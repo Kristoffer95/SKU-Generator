@@ -1,3 +1,19 @@
+## PRD-009: App Layout - COMPLETE
+- Created AppLayout component with shadcn/ui SidebarProvider
+- Left sidebar: header with "Specifications" title, content slot, Settings button footer
+- Main area: SidebarInset with header (title + toggle) and main content slot
+- Sidebar uses collapsible="offcanvas" mode for collapse/expand
+- Header includes SidebarTrigger for toggle + app title "SKU Generator"
+- Added matchMedia mock to test setup for jsdom compatibility
+- 6 tests covering: header, sidebar, content slots, settings button, toggle
+- All feedback loops pass (49 total tests)
+
+Files created/changed:
+- src/components/AppLayout.tsx
+- src/components/AppLayout.test.tsx
+- src/App.tsx (updated to use AppLayout)
+- src/test/setup.ts (added matchMedia mock)
+
 ## PRD-004: SKU Generation Logic - COMPLETE
 - Created generateSKU function in src/lib/sku-generator.ts
 - Takes: selectedValues (Map<specId,label>), specifications[], settings

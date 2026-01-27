@@ -120,7 +120,7 @@
         "Header with app title and sidebar toggle button",
         "Sidebar should be collapsible/expandable"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "PRD-010",

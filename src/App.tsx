@@ -1,8 +1,20 @@
+import { AppLayout } from "@/components/AppLayout"
+
 function App() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <h1 className="text-2xl font-bold p-4">SKU Generator</h1>
-    </div>
+    <AppLayout
+      sidebar={
+        <div className="p-4 text-sm text-muted-foreground">
+          Specifications will appear here
+        </div>
+      }
+    >
+      <div className="flex-1 p-4">
+        <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+          Spreadsheet will appear here
+        </div>
+      </div>
+    </AppLayout>
   )
 }
 
