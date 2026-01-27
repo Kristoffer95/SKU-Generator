@@ -1,3 +1,8 @@
+/**
+ * @deprecated This store is deprecated. Specifications now live in the Config sheet.
+ * Use useSheetsStore.getConfigSheet() and parse the Config sheet data instead.
+ * This file is kept for backwards compatibility during migration.
+ */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Specification, SpecValue } from '../types';

@@ -1,3 +1,18 @@
+## PRD-003: State Management (Config Sheet Approach) - COMPLETE
+- Updated sheets.ts: Config sheet as first sheet with headers (Specification, Value, SKU Code)
+- Added initializeWithConfigSheet() to create Config sheet on app start
+- Added getConfigSheet() helper to retrieve Config sheet
+- Config sheet protected from deletion (removeSheet returns false)
+- Deprecated specifications.ts with notice - specs now live in Config sheet
+- Data sheet naming excludes Config from count (Sheet 1, Sheet 2...)
+- 7 new tests: initializeWithConfigSheet, getConfigSheet, Config protection
+- All feedback loops pass (69 tests)
+
+Files changed:
+- src/store/sheets.ts (Config sheet init, protection, getConfigSheet)
+- src/store/sheets.test.ts (+7 new tests)
+- src/store/specifications.ts (added deprecation notice)
+
 ## PRD-002: Data Model (Config Sheet Approach) - COMPLETE
 - Updated src/types/index.ts for Config sheet-based spec management
 - ConfigRow: interface for Config sheet rows (specification, value, skuCode)

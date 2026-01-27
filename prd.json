@@ -41,7 +41,7 @@
         "Verify stores persist to localStorage on changes",
         "Verify Config sheet cannot be deleted"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "PRD-004",

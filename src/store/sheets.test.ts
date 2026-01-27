@@ -6,6 +6,92 @@ describe('useSheetsStore', () => {
     useSheetsStore.setState({ sheets: [], activeSheetId: null });
   });
 
+  describe('initializeWithConfigSheet', () => {
+    it('should create Config sheet with headers when no sheets exist', () => {
+      const { initializeWithConfigSheet } = useSheetsStore.getState();
+      initializeWithConfigSheet();
+
+      const { sheets, activeSheetId } = useSheetsStore.getState();
+      expect(sheets).toHaveLength(1);
+      expect(sheets[0].name).toBe('Config');
+      expect(sheets[0].type).toBe('config');
+      expect(sheets[0].data).toHaveLength(1);
+      expect(sheets[0].data[0]).toEqual([
+        { v: 'Specification', m: 'Specification' },
+        { v: 'Value', m: 'Value' },
+        { v: 'SKU Code', m: 'SKU Code' },
+      ]);
+      expect(activeSheetId).toBe(sheets[0].id);
+    });
+
+    it('should not create duplicate Config sheet', () => {
+      const { initializeWithConfigSheet } = useSheetsStore.getState();
+      initializeWithConfigSheet();
+      initializeWithConfigSheet();
+
+      const { sheets } = useSheetsStore.getState();
+      expect(sheets).toHaveLength(1);
+      expect(sheets.filter((s) => s.type === 'config')).toHaveLength(1);
+    });
+
+    it('should prepend Config sheet to existing data sheets', () => {
+      const { addSheet, initializeWithConfigSheet } = useSheetsStore.getState();
+      addSheet('Data Sheet');
+
+      initializeWithConfigSheet();
+
+      const { sheets } = useSheetsStore.getState();
+      expect(sheets).toHaveLength(2);
+      expect(sheets[0].type).toBe('config');
+      expect(sheets[1].name).toBe('Data Sheet');
+    });
+  });
+
+  describe('getConfigSheet', () => {
+    it('should return Config sheet when it exists', () => {
+      const { initializeWithConfigSheet, getConfigSheet } = useSheetsStore.getState();
+      initializeWithConfigSheet();
+
+      const configSheet = getConfigSheet();
+      expect(configSheet).toBeDefined();
+      expect(configSheet?.type).toBe('config');
+      expect(configSheet?.name).toBe('Config');
+    });
+
+    it('should return undefined when no Config sheet', () => {
+      const { getConfigSheet } = useSheetsStore.getState();
+      const configSheet = getConfigSheet();
+      expect(configSheet).toBeUndefined();
+    });
+  });
+
+  describe('Config sheet protection', () => {
+    it('should not allow deleting Config sheet', () => {
+      const { initializeWithConfigSheet, removeSheet, getConfigSheet } = useSheetsStore.getState();
+      initializeWithConfigSheet();
+
+      const configSheet = getConfigSheet();
+      const result = removeSheet(configSheet!.id);
+
+      expect(result).toBe(false);
+      const { sheets } = useSheetsStore.getState();
+      expect(sheets).toHaveLength(1);
+      expect(sheets[0].type).toBe('config');
+    });
+
+    it('should allow deleting data sheets', () => {
+      const { initializeWithConfigSheet, addSheet, removeSheet } = useSheetsStore.getState();
+      initializeWithConfigSheet();
+      const dataSheetId = addSheet('Data');
+
+      const result = removeSheet(dataSheetId);
+
+      expect(result).toBe(true);
+      const { sheets } = useSheetsStore.getState();
+      expect(sheets).toHaveLength(1);
+    });
+  });
+
   describe('addSheet', () => {
     it('should add a sheet with default name', () => {
       const { addSheet } = useSheetsStore.getState();

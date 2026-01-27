@@ -7,14 +7,23 @@ interface SheetsState {
   activeSheetId: string | null;
   addSheet: (name?: string) => string;
   updateSheet: (id: string, updates: Partial<Pick<SheetConfig, 'name' | 'data'>>) => void;
-  removeSheet: (id: string) => void;
+  removeSheet: (id: string) => boolean;
   setActiveSheet: (id: string) => void;
   getActiveSheet: () => SheetConfig | undefined;
+  getConfigSheet: () => SheetConfig | undefined;
   updateCellData: (sheetId: string, row: number, col: number, cell: CellData) => void;
   setSheetData: (sheetId: string, data: CellData[][]) => void;
+  initializeWithConfigSheet: () => void;
 }
 
 const generateId = () => crypto.randomUUID();
+
+/** Config sheet header row */
+const CONFIG_SHEET_HEADERS: CellData[] = [
+  { v: 'Specification', m: 'Specification' },
+  { v: 'Value', m: 'Value' },
+  { v: 'SKU Code', m: 'SKU Code' },
+];
 
 const createEmptySheet = (name: string, type: SheetConfig['type'] = 'data'): SheetConfig => ({
   id: generateId(),
@@ -23,15 +32,37 @@ const createEmptySheet = (name: string, type: SheetConfig['type'] = 'data'): She
   data: [],
 });
 
+const createConfigSheet = (): SheetConfig => ({
+  id: generateId(),
+  name: 'Config',
+  type: 'config',
+  data: [CONFIG_SHEET_HEADERS],
+});
+
 export const useSheetsStore = create<SheetsState>()(
   persist(
     (set, get) => ({
       sheets: [],
       activeSheetId: null,
 
+      initializeWithConfigSheet: () => {
+        const { sheets } = get();
+        // Only initialize if no Config sheet exists
+        const hasConfigSheet = sheets.some((s) => s.type === 'config');
+        if (!hasConfigSheet) {
+          const configSheet = createConfigSheet();
+          set({
+            sheets: [configSheet, ...sheets],
+            activeSheetId: configSheet.id,
+          });
+        }
+      },
+
       addSheet: (name?: string) => {
         const { sheets } = get();
-        const sheetName = name ?? `Sheet ${sheets.length + 1}`;
+        // Count only data sheets for naming
+        const dataSheetCount = sheets.filter((s) => s.type === 'data').length;
+        const sheetName = name ?? `Sheet ${dataSheetCount + 1}`;
         const newSheet = createEmptySheet(sheetName);
 
         set({
@@ -51,6 +82,14 @@ export const useSheetsStore = create<SheetsState>()(
       },
 
       removeSheet: (id: string) => {
+        const { sheets } = get();
+        const sheetToRemove = sheets.find((s) => s.id === id);
+
+        // Prevent deletion of Config sheet
+        if (sheetToRemove?.type === 'config') {
+          return false;
+        }
+
         set((state) => {
           const filtered = state.sheets.filter((sheet) => sheet.id !== id);
           const wasActive = state.activeSheetId === id;
@@ -62,6 +101,7 @@ export const useSheetsStore = create<SheetsState>()(
               : state.activeSheetId,
           };
         });
+        return true;
       },
 
       setActiveSheet: (id: string) => {
@@ -71,6 +111,11 @@ export const useSheetsStore = create<SheetsState>()(
       getActiveSheet: () => {
         const { sheets, activeSheetId } = get();
         return sheets.find((sheet) => sheet.id === activeSheetId);
+      },
+
+      getConfigSheet: () => {
+        const { sheets } = get();
+        return sheets.find((sheet) => sheet.type === 'config');
       },
 
       updateCellData: (sheetId: string, row: number, col: number, cell: CellData) => {
