@@ -56,7 +56,7 @@
         "Function joins codes with configurable delimiter and adds prefix/suffix",
         "Test: Row with 'Red', 'Small' lookups from Config -> 'R-S'"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "PRD-005",

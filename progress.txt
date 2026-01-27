@@ -1,3 +1,21 @@
+## PRD-004: SKU Generation Logic (Config Sheet Approach) - COMPLETE
+- Created config-sheet.ts: parseConfigSheet extracts ParsedSpec[] from Config sheet data
+- getSpecValues returns values for a spec name, lookupSkuCode finds SKU code for spec+value
+- getSpecNames helper returns all spec names
+- Created sheet-sku.ts: generateRowSKU takes row values, column headers, parsed config, settings
+- extractColumnHeaders gets headers excluding last column (SKU column)
+- getRowValuesWithoutSKU slices row to exclude SKU column
+- 19 tests for config-sheet.ts: parsing, grouping, empty handling, whitespace trim
+- 22 tests for sheet-sku.ts: basic gen, delimiter/prefix/suffix, edge cases
+- Test: Row 'Red','Small' with headers 'Color','Size' -> 'R-S' ✓
+- All feedback loops pass (110 tests)
+
+Files created:
+- src/lib/config-sheet.ts
+- src/lib/config-sheet.test.ts
+- src/lib/sheet-sku.ts
+- src/lib/sheet-sku.test.ts
+
 ## PRD-003: State Management (Config Sheet Approach) - COMPLETE
 - Updated sheets.ts: Config sheet as first sheet with headers (Specification, Value, SKU Code)
 - Added initializeWithConfigSheet() to create Config sheet on app start
