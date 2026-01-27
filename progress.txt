@@ -1,3 +1,18 @@
+## PRD-004: SKU Generation Logic - COMPLETE
+- Created generateSKU function in src/lib/sku-generator.ts
+- Takes: selectedValues (Map<specId,label>), specifications[], settings
+- Looks up skuCode for each selected label in spec values
+- Sorts by columnIndex for consistent ordering
+- Joins codes with configurable delimiter, prefix, suffix
+- Returns empty string if no values selected
+- 13 tests covering: basic generation, column ordering, custom delimiter, prefix/suffix, edge cases
+- Test: Temperature='29deg C' (29C) + Color='Red' (R) = '29C-R' ✓
+- All feedback loops pass (43 total tests)
+
+Files created:
+- src/lib/sku-generator.ts
+- src/lib/sku-generator.test.ts
+
 ## PRD-003: State Management - COMPLETE
 - Created Zustand stores with localStorage persistence
 - specifications.ts: CRUD for specs and values, reorder, columnIndex recalc

@@ -53,7 +53,7 @@
         "Function supports optional prefix and suffix",
         "Test: Temperature='29deg C' (29C) + Color='Red' (R) = '29C-R'"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "PRD-005",
