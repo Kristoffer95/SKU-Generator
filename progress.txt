@@ -1,3 +1,24 @@
+## PRD-006: Spreadsheet Integration - COMPLETE
+- Created SpreadsheetContainer wrapping Fortune-Sheet Workbook component
+- Parses Config sheet via parseConfigSheet to get spec names and allowed values
+- buildDataVerification generates dropdown rules keyed by "row_col" format
+- Column headers in data sheets match spec names to get dropdown options
+- dataVerification objects created for all data rows per column matching a spec
+- Workbook uses hooks.afterActivateSheet for sheet tab sync
+- Config sheet styled with orange tab color (#f97316)
+- onChange callback syncs Fortune-Sheet data back to Zustand store
+- 8 tests: empty state, workbook rendering, sheet colors, tab display
+- Updated App.tsx with SpreadsheetContainer + initializeWithConfigSheet on mount
+- All feedback loops pass (118 tests)
+
+Files created:
+- src/components/SpreadsheetContainer.tsx
+- src/components/SpreadsheetContainer.test.tsx
+
+Files changed:
+- src/App.tsx (SpreadsheetContainer integration, Config init)
+- src/App.test.tsx (Fortune-Sheet mock to avoid canvas errors)
+
 ## PRD-004: SKU Generation Logic (Config Sheet Approach) - COMPLETE
 - Created config-sheet.ts: parseConfigSheet extracts ParsedSpec[] from Config sheet data
 - getSpecValues returns values for a spec name, lookupSkuCode finds SKU code for spec+value

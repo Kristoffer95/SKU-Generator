@@ -84,7 +84,7 @@
         "Verify clicking a cell in data sheet shows dropdown with values from Config",
         "Last column is reserved for auto-generated SKU"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "PRD-007",
@@ -126,7 +126,7 @@
         "Header with app title, sidebar toggle, Import button, Export dropdown, Settings button",
         "Sidebar should be collapsible/expandable"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "PRD-010",
