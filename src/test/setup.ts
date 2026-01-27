@@ -14,3 +14,9 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: () => false,
   }),
 })
+
+// Mock window.scrollTo for jsdom (required by framer-motion)
+Object.defineProperty(window, 'scrollTo', {
+  writable: true,
+  value: () => {},
+})

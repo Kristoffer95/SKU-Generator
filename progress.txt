@@ -1,3 +1,25 @@
+## PRD-005: Specification Management UI - COMPLETE
+- Created SpecificationList component with Framer Motion Reorder for drag-reorder
+- Created SpecificationItem with expand/collapse animations (ChevronDown rotation)
+- SpecificationForm dialog for add/edit spec name
+- Inline SpecValueForm within SpecificationItem for adding label+skuCode pairs
+- Drag handle uses useDragControls for pointer-based reordering
+- AnimatePresence for smooth add/remove animations on specs and values
+- Delete confirmation via direct button (no dialog - per minimalism)
+- 13 tests covering: empty state, add spec, edit spec, delete spec, add value, delete value, expand/collapse, value count, keyboard interactions
+- All feedback loops pass (62 total tests)
+
+Files created:
+- src/components/SpecificationList.tsx
+- src/components/SpecificationItem.tsx
+- src/components/SpecificationForm.tsx
+- src/components/SpecificationList.test.tsx
+
+Files changed:
+- src/App.tsx (integrated SpecificationList in sidebar)
+- src/test/setup.ts (added scrollTo mock for framer-motion)
+- package.json (@testing-library/user-event added)
+
 ## PRD-009: App Layout - COMPLETE
 - Created AppLayout component with shadcn/ui SidebarProvider
 - Left sidebar: header with "Specifications" title, content slot, Settings button footer

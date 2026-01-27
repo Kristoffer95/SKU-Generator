@@ -67,7 +67,7 @@
         "Enable drag-to-reorder for specifications",
         "Verify adding a spec with values 'Red' -> 'R' appears correctly"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "PRD-006",
