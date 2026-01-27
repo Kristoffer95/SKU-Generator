@@ -1,3 +1,22 @@
+## PRD-005: Sidebar Specification View - COMPLETE
+- Rewrote SpecificationList to parse specs from Config sheet via parseConfigSheet()
+- Read-only display: spec names with value counts, expandable to show values
+- Edit button jumps to Config sheet (setActiveSheet)
+- Add Specification button opens placeholder dialog that redirects to Config sheet
+- Removed direct editing in sidebar - specs now edited only in Config sheet
+- Sidebar auto-updates when Config sheet data changes (useMemo dependency)
+- Removed old SpecificationItem.tsx and SpecificationForm.tsx (no longer needed)
+- 12 new tests: empty state, display specs, value counts, expand/collapse, edit jump, dialog
+- All feedback loops pass (160 tests)
+
+Files changed:
+- src/components/SpecificationList.tsx (complete rewrite)
+- src/components/SpecificationList.test.tsx (complete rewrite)
+
+Files removed:
+- src/components/SpecificationItem.tsx
+- src/components/SpecificationForm.tsx
+
 ## PRD-011: Settings Dialog - COMPLETE
 - Created SettingsDialog component accessible from sidebar Settings button
 - Delimiter options: Hyphen (-), Underscore (_), None, Custom with text input

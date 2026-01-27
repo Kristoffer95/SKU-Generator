@@ -2,27 +2,49 @@ import { describe, it, expect, beforeEach } from "vitest"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { SpecificationList } from "./SpecificationList"
-import { useSpecificationsStore } from "@/store/specifications"
+import { useSheetsStore } from "@/store/sheets"
+import type { CellData } from "@/types"
+
+// Helper to create Config sheet data
+const createConfigData = (specs: { name: string; value: string; code: string }[]): CellData[][] => {
+  const data: CellData[][] = [
+    [{ v: "Specification" }, { v: "Value" }, { v: "SKU Code" }]
+  ]
+  specs.forEach(({ name, value, code }) => {
+    data.push([{ v: name }, { v: value }, { v: code }])
+  })
+  return data
+}
 
 // Reset store before each test
 beforeEach(() => {
-  useSpecificationsStore.setState({ specifications: [] })
+  useSheetsStore.setState({
+    sheets: [],
+    activeSheetId: null
+  })
 })
 
 describe("SpecificationList", () => {
-  it("shows empty state when no specifications", () => {
+  it("shows empty state when Config sheet has no specs", () => {
+    // Initialize with empty Config sheet (only headers)
+    useSheetsStore.getState().initializeWithConfigSheet()
+
     render(<SpecificationList />)
     expect(screen.getByText(/no specifications yet/i)).toBeInTheDocument()
-    expect(screen.getByText(/add one to get started/i)).toBeInTheDocument()
+    expect(screen.getByText(/add specs in the config sheet/i)).toBeInTheDocument()
   })
 
   it("shows add specification button", () => {
+    useSheetsStore.getState().initializeWithConfigSheet()
+
     render(<SpecificationList />)
     expect(screen.getByRole("button", { name: /add specification/i })).toBeInTheDocument()
   })
 
   it("opens add dialog when button clicked", async () => {
     const user = userEvent.setup()
+    useSheetsStore.getState().initializeWithConfigSheet()
+
     render(<SpecificationList />)
 
     await user.click(screen.getByRole("button", { name: /add specification/i }))
@@ -31,25 +53,17 @@ describe("SpecificationList", () => {
     expect(screen.getByRole("heading", { name: "Add Specification" })).toBeInTheDocument()
   })
 
-  it("adds a specification via dialog", async () => {
-    const user = userEvent.setup()
-    render(<SpecificationList />)
-
-    await user.click(screen.getByRole("button", { name: /add specification/i }))
-    await user.type(screen.getByLabelText(/name/i), "Color")
-    await user.click(screen.getByRole("button", { name: /^add$/i }))
-
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
-    })
-
-    expect(screen.getByText("Color")).toBeInTheDocument()
-    expect(screen.getByText("0 values")).toBeInTheDocument()
-  })
-
-  it("displays existing specifications", () => {
-    useSpecificationsStore.getState().addSpecification("Temperature")
-    useSpecificationsStore.getState().addSpecification("Color")
+  it("displays specifications parsed from Config sheet", () => {
+    useSheetsStore.getState().initializeWithConfigSheet()
+    const configSheet = useSheetsStore.getState().getConfigSheet()
+    if (configSheet) {
+      useSheetsStore.getState().setSheetData(configSheet.id, createConfigData([
+        { name: "Temperature", value: "29deg C", code: "29C" },
+        { name: "Temperature", value: "30deg C", code: "30C" },
+        { name: "Color", value: "Red", code: "R" },
+        { name: "Color", value: "Blue", code: "B" },
+      ]))
+    }
 
     render(<SpecificationList />)
 
@@ -57,11 +71,33 @@ describe("SpecificationList", () => {
     expect(screen.getByText("Color")).toBeInTheDocument()
   })
 
+  it("shows correct value count for each spec", () => {
+    useSheetsStore.getState().initializeWithConfigSheet()
+    const configSheet = useSheetsStore.getState().getConfigSheet()
+    if (configSheet) {
+      useSheetsStore.getState().setSheetData(configSheet.id, createConfigData([
+        { name: "Color", value: "Red", code: "R" },
+        { name: "Color", value: "Blue", code: "B" },
+        { name: "Size", value: "Small", code: "S" },
+      ]))
+    }
+
+    render(<SpecificationList />)
+
+    expect(screen.getByText("2 values")).toBeInTheDocument() // Color
+    expect(screen.getByText("1 value")).toBeInTheDocument() // Size
+  })
+
   it("expands specification to show values", async () => {
     const user = userEvent.setup()
-    const specId = useSpecificationsStore.getState().addSpecification("Color")
-    useSpecificationsStore.getState().addSpecValue(specId, "Red", "R")
-    useSpecificationsStore.getState().addSpecValue(specId, "Blue", "B")
+    useSheetsStore.getState().initializeWithConfigSheet()
+    const configSheet = useSheetsStore.getState().getConfigSheet()
+    if (configSheet) {
+      useSheetsStore.getState().setSheetData(configSheet.id, createConfigData([
+        { name: "Color", value: "Red", code: "R" },
+        { name: "Color", value: "Blue", code: "B" },
+      ]))
+    }
 
     render(<SpecificationList />)
 
@@ -76,145 +112,136 @@ describe("SpecificationList", () => {
     })
   })
 
-  it("adds value to specification", async () => {
+  it("collapses specification when clicked again", async () => {
     const user = userEvent.setup()
-    useSpecificationsStore.getState().addSpecification("Color")
+    useSheetsStore.getState().initializeWithConfigSheet()
+    const configSheet = useSheetsStore.getState().getConfigSheet()
+    if (configSheet) {
+      useSheetsStore.getState().setSheetData(configSheet.id, createConfigData([
+        { name: "Color", value: "Red", code: "R" },
+      ]))
+    }
 
     render(<SpecificationList />)
 
-    // Expand specification
+    // Expand
     await user.click(screen.getByText("Color"))
-
-    // Click add value button
-    await user.click(screen.getByRole("button", { name: /add value/i }))
-
-    // Fill in the form
-    const labelInput = screen.getByPlaceholderText(/label/i)
-    const codeInput = screen.getByPlaceholderText(/code/i)
-
-    await user.type(labelInput, "Red")
-    await user.type(codeInput, "R")
-    await user.click(screen.getByRole("button", { name: /confirm add value/i }))
-
-    await waitFor(() => {
-      expect(screen.getByText("Red")).toBeInTheDocument()
-      expect(screen.getByText("R")).toBeInTheDocument()
-    })
-  })
-
-  it("deletes a value from specification", async () => {
-    const user = userEvent.setup()
-    const specId = useSpecificationsStore.getState().addSpecification("Color")
-    useSpecificationsStore.getState().addSpecValue(specId, "Red", "R")
-
-    render(<SpecificationList />)
-
-    // Expand specification
-    await user.click(screen.getByText("Color"))
-
     await waitFor(() => {
       expect(screen.getByText("Red")).toBeInTheDocument()
     })
 
-    // Find and click delete button for Red value
-    const deleteBtn = screen.getByRole("button", { name: /delete red/i })
-    await user.click(deleteBtn)
-
+    // Collapse
+    await user.click(screen.getByText("Color"))
     await waitFor(() => {
       expect(screen.queryByText("Red")).not.toBeInTheDocument()
     })
   })
 
-  it("deletes a specification", async () => {
+  it("shows Edit button that jumps to Config sheet", async () => {
     const user = userEvent.setup()
-    useSpecificationsStore.getState().addSpecification("Color")
+    useSheetsStore.getState().initializeWithConfigSheet()
+    const configSheet = useSheetsStore.getState().getConfigSheet()
+    if (configSheet) {
+      useSheetsStore.getState().setSheetData(configSheet.id, createConfigData([
+        { name: "Color", value: "Red", code: "R" },
+      ]))
+    }
+
+    // Add a data sheet and make it active
+    useSheetsStore.getState().addSheet("Sheet 1")
+    const activeSheetBefore = useSheetsStore.getState().activeSheetId
 
     render(<SpecificationList />)
-    expect(screen.getByText("Color")).toBeInTheDocument()
 
-    await user.click(screen.getByRole("button", { name: /delete specification/i }))
+    // Click Edit button on a spec
+    await user.click(screen.getByRole("button", { name: /edit/i }))
 
-    await waitFor(() => {
-      expect(screen.queryByText("Color")).not.toBeInTheDocument()
-    })
-    expect(screen.getByText(/no specifications yet/i)).toBeInTheDocument()
+    // Should switch to Config sheet
+    const activeSheetAfter = useSheetsStore.getState().activeSheetId
+    expect(activeSheetAfter).not.toBe(activeSheetBefore)
+    expect(activeSheetAfter).toBe(configSheet?.id)
   })
 
-  it("edits specification name via dialog", async () => {
+  it("closes add dialog when Cancel clicked", async () => {
     const user = userEvent.setup()
-    useSpecificationsStore.getState().addSpecification("Color")
+    useSheetsStore.getState().initializeWithConfigSheet()
 
     render(<SpecificationList />)
 
-    await user.click(screen.getByRole("button", { name: /edit specification/i }))
-
+    await user.click(screen.getByRole("button", { name: /add specification/i }))
     expect(screen.getByRole("dialog")).toBeInTheDocument()
-    expect(screen.getByText("Edit Specification")).toBeInTheDocument()
 
-    const input = screen.getByLabelText(/name/i)
-    await user.clear(input)
-    await user.type(input, "Colour")
-    await user.click(screen.getByRole("button", { name: /save/i }))
+    await user.click(screen.getByRole("button", { name: /cancel/i }))
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+  })
+
+  it("navigates to Config sheet when Go to Config clicked in dialog", async () => {
+    const user = userEvent.setup()
+    useSheetsStore.getState().initializeWithConfigSheet()
+    const configSheet = useSheetsStore.getState().getConfigSheet()
+
+    // Add a data sheet and make it active
+    useSheetsStore.getState().addSheet("Sheet 1")
+
+    render(<SpecificationList />)
+
+    await user.click(screen.getByRole("button", { name: /add specification/i }))
+    await user.click(screen.getByRole("button", { name: /go to config/i }))
 
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     })
-
-    expect(screen.getByText("Colour")).toBeInTheDocument()
-    expect(screen.queryByText("Color")).not.toBeInTheDocument()
+    expect(useSheetsStore.getState().activeSheetId).toBe(configSheet?.id)
   })
 
-  it("shows correct value count", async () => {
-    const specId = useSpecificationsStore.getState().addSpecification("Color")
+  it("updates when Config sheet data changes", async () => {
+    useSheetsStore.getState().initializeWithConfigSheet()
+    const configSheet = useSheetsStore.getState().getConfigSheet()
+    if (configSheet) {
+      useSheetsStore.getState().setSheetData(configSheet.id, createConfigData([
+        { name: "Color", value: "Red", code: "R" },
+      ]))
+    }
 
     const { rerender } = render(<SpecificationList />)
-    expect(screen.getByText("0 values")).toBeInTheDocument()
-
-    useSpecificationsStore.getState().addSpecValue(specId, "Red", "R")
-
-    // Rerender same instance to see updated count
-    rerender(<SpecificationList />)
+    expect(screen.getByText("Color")).toBeInTheDocument()
     expect(screen.getByText("1 value")).toBeInTheDocument()
 
-    useSpecificationsStore.getState().addSpecValue(specId, "Blue", "B")
+    // Add more values to Color
+    if (configSheet) {
+      useSheetsStore.getState().setSheetData(configSheet.id, createConfigData([
+        { name: "Color", value: "Red", code: "R" },
+        { name: "Color", value: "Blue", code: "B" },
+        { name: "Size", value: "Small", code: "S" },
+      ]))
+    }
 
     rerender(<SpecificationList />)
+    expect(screen.getByText("Color")).toBeInTheDocument()
     expect(screen.getByText("2 values")).toBeInTheDocument()
+    expect(screen.getByText("Size")).toBeInTheDocument()
+    expect(screen.getByText("1 value")).toBeInTheDocument()
   })
 
-  it("cancels add value form with Escape key", async () => {
+  it("handles spec with empty SKU code", async () => {
     const user = userEvent.setup()
-    useSpecificationsStore.getState().addSpecification("Color")
+    useSheetsStore.getState().initializeWithConfigSheet()
+    const configSheet = useSheetsStore.getState().getConfigSheet()
+    if (configSheet) {
+      useSheetsStore.getState().setSheetData(configSheet.id, createConfigData([
+        { name: "Color", value: "Red", code: "" },
+      ]))
+    }
 
     render(<SpecificationList />)
 
     await user.click(screen.getByText("Color"))
-    await user.click(screen.getByRole("button", { name: /add value/i }))
-
-    expect(screen.getByPlaceholderText(/label/i)).toBeInTheDocument()
-
-    await user.keyboard("{Escape}")
-
-    await waitFor(() => {
-      expect(screen.queryByPlaceholderText(/label/i)).not.toBeInTheDocument()
-    })
-  })
-
-  it("submits add value form with Enter key", async () => {
-    const user = userEvent.setup()
-    useSpecificationsStore.getState().addSpecification("Color")
-
-    render(<SpecificationList />)
-
-    await user.click(screen.getByText("Color"))
-    await user.click(screen.getByRole("button", { name: /add value/i }))
-
-    await user.type(screen.getByPlaceholderText(/label/i), "Red")
-    await user.type(screen.getByPlaceholderText(/code/i), "R")
-    await user.keyboard("{Enter}")
 
     await waitFor(() => {
       expect(screen.getByText("Red")).toBeInTheDocument()
+      expect(screen.getByText("-")).toBeInTheDocument() // Placeholder for empty code
     })
   })
 })

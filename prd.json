@@ -70,7 +70,7 @@
         "Remove direct editing in sidebar (specs are edited in Config sheet)",
         "Sidebar updates automatically when Config sheet changes"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "PRD-006",
