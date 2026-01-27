@@ -1,3 +1,20 @@
+## PRD-011: Settings Dialog - COMPLETE
+- Created SettingsDialog component accessible from sidebar Settings button
+- Delimiter options: Hyphen (-), Underscore (_), None, Custom with text input
+- Prefix and suffix inputs for SKU customization
+- Settings persist to localStorage via existing Zustand settings store
+- Changing settings triggers SKU recalculation for all rows in all data sheets
+- Uses isCustomMode state to track explicit custom delimiter selection
+- 11 tests: dialog render, delimiter options, save/cancel, SKU recalculation
+- All feedback loops pass (161 tests)
+
+Files created:
+- src/components/SettingsDialog.tsx
+- src/components/SettingsDialog.test.tsx
+
+Files changed:
+- src/components/AppLayout.tsx (wired Settings button to open dialog)
+
 ## PRD-008: Multiple Sheets Support - COMPLETE
 - Extended SpreadsheetContainer with Fortune-Sheet hooks for sheet management
 - Config sheet protected: beforeDeleteSheet returns false for config type

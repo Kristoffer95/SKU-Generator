@@ -155,7 +155,7 @@
         "Settings persist to localStorage via Zustand",
         "Changing settings triggers SKU recalculation for all rows in all data sheets"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "PRD-012",
