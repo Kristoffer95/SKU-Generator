@@ -1,29 +1,28 @@
 /**
- * A single value within a specification (e.g., "Red" -> "R")
+ * A single row in the Config sheet defining a specification value
+ * Each row maps: Specification name -> Value label -> SKU code
  */
-export interface SpecValue {
-  id: string;
+export interface ConfigRow {
+  specification: string;
+  value: string;
+  skuCode: string;
+}
+
+/**
+ * A single value within a parsed specification
+ */
+export interface ParsedSpecValue {
   label: string;
   skuCode: string;
 }
 
 /**
- * A specification column (e.g., "Color" with values Red, Blue, Green)
+ * A specification parsed from Config sheet data
+ * Groups all values that share the same specification name
  */
-export interface Specification {
-  id: string;
+export interface ParsedSpec {
   name: string;
-  values: SpecValue[];
-  columnIndex: number;
-}
-
-/**
- * Configuration for a single spreadsheet tab
- */
-export interface SheetConfig {
-  id: string;
-  name: string;
-  data: CellData[][];
+  values: ParsedSpecValue[];
 }
 
 /**
@@ -36,6 +35,21 @@ export interface CellData {
 }
 
 /**
+ * Type discriminator for sheet types
+ */
+export type SheetType = 'config' | 'data';
+
+/**
+ * Configuration for a single spreadsheet tab
+ */
+export interface SheetConfig {
+  id: string;
+  name: string;
+  type: SheetType;
+  data: CellData[][];
+}
+
+/**
  * App-wide settings for SKU generation
  */
 export interface AppSettings {
@@ -45,6 +59,28 @@ export interface AppSettings {
 }
 
 /**
- * Map of specification ID to selected label value
+ * Map of specification name to selected value label
  */
 export type SelectedValues = Map<string, string>;
+
+// Legacy interfaces kept for backwards compatibility during migration
+// TODO: Remove after migration to Config sheet approach
+
+/**
+ * @deprecated Use ConfigRow and ParsedSpec instead
+ */
+export interface SpecValue {
+  id: string;
+  label: string;
+  skuCode: string;
+}
+
+/**
+ * @deprecated Use ParsedSpec instead - specs now live in Config sheet
+ */
+export interface Specification {
+  id: string;
+  name: string;
+  values: SpecValue[];
+  columnIndex: number;
+}

@@ -1,3 +1,20 @@
+## PRD-002: Data Model (Config Sheet Approach) - COMPLETE
+- Updated src/types/index.ts for Config sheet-based spec management
+- ConfigRow: interface for Config sheet rows (specification, value, skuCode)
+- ParsedSpec + ParsedSpecValue: parsed specs grouped by name
+- SheetConfig: added 'type' field (SheetType = 'config' | 'data')
+- AppSettings: unchanged (delimiter, prefix, suffix)
+- CellData: unchanged (Fortune-Sheet cell format)
+- SelectedValues: Map<string, string> - now maps spec name to value label
+- Kept legacy Specification/SpecValue interfaces with @deprecated for migration
+- Updated sheets.ts createEmptySheet to accept type parameter
+
+Files changed:
+- src/types/index.ts
+- src/store/sheets.ts (type field fix)
+
+All feedback loops pass (62 tests)
+
 ## PRD-005: Specification Management UI - COMPLETE
 - Created SpecificationList component with Framer Motion Reorder for drag-reorder
 - Created SpecificationItem with expand/collapse animations (ChevronDown rotation)

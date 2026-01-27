@@ -1,6 +1,6 @@
 {
   "project": "SKU Generator",
-  "description": "A React application that lets users define specifications with value-to-SKU code mappings, enabling auto-generation of SKU codes in a spreadsheet interface",
+  "description": "A React application using a Config sheet as single source of truth for specification definitions, with auto-generation of SKU codes in a spreadsheet interface",
   "items": [
     {
       "id": "PRD-001",
@@ -18,12 +18,13 @@
     {
       "id": "PRD-002",
       "category": "Data Model",
-      "description": "Define TypeScript interfaces for Specification, SpecValue, and related types",
+      "description": "Define TypeScript interfaces for Config sheet-based specification management",
       "stepsToVerify": [
-        "Create src/types/index.ts with SpecValue interface (id, label, skuCode)",
-        "Create Specification interface (id, name, values array, columnIndex)",
-        "Create SheetConfig interface for multi-sheet support",
+        "Create src/types/index.ts with ConfigRow interface (specification, value, skuCode)",
+        "Create ParsedSpec interface (name, values array with label and skuCode)",
+        "Create SheetConfig interface for multi-sheet support including Config sheet",
         "Create AppSettings interface for SKU delimiter and prefix/suffix options",
+        "Create CellData interface matching Fortune-Sheet cell format",
         "Verify TypeScript compiles without errors"
       ],
       "passes": true
@@ -31,108 +32,114 @@
     {
       "id": "PRD-003",
       "category": "State Management",
-      "description": "Implement Zustand stores with localStorage persistence for specifications, sheets, and settings",
+      "description": "Implement Zustand stores for sheets and settings with Config sheet as spec source of truth",
       "stepsToVerify": [
-        "Create src/store/specifications.ts with CRUD operations for specs and values",
-        "Create src/store/sheets.ts for multi-sheet management",
+        "Create src/store/sheets.ts for multi-sheet management with Config sheet always first",
+        "Initialize sheets store with default Config sheet containing headers (Specification, Value, SKU Code)",
         "Create src/store/settings.ts for app configuration (delimiter, prefix, suffix)",
+        "Remove or deprecate src/store/specifications.ts (specs now live in Config sheet)",
         "Verify stores persist to localStorage on changes",
-        "Verify stores rehydrate from localStorage on page reload"
+        "Verify Config sheet cannot be deleted"
       ],
-      "passes": true
+      "passes": false
     },
     {
       "id": "PRD-004",
       "category": "SKU Generation Logic",
-      "description": "Implement core SKU generation function that combines SKU codes from selected specification values",
+      "description": "Implement SKU generation that looks up codes from Config sheet data",
       "stepsToVerify": [
-        "Create src/lib/sku-generator.ts with generateSKU function",
-        "Function takes selected values (Map of specId to label) and specifications array",
-        "Function looks up skuCode for each selected label",
-        "Function joins codes with configurable delimiter (default '-')",
-        "Function supports optional prefix and suffix",
-        "Test: Temperature='29deg C' (29C) + Color='Red' (R) = '29C-R'"
+        "Create src/lib/config-sheet.ts with parseConfigSheet function to extract specs from Config data",
+        "Create getSpecValues function to get all values for a specification name",
+        "Create src/lib/sheet-sku.ts with generateRowSKU function",
+        "Function takes row values, column headers, parsed config, and settings",
+        "Function looks up skuCode from Config for each cell value",
+        "Function joins codes with configurable delimiter and adds prefix/suffix",
+        "Test: Row with 'Red', 'Small' lookups from Config -> 'R-S'"
       ],
-      "passes": true
+      "passes": false
     },
     {
       "id": "PRD-005",
-      "category": "Specification Management UI",
-      "description": "Create sidebar UI for managing specifications and their values with Framer Motion animations",
+      "category": "Sidebar Specification View",
+      "description": "Create sidebar UI that displays specifications parsed from Config sheet",
       "stepsToVerify": [
-        "Create SpecificationList component with animated list (add/remove animations)",
-        "Create SpecificationItem component with expand/collapse animation",
-        "Create SpecificationForm dialog for adding/editing specification names",
-        "Create SpecValueForm for adding values with label and SKU code fields",
-        "Enable drag-to-reorder for specifications",
-        "Verify adding a spec with values 'Red' -> 'R' appears correctly"
+        "Update SpecificationList to parse and display specs from Config sheet data",
+        "Show each specification name with count of defined values",
+        "Add 'Add Specification' button that opens AddSpecDialog",
+        "Clicking a specification jumps to or highlights it in Config sheet",
+        "Remove direct editing in sidebar (specs are edited in Config sheet)",
+        "Sidebar updates automatically when Config sheet changes"
       ],
-      "passes": true
+      "passes": false
     },
     {
       "id": "PRD-006",
       "category": "Spreadsheet Integration",
-      "description": "Integrate Fortune-Sheet spreadsheet with dropdown validation for specification columns",
+      "description": "Integrate Fortune-Sheet with dropdowns populated from Config sheet",
       "stepsToVerify": [
         "Create SpreadsheetContainer component wrapping Fortune-Sheet Workbook",
-        "Create useSpreadsheet hook for Fortune-Sheet API interactions",
-        "Generate header row from specification names plus 'SKU' column",
-        "Apply dataVerification (dropdown) to each spec column with spec values as options",
-        "Verify clicking a cell shows dropdown with spec values"
+        "Parse Config sheet to get all spec names and their allowed values",
+        "For data sheets: column headers define which spec applies to that column",
+        "Generate dataVerification (dropdown) for cells based on column header matching Config spec",
+        "Verify clicking a cell in data sheet shows dropdown with values from Config",
+        "Last column is reserved for auto-generated SKU"
       ],
       "passes": false
     },
     {
       "id": "PRD-007",
       "category": "Auto SKU Generation",
-      "description": "Automatically update SKU column when specification values are selected in a row",
+      "description": "Automatically update SKU column when values are selected in data sheet rows",
       "stepsToVerify": [
-        "Listen to onCellUpdated callback from Fortune-Sheet",
-        "When a spec column value changes, collect all values in that row",
-        "Call generateSKU with collected values",
-        "Update the SKU column cell with generated SKU",
-        "Test: Select 'Temperature: 29deg C' and 'Color: Red' -> SKU shows '29C-R'"
+        "Listen to onChange callback from Fortune-Sheet",
+        "When a cell value changes in a data sheet, identify the row",
+        "Collect all values in that row and their column headers",
+        "Look up SKU codes from Config sheet for each value",
+        "Generate SKU and update the SKU column cell",
+        "Test: Select 'Red' (R), 'Small' (S) in row -> SKU shows 'R-S'"
       ],
       "passes": false
     },
     {
       "id": "PRD-008",
       "category": "Multiple Sheets",
-      "description": "Support multiple spreadsheet tabs with independent data",
+      "description": "Support Config sheet plus multiple data sheets with independent data",
       "stepsToVerify": [
         "Create SheetTabs component showing tab bar at bottom of spreadsheet",
-        "Support adding new sheets via '+' button",
-        "Support renaming sheets (double-click tab)",
-        "Support deleting sheets (X button on tab)",
-        "Verify each sheet maintains independent data",
-        "Verify switching tabs shows correct sheet content"
+        "Config sheet is always the first tab and cannot be deleted or renamed",
+        "Style Config tab distinctly (different color or icon)",
+        "Support adding new data sheets via '+' button",
+        "Support renaming data sheets (double-click tab)",
+        "Support deleting data sheets (X button on tab, not Config)",
+        "Each data sheet maintains independent row data but shares Config specs"
       ],
       "passes": false
     },
     {
       "id": "PRD-009",
       "category": "App Layout",
-      "description": "Create main application layout with collapsible sidebar and spreadsheet area",
+      "description": "Create main application layout with header actions for import/export/settings",
       "stepsToVerify": [
         "Create AppLayout component with shadcn/ui SidebarProvider",
-        "Left sidebar contains specification management",
+        "Left sidebar contains specification view (read from Config)",
         "Main area contains spreadsheet with sheet tabs below",
-        "Header with app title and sidebar toggle button",
+        "Header with app title, sidebar toggle, Import button, Export dropdown, Settings button",
         "Sidebar should be collapsible/expandable"
       ],
-      "passes": true
+      "passes": false
     },
     {
       "id": "PRD-010",
       "category": "Import/Export",
-      "description": "Support importing and exporting spreadsheet data to Excel and CSV formats",
+      "description": "Support importing and exporting spreadsheet data including Config sheet",
       "stepsToVerify": [
-        "Create export.ts with exportToExcel function using Fortune-Sheet export",
-        "Create exportToCSV function for CSV download",
-        "Create importFromExcel function for loading Excel files",
-        "Add Import/Export buttons to header or settings",
+        "Create src/lib/import-export.ts with exportToExcel function",
+        "Export includes all sheets (Config + data sheets) in one workbook",
+        "Create exportToCSV function for current sheet only",
+        "Create importFromExcel function that loads all sheets including Config",
+        "Importing a workbook with Config sheet replaces current specs",
         "Verify exported Excel opens correctly in Excel/Google Sheets",
-        "Verify importing an Excel file loads data into spreadsheet"
+        "Verify importing an Excel file loads Config and data correctly"
       ],
       "passes": false
     },
@@ -141,28 +148,43 @@
       "category": "Settings",
       "description": "Allow users to configure SKU generation settings (delimiter, prefix, suffix)",
       "stepsToVerify": [
-        "Create Settings dialog accessible from sidebar footer",
+        "Create SettingsDialog component accessible from header",
         "Setting: SKU delimiter (default '-', options: '-', '_', '', custom)",
         "Setting: SKU prefix (optional string prepended to all SKUs)",
         "Setting: SKU suffix (optional string appended to all SKUs)",
-        "Settings persist to localStorage",
-        "Changing settings triggers SKU recalculation for all rows"
+        "Settings persist to localStorage via Zustand",
+        "Changing settings triggers SKU recalculation for all rows in all data sheets"
       ],
       "passes": false
     },
     {
       "id": "PRD-012",
       "category": "End-to-End Verification",
-      "description": "Complete workflow test from spec creation to SKU generation",
+      "description": "Complete workflow test using Config sheet for spec definitions",
       "stepsToVerify": [
-        "Create specification 'Temperature' with values: '29deg C' -> '29C', '30deg C' -> '30C'",
-        "Create specification 'Color' with values: 'Red' -> 'R', 'Blue' -> 'B'",
-        "Create specification 'Type' with values: 'Standard' -> 'STD', 'Premium' -> 'PRM'",
-        "Verify spreadsheet shows columns: Temperature, Color, Type, SKU",
+        "In Config sheet, add rows: Temperature/29deg C/29C, Temperature/30deg C/30C",
+        "In Config sheet, add rows: Color/Red/R, Color/Blue/B",
+        "In Config sheet, add rows: Type/Standard/STD, Type/Premium/PRM",
+        "Create new data sheet, add columns: Temperature, Color, Type, SKU",
+        "Verify dropdowns in Temperature column show '29deg C', '30deg C'",
         "Select '29deg C', 'Red', 'Standard' in row 2",
-        "Verify SKU column shows '29C-R-STD'",
+        "Verify SKU column auto-generates '29C-R-STD'",
         "Change Color to 'Blue' -> SKU updates to '29C-B-STD'",
-        "Export to Excel and verify data integrity"
+        "Export to Excel and verify Config sheet and data are included"
+      ],
+      "passes": false
+    },
+    {
+      "id": "PRD-013",
+      "category": "Add Specification Dialog",
+      "description": "Dialog for adding new specifications to Config sheet and data sheet columns",
+      "stepsToVerify": [
+        "Create AddSpecDialog component accessible from sidebar",
+        "Form fields: specification name, initial values (label + SKU code pairs)",
+        "On submit: add rows to Config sheet for each value",
+        "On submit: add column with spec name as header to active data sheet",
+        "Validate specification name is unique (not already in Config)",
+        "Verify new dropdown appears in the new column with defined values"
       ],
       "passes": false
     }

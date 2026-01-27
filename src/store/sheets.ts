@@ -16,9 +16,10 @@ interface SheetsState {
 
 const generateId = () => crypto.randomUUID();
 
-const createEmptySheet = (name: string): SheetConfig => ({
+const createEmptySheet = (name: string, type: SheetConfig['type'] = 'data'): SheetConfig => ({
   id: generateId(),
   name,
+  type,
   data: [],
 });
 
