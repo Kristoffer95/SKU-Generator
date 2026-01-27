@@ -1,3 +1,16 @@
+## PRD-002: Data Model - COMPLETE
+- Created src/types/index.ts with all required interfaces
+- SpecValue: id, label, skuCode
+- Specification: id, name, values[], columnIndex
+- SheetConfig: id, name, data[][] for multi-sheet support
+- CellData: Fortune-Sheet cell structure (v, m, ct)
+- AppSettings: delimiter, prefix, suffix for SKU config
+- SelectedValues: Map<string, string> type alias
+- All feedback loops pass
+
+Files created:
+- src/types/index.ts
+
 ## PRD-001: Project Setup - COMPLETE
 - Initialized React+Vite+TypeScript project manually (Vite CLI had permission issues)
 - Installed: zustand, framer-motion, @fortune-sheet/react@1.0.4, tailwindcss, shadcn/ui deps
