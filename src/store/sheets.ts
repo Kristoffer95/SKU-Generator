@@ -6,6 +6,7 @@ interface SheetsState {
   sheets: SheetConfig[];
   activeSheetId: string | null;
   addSheet: (name?: string) => string;
+  addSheetWithId: (id: string, name: string) => void;
   updateSheet: (id: string, updates: Partial<Pick<SheetConfig, 'name' | 'data'>>) => void;
   removeSheet: (id: string) => boolean;
   setActiveSheet: (id: string) => void;
@@ -71,6 +72,24 @@ export const useSheetsStore = create<SheetsState>()(
         });
 
         return newSheet.id;
+      },
+
+      addSheetWithId: (id: string, name: string) => {
+        const { sheets } = get();
+        // Check if sheet with this ID already exists
+        if (sheets.some((s) => s.id === id)) return;
+
+        const newSheet: SheetConfig = {
+          id,
+          name,
+          type: 'data',
+          data: [],
+        };
+
+        set({
+          sheets: [...sheets, newSheet],
+          activeSheetId: id,
+        });
       },
 
       updateSheet: (id: string, updates: Partial<Pick<SheetConfig, 'name' | 'data'>>) => {

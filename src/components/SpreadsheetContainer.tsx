@@ -98,7 +98,7 @@ function convertFromFortuneSheetData(data: CellMatrix | undefined): CellData[][]
 }
 
 export function SpreadsheetContainer() {
-  const { sheets, activeSheetId, setActiveSheet, setSheetData, getConfigSheet } = useSheetsStore()
+  const { sheets, activeSheetId, setActiveSheet, setSheetData, getConfigSheet, addSheetWithId, removeSheet, updateSheet } = useSheetsStore()
   const delimiter = useSettingsStore((state) => state.delimiter)
   const prefix = useSettingsStore((state) => state.prefix)
   const suffix = useSettingsStore((state) => state.suffix)
@@ -124,6 +124,44 @@ export function SpreadsheetContainer() {
   const handleSheetActivate = useCallback((sheetId: string) => {
     setActiveSheet(sheetId)
   }, [setActiveSheet])
+
+  // Prevent deletion of Config sheet
+  const handleBeforeDeleteSheet = useCallback((id: string): boolean => {
+    const sheet = sheets.find(s => s.id === id)
+    if (sheet?.type === "config") {
+      return false // Prevent deletion
+    }
+    return true // Allow deletion of data sheets
+  }, [sheets])
+
+  // Sync sheet deletion to Zustand store
+  const handleAfterDeleteSheet = useCallback((id: string) => {
+    removeSheet(id)
+  }, [removeSheet])
+
+  // Prevent renaming of Config sheet
+  const handleBeforeUpdateSheetName = useCallback((id: string): boolean => {
+    const sheet = sheets.find(s => s.id === id)
+    if (sheet?.type === "config") {
+      return false // Prevent rename
+    }
+    return true // Allow rename of data sheets
+  }, [sheets])
+
+  // Sync sheet rename to Zustand store
+  // Fortune-Sheet hook signature: (id: string, oldName: string, newName: string)
+  const handleAfterUpdateSheetName = useCallback((id: string, oldName: string, newName: string) => {
+    void oldName // Unused but required by Fortune-Sheet hook signature
+    updateSheet(id, { name: newName })
+  }, [updateSheet])
+
+  // Handle new sheet added via Fortune-Sheet UI
+  const handleAfterAddSheet = useCallback((sheet: Sheet) => {
+    // Fortune-Sheet generates its own ID; we need to sync to our store
+    if (sheet.id) {
+      addSheetWithId(sheet.id, sheet.name ?? "Sheet")
+    }
+  }, [addSheetWithId])
 
   // Handle sheet data changes from Fortune-Sheet
   const handleChange = useCallback((data: Sheet[]) => {
@@ -174,7 +212,12 @@ export function SpreadsheetContainer() {
   // Hooks for Fortune-Sheet events
   const hooks = useMemo(() => ({
     afterActivateSheet: handleSheetActivate,
-  }), [handleSheetActivate])
+    beforeDeleteSheet: handleBeforeDeleteSheet,
+    afterDeleteSheet: handleAfterDeleteSheet,
+    beforeUpdateSheetName: handleBeforeUpdateSheetName,
+    afterUpdateSheetName: handleAfterUpdateSheetName,
+    afterAddSheet: handleAfterAddSheet,
+  }), [handleSheetActivate, handleBeforeDeleteSheet, handleAfterDeleteSheet, handleBeforeUpdateSheetName, handleAfterUpdateSheetName, handleAfterAddSheet])
 
   if (sheets.length === 0) {
     return (

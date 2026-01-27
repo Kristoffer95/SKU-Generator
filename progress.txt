@@ -1,3 +1,22 @@
+## PRD-008: Multiple Sheets Support - COMPLETE
+- Extended SpreadsheetContainer with Fortune-Sheet hooks for sheet management
+- Config sheet protected: beforeDeleteSheet returns false for config type
+- Config sheet rename blocked: beforeUpdateSheetName returns false for config type
+- Data sheet rename synced: afterUpdateSheetName updates Zustand store
+- New sheets synced: afterAddSheet adds Fortune-Sheet created sheets to Zustand
+- Sheet deletion synced: afterDeleteSheet removes from Zustand store
+- Added addSheetWithId to sheets store for external ID sheet creation
+- Fortune-Sheet built-in UI handles: + button, double-click rename, X delete
+- Config tab styled orange (#f97316), data tabs default color
+- 10 new tests: 3 for addSheetWithId, 7 for SpreadsheetContainer hooks
+- All feedback loops pass (150 tests)
+
+Files changed:
+- src/store/sheets.ts (addSheetWithId function)
+- src/store/sheets.test.ts (+3 addSheetWithId tests)
+- src/components/SpreadsheetContainer.tsx (hook handlers for sheet ops)
+- src/components/SpreadsheetContainer.test.tsx (+7 hook tests)
+
 ## PRD-007: Auto SKU Generation - COMPLETE
 - Created src/lib/auto-sku.ts with auto-SKU helper functions
 - updateRowSKU: generates SKU for single row based on headers and Config specs

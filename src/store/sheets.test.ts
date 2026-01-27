@@ -123,6 +123,39 @@ describe('useSheetsStore', () => {
     });
   });
 
+  describe('addSheetWithId', () => {
+    it('should add a sheet with specific ID', () => {
+      const { addSheetWithId } = useSheetsStore.getState();
+      addSheetWithId('custom-id-123', 'External Sheet');
+
+      const { sheets, activeSheetId } = useSheetsStore.getState();
+      expect(sheets).toHaveLength(1);
+      expect(sheets[0].id).toBe('custom-id-123');
+      expect(sheets[0].name).toBe('External Sheet');
+      expect(sheets[0].type).toBe('data');
+      expect(activeSheetId).toBe('custom-id-123');
+    });
+
+    it('should not add duplicate sheet if ID already exists', () => {
+      const { addSheetWithId } = useSheetsStore.getState();
+      addSheetWithId('existing-id', 'First Sheet');
+      addSheetWithId('existing-id', 'Duplicate Sheet');
+
+      const { sheets } = useSheetsStore.getState();
+      expect(sheets).toHaveLength(1);
+      expect(sheets[0].name).toBe('First Sheet');
+    });
+
+    it('should set new sheet as active', () => {
+      const { addSheet, addSheetWithId } = useSheetsStore.getState();
+      addSheet('First');
+      addSheetWithId('new-id', 'Second');
+
+      const { activeSheetId } = useSheetsStore.getState();
+      expect(activeSheetId).toBe('new-id');
+    });
+  });
+
   describe('updateSheet', () => {
     it('should update sheet name', () => {
       const { addSheet, updateSheet } = useSheetsStore.getState();

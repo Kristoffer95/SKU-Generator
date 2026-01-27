@@ -2,19 +2,26 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { useSheetsStore } from '@/store/sheets'
 
+// Track hooks passed to Workbook for testing
+let capturedHooks: Record<string, (...args: unknown[]) => unknown> = {}
+
 // Mock Fortune-Sheet Workbook since it uses canvas
 vi.mock('@fortune-sheet/react', () => ({
-  Workbook: vi.fn(({ data, showSheetTabs }) => (
-    <div data-testid="mock-workbook">
-      <span data-testid="sheet-count">{data?.length || 0} sheets</span>
-      {showSheetTabs && <span data-testid="sheet-tabs">tabs shown</span>}
-      {data?.map((sheet: { id: string; name: string; color?: string }) => (
-        <div key={sheet.id} data-testid={`sheet-${sheet.name}`} data-color={sheet.color}>
-          {sheet.name}
-        </div>
-      ))}
-    </div>
-  )),
+  Workbook: vi.fn(({ data, showSheetTabs, hooks }) => {
+    // Capture hooks for testing
+    capturedHooks = hooks || {}
+    return (
+      <div data-testid="mock-workbook">
+        <span data-testid="sheet-count">{data?.length || 0} sheets</span>
+        {showSheetTabs && <span data-testid="sheet-tabs">tabs shown</span>}
+        {data?.map((sheet: { id: string; name: string; color?: string }) => (
+          <div key={sheet.id} data-testid={`sheet-${sheet.name}`} data-color={sheet.color}>
+            {sheet.name}
+          </div>
+        ))}
+      </div>
+    )
+  }),
 }))
 
 // Import after mocking
@@ -24,6 +31,8 @@ describe('SpreadsheetContainer', () => {
   beforeEach(() => {
     // Reset store state
     useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    // Reset captured hooks
+    capturedHooks = {}
   })
 
   it('shows empty state when no sheets exist', () => {
@@ -102,5 +111,92 @@ describe('buildDataVerification helper', () => {
 
     // The component should have rendered without errors
     expect(screen.getByTestId('mock-workbook')).toBeInTheDocument()
+  })
+})
+
+describe('SpreadsheetContainer hooks', () => {
+  beforeEach(() => {
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    capturedHooks = {}
+  })
+
+  it('provides beforeDeleteSheet hook that blocks Config sheet deletion', () => {
+    useSheetsStore.getState().initializeWithConfigSheet()
+    const configSheet = useSheetsStore.getState().getConfigSheet()!
+
+    render(<SpreadsheetContainer />)
+
+    const result = capturedHooks.beforeDeleteSheet?.(configSheet.id)
+    expect(result).toBe(false)
+  })
+
+  it('provides beforeDeleteSheet hook that allows data sheet deletion', () => {
+    useSheetsStore.getState().initializeWithConfigSheet()
+    const dataSheetId = useSheetsStore.getState().addSheet('Data')
+
+    render(<SpreadsheetContainer />)
+
+    const result = capturedHooks.beforeDeleteSheet?.(dataSheetId)
+    expect(result).toBe(true)
+  })
+
+  it('provides beforeUpdateSheetName hook that blocks Config sheet rename', () => {
+    useSheetsStore.getState().initializeWithConfigSheet()
+    const configSheet = useSheetsStore.getState().getConfigSheet()!
+
+    render(<SpreadsheetContainer />)
+
+    const result = capturedHooks.beforeUpdateSheetName?.(configSheet.id, 'Config', 'NewName')
+    expect(result).toBe(false)
+  })
+
+  it('provides beforeUpdateSheetName hook that allows data sheet rename', () => {
+    useSheetsStore.getState().initializeWithConfigSheet()
+    const dataSheetId = useSheetsStore.getState().addSheet('Data')
+
+    render(<SpreadsheetContainer />)
+
+    const result = capturedHooks.beforeUpdateSheetName?.(dataSheetId, 'Data', 'Renamed')
+    expect(result).toBe(true)
+  })
+
+  it('provides afterUpdateSheetName hook that syncs rename to store', () => {
+    useSheetsStore.getState().initializeWithConfigSheet()
+    const dataSheetId = useSheetsStore.getState().addSheet('Data')
+
+    render(<SpreadsheetContainer />)
+
+    capturedHooks.afterUpdateSheetName?.(dataSheetId, 'Data', 'Renamed')
+
+    const { sheets } = useSheetsStore.getState()
+    const renamedSheet = sheets.find(s => s.id === dataSheetId)
+    expect(renamedSheet?.name).toBe('Renamed')
+  })
+
+  it('provides afterAddSheet hook that syncs new sheet to store', () => {
+    useSheetsStore.getState().initializeWithConfigSheet()
+
+    render(<SpreadsheetContainer />)
+
+    // Simulate Fortune-Sheet adding a new sheet
+    capturedHooks.afterAddSheet?.({ id: 'fortune-sheet-id', name: 'New Sheet' })
+
+    const { sheets } = useSheetsStore.getState()
+    const newSheet = sheets.find(s => s.id === 'fortune-sheet-id')
+    expect(newSheet).toBeDefined()
+    expect(newSheet?.name).toBe('New Sheet')
+    expect(newSheet?.type).toBe('data')
+  })
+
+  it('provides afterDeleteSheet hook that syncs deletion to store', () => {
+    useSheetsStore.getState().initializeWithConfigSheet()
+    const dataSheetId = useSheetsStore.getState().addSheet('Data')
+
+    render(<SpreadsheetContainer />)
+
+    capturedHooks.afterDeleteSheet?.(dataSheetId)
+
+    const { sheets } = useSheetsStore.getState()
+    expect(sheets.find(s => s.id === dataSheetId)).toBeUndefined()
   })
 })

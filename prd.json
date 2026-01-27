@@ -113,7 +113,7 @@
         "Support deleting data sheets (X button on tab, not Config)",
         "Each data sheet maintains independent row data but shares Config specs"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "PRD-009",
