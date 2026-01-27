@@ -1,0 +1,170 @@
+{
+  "project": "SKU Generator",
+  "description": "A React application that lets users define specifications with value-to-SKU code mappings, enabling auto-generation of SKU codes in a spreadsheet interface",
+  "items": [
+    {
+      "id": "PRD-001",
+      "category": "Project Setup",
+      "description": "Initialize React project with Vite, TypeScript, Tailwind CSS, shadcn/ui, Framer Motion, Zustand, and Fortune-Sheet",
+      "stepsToVerify": [
+        "Run 'npm create vite@latest' with react-ts template",
+        "Install all dependencies: zustand, framer-motion, @fortune-sheet/react, tailwindcss",
+        "Configure Tailwind CSS with tailwind.config.js and postcss.config.js",
+        "Initialize shadcn/ui and add required components (button, card, dialog, sidebar, tabs, input)",
+        "Verify 'npm run dev' starts the development server without errors"
+      ],
+      "passes": true
+    },
+    {
+      "id": "PRD-002",
+      "category": "Data Model",
+      "description": "Define TypeScript interfaces for Specification, SpecValue, and related types",
+      "stepsToVerify": [
+        "Create src/types/index.ts with SpecValue interface (id, label, skuCode)",
+        "Create Specification interface (id, name, values array, columnIndex)",
+        "Create SheetConfig interface for multi-sheet support",
+        "Create AppSettings interface for SKU delimiter and prefix/suffix options",
+        "Verify TypeScript compiles without errors"
+      ],
+      "passes": false
+    },
+    {
+      "id": "PRD-003",
+      "category": "State Management",
+      "description": "Implement Zustand stores with localStorage persistence for specifications, sheets, and settings",
+      "stepsToVerify": [
+        "Create src/store/specifications.ts with CRUD operations for specs and values",
+        "Create src/store/sheets.ts for multi-sheet management",
+        "Create src/store/settings.ts for app configuration (delimiter, prefix, suffix)",
+        "Verify stores persist to localStorage on changes",
+        "Verify stores rehydrate from localStorage on page reload"
+      ],
+      "passes": false
+    },
+    {
+      "id": "PRD-004",
+      "category": "SKU Generation Logic",
+      "description": "Implement core SKU generation function that combines SKU codes from selected specification values",
+      "stepsToVerify": [
+        "Create src/lib/sku-generator.ts with generateSKU function",
+        "Function takes selected values (Map of specId to label) and specifications array",
+        "Function looks up skuCode for each selected label",
+        "Function joins codes with configurable delimiter (default '-')",
+        "Function supports optional prefix and suffix",
+        "Test: Temperature='29deg C' (29C) + Color='Red' (R) = '29C-R'"
+      ],
+      "passes": false
+    },
+    {
+      "id": "PRD-005",
+      "category": "Specification Management UI",
+      "description": "Create sidebar UI for managing specifications and their values with Framer Motion animations",
+      "stepsToVerify": [
+        "Create SpecificationList component with animated list (add/remove animations)",
+        "Create SpecificationItem component with expand/collapse animation",
+        "Create SpecificationForm dialog for adding/editing specification names",
+        "Create SpecValueForm for adding values with label and SKU code fields",
+        "Enable drag-to-reorder for specifications",
+        "Verify adding a spec with values 'Red' -> 'R' appears correctly"
+      ],
+      "passes": false
+    },
+    {
+      "id": "PRD-006",
+      "category": "Spreadsheet Integration",
+      "description": "Integrate Fortune-Sheet spreadsheet with dropdown validation for specification columns",
+      "stepsToVerify": [
+        "Create SpreadsheetContainer component wrapping Fortune-Sheet Workbook",
+        "Create useSpreadsheet hook for Fortune-Sheet API interactions",
+        "Generate header row from specification names plus 'SKU' column",
+        "Apply dataVerification (dropdown) to each spec column with spec values as options",
+        "Verify clicking a cell shows dropdown with spec values"
+      ],
+      "passes": false
+    },
+    {
+      "id": "PRD-007",
+      "category": "Auto SKU Generation",
+      "description": "Automatically update SKU column when specification values are selected in a row",
+      "stepsToVerify": [
+        "Listen to onCellUpdated callback from Fortune-Sheet",
+        "When a spec column value changes, collect all values in that row",
+        "Call generateSKU with collected values",
+        "Update the SKU column cell with generated SKU",
+        "Test: Select 'Temperature: 29deg C' and 'Color: Red' -> SKU shows '29C-R'"
+      ],
+      "passes": false
+    },
+    {
+      "id": "PRD-008",
+      "category": "Multiple Sheets",
+      "description": "Support multiple spreadsheet tabs with independent data",
+      "stepsToVerify": [
+        "Create SheetTabs component showing tab bar at bottom of spreadsheet",
+        "Support adding new sheets via '+' button",
+        "Support renaming sheets (double-click tab)",
+        "Support deleting sheets (X button on tab)",
+        "Verify each sheet maintains independent data",
+        "Verify switching tabs shows correct sheet content"
+      ],
+      "passes": false
+    },
+    {
+      "id": "PRD-009",
+      "category": "App Layout",
+      "description": "Create main application layout with collapsible sidebar and spreadsheet area",
+      "stepsToVerify": [
+        "Create AppLayout component with shadcn/ui SidebarProvider",
+        "Left sidebar contains specification management",
+        "Main area contains spreadsheet with sheet tabs below",
+        "Header with app title and sidebar toggle button",
+        "Sidebar should be collapsible/expandable"
+      ],
+      "passes": false
+    },
+    {
+      "id": "PRD-010",
+      "category": "Import/Export",
+      "description": "Support importing and exporting spreadsheet data to Excel and CSV formats",
+      "stepsToVerify": [
+        "Create export.ts with exportToExcel function using Fortune-Sheet export",
+        "Create exportToCSV function for CSV download",
+        "Create importFromExcel function for loading Excel files",
+        "Add Import/Export buttons to header or settings",
+        "Verify exported Excel opens correctly in Excel/Google Sheets",
+        "Verify importing an Excel file loads data into spreadsheet"
+      ],
+      "passes": false
+    },
+    {
+      "id": "PRD-011",
+      "category": "Settings",
+      "description": "Allow users to configure SKU generation settings (delimiter, prefix, suffix)",
+      "stepsToVerify": [
+        "Create Settings dialog accessible from sidebar footer",
+        "Setting: SKU delimiter (default '-', options: '-', '_', '', custom)",
+        "Setting: SKU prefix (optional string prepended to all SKUs)",
+        "Setting: SKU suffix (optional string appended to all SKUs)",
+        "Settings persist to localStorage",
+        "Changing settings triggers SKU recalculation for all rows"
+      ],
+      "passes": false
+    },
+    {
+      "id": "PRD-012",
+      "category": "End-to-End Verification",
+      "description": "Complete workflow test from spec creation to SKU generation",
+      "stepsToVerify": [
+        "Create specification 'Temperature' with values: '29deg C' -> '29C', '30deg C' -> '30C'",
+        "Create specification 'Color' with values: 'Red' -> 'R', 'Blue' -> 'B'",
+        "Create specification 'Type' with values: 'Standard' -> 'STD', 'Premium' -> 'PRM'",
+        "Verify spreadsheet shows columns: Temperature, Color, Type, SKU",
+        "Select '29deg C', 'Red', 'Standard' in row 2",
+        "Verify SKU column shows '29C-R-STD'",
+        "Change Color to 'Blue' -> SKU updates to '29C-B-STD'",
+        "Export to Excel and verify data integrity"
+      ],
+      "passes": false
+    }
+  ]
+}

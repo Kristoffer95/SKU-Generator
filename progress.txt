@@ -1,0 +1,18 @@
+## PRD-001: Project Setup - COMPLETE
+- Initialized React+Vite+TypeScript project manually (Vite CLI had permission issues)
+- Installed: zustand, framer-motion, @fortune-sheet/react@1.0.4, tailwindcss, shadcn/ui deps
+- Configured: tailwind.config.js, postcss.config.js with shadcn theme vars
+- Added shadcn/ui components: button, card, dialog, input, label, tabs, separator, tooltip, sidebar
+- Created use-mobile hook for sidebar responsiveness
+- Setup vitest with jsdom + testing-library
+- All feedback loops pass: typecheck, lint (warnings only), test
+
+Files created/changed:
+- package.json, tsconfig.json, tsconfig.node.json, vite.config.ts
+- tailwind.config.js, postcss.config.js, eslint.config.js
+- index.html, src/main.tsx, src/App.tsx, src/index.css, src/vite-env.d.ts
+- src/lib/utils.ts
+- src/components/ui/*.tsx (button, card, dialog, input, label, tabs, separator, tooltip, sidebar)
+- src/hooks/use-mobile.tsx
+- vitest.config.ts, src/test/setup.ts, src/App.test.tsx
+
