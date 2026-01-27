@@ -98,7 +98,7 @@
         "Generate SKU and update the SKU column cell",
         "Test: Select 'Red' (R), 'Small' (S) in row -> SKU shows 'R-S'"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "PRD-008",

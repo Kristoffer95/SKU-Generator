@@ -3,8 +3,10 @@ import { Workbook } from "@fortune-sheet/react"
 import type { Sheet, Cell, CellMatrix } from "@fortune-sheet/core"
 import "@fortune-sheet/react/dist/index.css"
 import { useSheetsStore } from "@/store/sheets"
+import { useSettingsStore } from "@/store/settings"
 import { parseConfigSheet, getSpecValues } from "@/lib/config-sheet"
-import type { CellData, ParsedSpec } from "@/types"
+import { processAutoSKU } from "@/lib/auto-sku"
+import type { CellData, ParsedSpec, SheetConfig } from "@/types"
 
 /**
  * Build dataVerification object for dropdown cells based on column headers
@@ -97,6 +99,10 @@ function convertFromFortuneSheetData(data: CellMatrix | undefined): CellData[][]
 
 export function SpreadsheetContainer() {
   const { sheets, activeSheetId, setActiveSheet, setSheetData, getConfigSheet } = useSheetsStore()
+  const delimiter = useSettingsStore((state) => state.delimiter)
+  const prefix = useSettingsStore((state) => state.prefix)
+  const suffix = useSettingsStore((state) => state.suffix)
+  const settings = useMemo(() => ({ delimiter, prefix, suffix }), [delimiter, prefix, suffix])
 
   // Parse Config sheet for spec definitions
   const configSheet = getConfigSheet()
@@ -105,6 +111,15 @@ export function SpreadsheetContainer() {
     return parseConfigSheet(configSheet.data)
   }, [configSheet])
 
+  // Keep a reference to previous sheet data for change detection
+  const sheetsRef = useMemo(() => {
+    const map = new Map<string, CellData[][]>()
+    sheets.forEach(sheet => {
+      map.set(sheet.id, sheet.data)
+    })
+    return map
+  }, [sheets])
+
   // Handle when user clicks a sheet tab in Fortune-Sheet
   const handleSheetActivate = useCallback((sheetId: string) => {
     setActiveSheet(sheetId)
@@ -112,13 +127,26 @@ export function SpreadsheetContainer() {
 
   // Handle sheet data changes from Fortune-Sheet
   const handleChange = useCallback((data: Sheet[]) => {
+    // Find the original sheets from store for type information
+    const sheetMap = new Map<string, SheetConfig>()
+    sheets.forEach(s => sheetMap.set(s.id, s))
+
     // Find changed sheets and update our store
     data.forEach(sheet => {
       if (!sheet.id) return
-      const sheetData = convertFromFortuneSheetData(sheet.data)
-      setSheetData(sheet.id, sheetData)
+
+      const sheetConfig = sheetMap.get(sheet.id)
+      const newData = convertFromFortuneSheetData(sheet.data)
+
+      // For data sheets, auto-generate SKUs for changed rows
+      if (sheetConfig?.type === "data") {
+        const oldData = sheetsRef.get(sheet.id) ?? []
+        processAutoSKU(oldData, newData, parsedSpecs, settings)
+      }
+
+      setSheetData(sheet.id, newData)
     })
-  }, [setSheetData])
+  }, [setSheetData, sheets, sheetsRef, parsedSpecs, settings])
 
   // Convert sheets to Fortune-Sheet format with hooks
   const fortuneSheetData: Sheet[] = useMemo(() => {

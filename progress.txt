@@ -1,3 +1,22 @@
+## PRD-007: Auto SKU Generation - COMPLETE
+- Created src/lib/auto-sku.ts with auto-SKU helper functions
+- updateRowSKU: generates SKU for single row based on headers and Config specs
+- findChangedRows: compares old/new data to detect which rows changed (excludes SKU col)
+- processAutoSKU: orchestrates change detection and SKU updates
+- SpreadsheetContainer handleChange now calls processAutoSKU for data sheets
+- Fixed infinite loop: settings now selected as primitives then memoized
+- Row values sliced based on header count, not row length (handles missing SKU col)
+- 22 tests for auto-sku.ts covering edge cases and workflows
+- Test: Select 'Red', 'Small' -> SKU shows 'R-S' ✓
+- All feedback loops pass (140 tests)
+
+Files created:
+- src/lib/auto-sku.ts
+- src/lib/auto-sku.test.ts
+
+Files changed:
+- src/components/SpreadsheetContainer.tsx (processAutoSKU integration, settings fix)
+
 ## PRD-006: Spreadsheet Integration - COMPLETE
 - Created SpreadsheetContainer wrapping Fortune-Sheet Workbook component
 - Parses Config sheet via parseConfigSheet to get spec names and allowed values
