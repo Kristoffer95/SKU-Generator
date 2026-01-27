@@ -186,7 +186,7 @@
         "Validate specification name is unique (not already in Config)",
         "Verify new dropdown appears in the new column with defined values"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }

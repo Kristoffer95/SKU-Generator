@@ -177,23 +177,29 @@ describe("SpecificationList", () => {
     })
   })
 
-  it("navigates to Config sheet when Go to Config clicked in dialog", async () => {
+  it("closes dialog after successfully adding specification", async () => {
     const user = userEvent.setup()
     useSheetsStore.getState().initializeWithConfigSheet()
-    const configSheet = useSheetsStore.getState().getConfigSheet()
-
-    // Add a data sheet and make it active
-    useSheetsStore.getState().addSheet("Sheet 1")
 
     render(<SpecificationList />)
 
     await user.click(screen.getByRole("button", { name: /add specification/i }))
-    await user.click(screen.getByRole("button", { name: /go to config/i }))
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+
+    // Fill in the form
+    await user.type(screen.getByLabelText("Specification Name"), "Color")
+    await user.type(screen.getByLabelText("Value 1 label"), "Red")
+    await user.type(screen.getByLabelText("Value 1 SKU code"), "R")
+
+    // Submit the form
+    await user.click(screen.getByRole("button", { name: "Add Specification" }))
 
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     })
-    expect(useSheetsStore.getState().activeSheetId).toBe(configSheet?.id)
+
+    // New spec should appear in the list
+    expect(screen.getByText("Color")).toBeInTheDocument()
   })
 
   it("updates when Config sheet data changes", async () => {

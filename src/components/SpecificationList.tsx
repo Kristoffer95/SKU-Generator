@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { useSheetsStore } from "@/store/sheets"
 import { parseConfigSheet } from "@/lib/config-sheet"
+import { AddSpecDialog } from "@/components/AddSpecDialog"
 import type { ParsedSpec } from "@/types"
 
 interface SpecItemProps {
@@ -152,41 +153,10 @@ export function SpecificationList() {
           Add Specification
         </Button>
       </div>
-      {/* Placeholder for AddSpecDialog - will be implemented in PRD-013 */}
-      {isAddDialogOpen && (
-        <div
-          role="dialog"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-          onClick={() => setIsAddDialogOpen(false)}
-        >
-          <div
-            className="bg-background p-6 rounded-lg shadow-lg max-w-md w-full mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-lg font-semibold mb-4">Add Specification</h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              To add specifications, edit the Config sheet directly.
-              Add rows with: Specification name, Value, and SKU Code.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setIsAddDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => {
-                  setIsAddDialogOpen(false)
-                  handleJumpToConfig()
-                }}
-              >
-                Go to Config
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AddSpecDialog
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+      />
     </div>
   )
 }

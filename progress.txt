@@ -1,3 +1,25 @@
+## PRD-013: Add Specification Dialog - COMPLETE
+- Created AddSpecDialog component accessible from sidebar Add Specification button
+- Form: spec name input + dynamic list of value/SKU code pairs
+- Add Value button adds new entry, trash removes (min 1 entry required)
+- Validation: spec name required, unique (case-insensitive), at least one value
+- Submit adds rows to Config sheet for each value (spec name, value label, SKU code)
+- Submit adds column to active data sheet (inserted before SKU column)
+- Empty data sheets get header row created with new spec + SKU column
+- Form resets on close, error messages shown inline
+- Integrated into SpecificationList, replaced placeholder dialog
+- 19 tests: render, inputs, validation, Config/data sheet updates, reset
+- Updated SpecificationList test for new dialog behavior
+- All feedback loops pass (179 tests)
+
+Files created:
+- src/components/AddSpecDialog.tsx
+- src/components/AddSpecDialog.test.tsx
+
+Files changed:
+- src/components/SpecificationList.tsx (import & use AddSpecDialog)
+- src/components/SpecificationList.test.tsx (updated test for new dialog)
+
 ## PRD-005: Sidebar Specification View - COMPLETE
 - Rewrote SpecificationList to parse specs from Config sheet via parseConfigSheet()
 - Read-only display: spec names with value counts, expandable to show values
