@@ -239,6 +239,8 @@
       "category": "User Onboarding",
       "description": "Implement comprehensive 24-step Driver.js guided tutorial organized into 3 phases (Foundation, Create SKU, Advanced) that teaches users how to use the app step-by-step with auto-opening dialogs at relevant steps",
       "stepsToVerify": [
+        "Auto-start tour on first page load: In App.tsx useEffect, check hasTourCompleted() and call startGuidedTour() if false",
+        "Add small delay (500-1000ms) before auto-starting tour to ensure all elements are rendered",
         "Phase 1 - Foundation (Steps 1-7): Welcome, Config tab intro, Config structure explanation, row mapping demo, sidebar overview, spec cards explanation, foundation checkpoint",
         "Phase 2 - Create SKU (Steps 8-17): Add spec button, add spec dialog overview, spec name field, values section, create data sheet, column headers setup, SKU column explanation, dropdown usage, SKU generation explanation, create SKU checkpoint",
         "Phase 3 - Advanced (Steps 18-24): Settings button, settings dialog, import button, export button, multi-sheet overview, tour restart button, completion",
@@ -263,6 +265,8 @@
         "Verify Previous/Next navigation works correctly through all 24 steps",
         "Verify tour can be dismissed at any point",
         "Verify tour completion state persists to localStorage",
+        "Verify tour auto-starts on first page load (clear localStorage, refresh page)",
+        "Verify tour does NOT auto-start on subsequent visits (after completion)",
         "Run npm run typecheck with no errors",
         "Run npm run lint with no errors",
         "Run npm run test with all tests passing"

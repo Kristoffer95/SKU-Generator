@@ -1,3 +1,14 @@
+## PRD-016: Auto-Start Tour on First Page Load - COMPLETE
+- Added useEffect in App.tsx to auto-start guided tour on first visit
+- Checks hasTourCompleted() before starting tour
+- 750ms delay before starting tour to ensure all elements rendered
+- Added 2 new tests for auto-start behavior (starts when not completed, skips when completed)
+- All feedback loops pass (248 tests, typecheck, lint)
+
+Files changed:
+- src/App.tsx (auto-start tour useEffect with delay)
+- src/App.test.tsx (+2 tests for auto-start behavior)
+
 ## PRD-016: Enhanced User Onboarding with 24-Step Driver.js Tutorial - COMPLETE
 - Rewrote guided-tour.ts with 24 detailed steps in 3 phases: Foundation (1-7), Create SKU (8-17), Advanced (18-24)
 - Created dialog opener registry: registerTourDialogOpeners(), unregisterTourDialogOpeners()

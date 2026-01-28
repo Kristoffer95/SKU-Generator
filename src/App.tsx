@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/AppLayout"
 import { SpecificationList } from "@/components/SpecificationList"
 import { SpreadsheetContainer } from "@/components/SpreadsheetContainer"
 import { useSheetsStore } from "@/store/sheets"
+import { hasTourCompleted, startGuidedTour } from "@/lib/guided-tour"
 
 function App() {
   const initializeWithConfigSheet = useSheetsStore(s => s.initializeWithConfigSheet)
@@ -11,6 +12,17 @@ function App() {
   useEffect(() => {
     initializeWithConfigSheet()
   }, [initializeWithConfigSheet])
+
+  // Auto-start guided tour on first page load
+  useEffect(() => {
+    if (!hasTourCompleted()) {
+      // Delay to ensure all elements are rendered before starting tour
+      const timeout = setTimeout(() => {
+        startGuidedTour()
+      }, 750)
+      return () => clearTimeout(timeout)
+    }
+  }, [])
 
   return (
     <AppLayout sidebar={<SpecificationList />}>
