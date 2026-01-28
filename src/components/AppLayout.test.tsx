@@ -85,4 +85,24 @@ describe('AppLayout', () => {
     expect(fileInput).toBeInTheDocument()
     expect(fileInput).toHaveAttribute('accept', '.xlsx,.xls')
   })
+
+  describe('layout constraints', () => {
+    it('main content area has min-h-0 for proper flex shrinking', () => {
+      render(<AppLayout>content</AppLayout>)
+      // The inner main element (inside SidebarInset) should have min-h-0
+      const mainElements = screen.getAllByRole('main')
+      // The outer main is SidebarInset, inner contains our content
+      const innerMain = mainElements.find(el => el.classList.contains('min-h-0'))
+      expect(innerMain).toBeInTheDocument()
+    })
+
+    it('SidebarInset has h-svh and overflow-hidden for fixed viewport height', () => {
+      render(<AppLayout>content</AppLayout>)
+      // SidebarInset renders as a main element with h-svh class
+      const mainElements = screen.getAllByRole('main')
+      const sidebarInset = mainElements.find(el => el.classList.contains('h-svh'))
+      expect(sidebarInset).toBeInTheDocument()
+      expect(sidebarInset).toHaveClass('overflow-hidden')
+    })
+  })
 })

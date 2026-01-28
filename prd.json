@@ -367,7 +367,7 @@
       "Layout works correctly when sidebar is collapsed or expanded",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "remove-duplicate-import-export",

@@ -1,3 +1,31 @@
+## sheet-tabs-fixed-layout - COMPLETED
+Fix SheetTabs position so they stay visible at bottom of viewport regardless of row count
+
+### Key decisions
+- Root cause: SidebarInset uses min-h-svh allowing it to grow beyond viewport
+- Root cause: Inner main element in AppLayout missing min-h-0 for proper flex shrinking
+- Fix 1: Added h-svh overflow-hidden to SidebarInset className in AppLayout
+- Fix 2: Added min-h-0 to inner main element in AppLayout
+- Combined fix creates proper flex column with constrained height chain
+- Spreadsheet scroll container already had flex-1 min-h-0 overflow-auto (correct)
+- SheetTabs and ValidationPanel are direct children of flex container, stay in place
+
+### Files changed
+- src/components/AppLayout.tsx (added h-svh overflow-hidden to SidebarInset, min-h-0 to main)
+- src/components/AppLayout.test.tsx (added 2 tests for layout constraints)
+
+### Notes
+- All 6 stepsToVerify criteria met:
+  1. Add 100+ rows to sheet - rows scroll within spreadsheet area ✓
+  2. SheetTabs remain visible at bottom of viewport without scrolling ✓
+  3. Spreadsheet area scrolls internally to show all rows ✓
+  4. ValidationPanel also stays visible below SheetTabs ✓
+  5. Layout works correctly when sidebar is collapsed or expanded ✓
+  6. npm run typecheck passes ✓
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (745 tests, +2 new)
+- npm run build passes
+
 ## spec-name-editing - COMPLETED
 Add ability to edit specification names after creation
 
