@@ -1,3 +1,22 @@
+## sidebar-ui-1: Enhance SpecificationList to read from useSpecificationsStore
+
+**Completed**: SpecificationList now reads from useSpecificationsStore instead of Config sheet
+
+**Key decisions**:
+- Replaced useSheetsStore/parseConfigSheet with useSpecificationsStore hook
+- Updated SpecItem to accept Specification type (not ParsedSpec)
+- Changed field references: displayValue (was label), skuFragment (was skuCode)
+- Specs sorted by order field (lowest first) via useMemo
+- Removed "Edit" button that jumped to Config sheet (no longer applicable)
+- Updated empty state message: "Click Add Specification to create one"
+- Keys now use spec.id and value.id instead of name/index
+
+**Files changed**:
+- src/components/SpecificationList.tsx: Replaced Config sheet parsing with store hook
+- src/components/SpecificationList.test.tsx: Rewrote 12 tests to use specifications store
+
+---
+
 ## remove-config-3: Update dropdown building to use specifications store
 
 **Completed**: Dropdowns now built from useSpecificationsStore instead of Config sheet

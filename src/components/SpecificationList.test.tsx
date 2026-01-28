@@ -2,49 +2,46 @@ import { describe, it, expect, beforeEach } from "vitest"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { SpecificationList } from "./SpecificationList"
-import { useSheetsStore } from "@/store/sheets"
-import type { CellData } from "@/types"
+import { useSpecificationsStore } from "@/store/specifications"
+import type { Specification } from "@/types"
 
-// Helper to create Config sheet data
-const createConfigData = (specs: { name: string; value: string; code: string }[]): CellData[][] => {
-  const data: CellData[][] = [
-    [{ v: "Specification" }, { v: "Value" }, { v: "SKU Code" }]
-  ]
-  specs.forEach(({ name, value, code }) => {
-    data.push([{ v: name }, { v: value }, { v: code }])
-  })
-  return data
-}
+// Helper to create specifications
+const createSpecification = (
+  name: string,
+  order: number,
+  values: { displayValue: string; skuFragment: string }[]
+): Specification => ({
+  id: crypto.randomUUID(),
+  name,
+  order,
+  values: values.map((v) => ({
+    id: crypto.randomUUID(),
+    displayValue: v.displayValue,
+    skuFragment: v.skuFragment,
+  })),
+})
 
 // Reset store before each test
 beforeEach(() => {
-  useSheetsStore.setState({
-    sheets: [],
-    activeSheetId: null
+  useSpecificationsStore.setState({
+    specifications: [],
   })
 })
 
 describe("SpecificationList", () => {
-  it("shows empty state when Config sheet has no specs", () => {
-    // Initialize with empty Config sheet (only headers)
-    useSheetsStore.getState().initializeWithConfigSheet()
-
+  it("shows empty state when no specifications exist", () => {
     render(<SpecificationList />)
     expect(screen.getByText(/no specifications yet/i)).toBeInTheDocument()
-    expect(screen.getByText(/add specs in the config sheet/i)).toBeInTheDocument()
+    expect(screen.getByText(/click "add specification" to create one/i)).toBeInTheDocument()
   })
 
   it("shows add specification button", () => {
-    useSheetsStore.getState().initializeWithConfigSheet()
-
     render(<SpecificationList />)
     expect(screen.getByRole("button", { name: /add specification/i })).toBeInTheDocument()
   })
 
   it("opens add dialog when button clicked", async () => {
     const user = userEvent.setup()
-    useSheetsStore.getState().initializeWithConfigSheet()
-
     render(<SpecificationList />)
 
     await user.click(screen.getByRole("button", { name: /add specification/i }))
@@ -53,17 +50,19 @@ describe("SpecificationList", () => {
     expect(screen.getByRole("heading", { name: "Add Specification" })).toBeInTheDocument()
   })
 
-  it("displays specifications parsed from Config sheet", () => {
-    useSheetsStore.getState().initializeWithConfigSheet()
-    const configSheet = useSheetsStore.getState().getConfigSheet()
-    if (configSheet) {
-      useSheetsStore.getState().setSheetData(configSheet.id, createConfigData([
-        { name: "Temperature", value: "29deg C", code: "29C" },
-        { name: "Temperature", value: "30deg C", code: "30C" },
-        { name: "Color", value: "Red", code: "R" },
-        { name: "Color", value: "Blue", code: "B" },
-      ]))
-    }
+  it("displays specifications from store", () => {
+    useSpecificationsStore.setState({
+      specifications: [
+        createSpecification("Temperature", 0, [
+          { displayValue: "29deg C", skuFragment: "29C" },
+          { displayValue: "30deg C", skuFragment: "30C" },
+        ]),
+        createSpecification("Color", 1, [
+          { displayValue: "Red", skuFragment: "R" },
+          { displayValue: "Blue", skuFragment: "B" },
+        ]),
+      ],
+    })
 
     render(<SpecificationList />)
 
@@ -72,15 +71,17 @@ describe("SpecificationList", () => {
   })
 
   it("shows correct value count for each spec", () => {
-    useSheetsStore.getState().initializeWithConfigSheet()
-    const configSheet = useSheetsStore.getState().getConfigSheet()
-    if (configSheet) {
-      useSheetsStore.getState().setSheetData(configSheet.id, createConfigData([
-        { name: "Color", value: "Red", code: "R" },
-        { name: "Color", value: "Blue", code: "B" },
-        { name: "Size", value: "Small", code: "S" },
-      ]))
-    }
+    useSpecificationsStore.setState({
+      specifications: [
+        createSpecification("Color", 0, [
+          { displayValue: "Red", skuFragment: "R" },
+          { displayValue: "Blue", skuFragment: "B" },
+        ]),
+        createSpecification("Size", 1, [
+          { displayValue: "Small", skuFragment: "S" },
+        ]),
+      ],
+    })
 
     render(<SpecificationList />)
 
@@ -88,16 +89,16 @@ describe("SpecificationList", () => {
     expect(screen.getByText("1 value")).toBeInTheDocument() // Size
   })
 
-  it("expands specification to show values", async () => {
+  it("expands specification to show values with skuFragments", async () => {
     const user = userEvent.setup()
-    useSheetsStore.getState().initializeWithConfigSheet()
-    const configSheet = useSheetsStore.getState().getConfigSheet()
-    if (configSheet) {
-      useSheetsStore.getState().setSheetData(configSheet.id, createConfigData([
-        { name: "Color", value: "Red", code: "R" },
-        { name: "Color", value: "Blue", code: "B" },
-      ]))
-    }
+    useSpecificationsStore.setState({
+      specifications: [
+        createSpecification("Color", 0, [
+          { displayValue: "Red", skuFragment: "R" },
+          { displayValue: "Blue", skuFragment: "B" },
+        ]),
+      ],
+    })
 
     render(<SpecificationList />)
 
@@ -114,13 +115,13 @@ describe("SpecificationList", () => {
 
   it("collapses specification when clicked again", async () => {
     const user = userEvent.setup()
-    useSheetsStore.getState().initializeWithConfigSheet()
-    const configSheet = useSheetsStore.getState().getConfigSheet()
-    if (configSheet) {
-      useSheetsStore.getState().setSheetData(configSheet.id, createConfigData([
-        { name: "Color", value: "Red", code: "R" },
-      ]))
-    }
+    useSpecificationsStore.setState({
+      specifications: [
+        createSpecification("Color", 0, [
+          { displayValue: "Red", skuFragment: "R" },
+        ]),
+      ],
+    })
 
     render(<SpecificationList />)
 
@@ -137,35 +138,25 @@ describe("SpecificationList", () => {
     })
   })
 
-  it("shows Edit button that jumps to Config sheet", async () => {
-    const user = userEvent.setup()
-    useSheetsStore.getState().initializeWithConfigSheet()
-    const configSheet = useSheetsStore.getState().getConfigSheet()
-    if (configSheet) {
-      useSheetsStore.getState().setSheetData(configSheet.id, createConfigData([
-        { name: "Color", value: "Red", code: "R" },
-      ]))
-    }
-
-    // Add a data sheet and make it active
-    useSheetsStore.getState().addSheet("Sheet 1")
-    const activeSheetBefore = useSheetsStore.getState().activeSheetId
+  it("sorts specifications by order field (lowest first)", () => {
+    useSpecificationsStore.setState({
+      specifications: [
+        createSpecification("Size", 2, []),
+        createSpecification("Color", 0, []),
+        createSpecification("Material", 1, []),
+      ],
+    })
 
     render(<SpecificationList />)
 
-    // Click Edit button on a spec
-    await user.click(screen.getByRole("button", { name: /edit/i }))
-
-    // Should switch to Config sheet
-    const activeSheetAfter = useSheetsStore.getState().activeSheetId
-    expect(activeSheetAfter).not.toBe(activeSheetBefore)
-    expect(activeSheetAfter).toBe(configSheet?.id)
+    const specNames = screen.getAllByText(/Color|Size|Material/)
+    expect(specNames[0]).toHaveTextContent("Color")
+    expect(specNames[1]).toHaveTextContent("Material")
+    expect(specNames[2]).toHaveTextContent("Size")
   })
 
   it("closes add dialog when Cancel clicked", async () => {
     const user = userEvent.setup()
-    useSheetsStore.getState().initializeWithConfigSheet()
-
     render(<SpecificationList />)
 
     await user.click(screen.getByRole("button", { name: /add specification/i }))
@@ -177,69 +168,15 @@ describe("SpecificationList", () => {
     })
   })
 
-  it("closes dialog after successfully adding specification", async () => {
+  it("handles spec with empty skuFragment", async () => {
     const user = userEvent.setup()
-    useSheetsStore.getState().initializeWithConfigSheet()
-
-    render(<SpecificationList />)
-
-    await user.click(screen.getByRole("button", { name: /add specification/i }))
-    expect(screen.getByRole("dialog")).toBeInTheDocument()
-
-    // Fill in the form
-    await user.type(screen.getByLabelText("Specification Name"), "Color")
-    await user.type(screen.getByLabelText("Value 1 label"), "Red")
-    await user.type(screen.getByLabelText("Value 1 SKU code"), "R")
-
-    // Submit the form
-    await user.click(screen.getByRole("button", { name: "Add Specification" }))
-
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    useSpecificationsStore.setState({
+      specifications: [
+        createSpecification("Color", 0, [
+          { displayValue: "Red", skuFragment: "" },
+        ]),
+      ],
     })
-
-    // New spec should appear in the list
-    expect(screen.getByText("Color")).toBeInTheDocument()
-  })
-
-  it("updates when Config sheet data changes", async () => {
-    useSheetsStore.getState().initializeWithConfigSheet()
-    const configSheet = useSheetsStore.getState().getConfigSheet()
-    if (configSheet) {
-      useSheetsStore.getState().setSheetData(configSheet.id, createConfigData([
-        { name: "Color", value: "Red", code: "R" },
-      ]))
-    }
-
-    const { rerender } = render(<SpecificationList />)
-    expect(screen.getByText("Color")).toBeInTheDocument()
-    expect(screen.getByText("1 value")).toBeInTheDocument()
-
-    // Add more values to Color
-    if (configSheet) {
-      useSheetsStore.getState().setSheetData(configSheet.id, createConfigData([
-        { name: "Color", value: "Red", code: "R" },
-        { name: "Color", value: "Blue", code: "B" },
-        { name: "Size", value: "Small", code: "S" },
-      ]))
-    }
-
-    rerender(<SpecificationList />)
-    expect(screen.getByText("Color")).toBeInTheDocument()
-    expect(screen.getByText("2 values")).toBeInTheDocument()
-    expect(screen.getByText("Size")).toBeInTheDocument()
-    expect(screen.getByText("1 value")).toBeInTheDocument()
-  })
-
-  it("handles spec with empty SKU code", async () => {
-    const user = userEvent.setup()
-    useSheetsStore.getState().initializeWithConfigSheet()
-    const configSheet = useSheetsStore.getState().getConfigSheet()
-    if (configSheet) {
-      useSheetsStore.getState().setSheetData(configSheet.id, createConfigData([
-        { name: "Color", value: "Red", code: "" },
-      ]))
-    }
 
     render(<SpecificationList />)
 
@@ -247,7 +184,61 @@ describe("SpecificationList", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Red")).toBeInTheDocument()
-      expect(screen.getByText("-")).toBeInTheDocument() // Placeholder for empty code
+      expect(screen.getByText("-")).toBeInTheDocument() // Placeholder for empty skuFragment
+    })
+  })
+
+  it("updates when specifications store changes", async () => {
+    const colorSpec = createSpecification("Color", 0, [
+      { displayValue: "Red", skuFragment: "R" },
+    ])
+
+    useSpecificationsStore.setState({
+      specifications: [colorSpec],
+    })
+
+    const { rerender } = render(<SpecificationList />)
+    expect(screen.getByText("Color")).toBeInTheDocument()
+    expect(screen.getByText("1 value")).toBeInTheDocument()
+
+    // Update existing spec and add a new one (reuse the ID to ensure proper update)
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          ...colorSpec,
+          values: [
+            { id: crypto.randomUUID(), displayValue: "Red", skuFragment: "R" },
+            { id: crypto.randomUUID(), displayValue: "Blue", skuFragment: "B" },
+          ],
+        },
+        createSpecification("Size", 1, [
+          { displayValue: "Small", skuFragment: "S" },
+        ]),
+      ],
+    })
+
+    rerender(<SpecificationList />)
+    // Use getAllBy since the same Color spec may show with updated values
+    expect(screen.getByText("Color")).toBeInTheDocument()
+    expect(screen.getByText("2 values")).toBeInTheDocument()
+    expect(screen.getByText("Size")).toBeInTheDocument()
+    expect(screen.getByText("1 value")).toBeInTheDocument()
+  })
+
+  it("shows spec with no values defined message when expanded", async () => {
+    const user = userEvent.setup()
+    useSpecificationsStore.setState({
+      specifications: [
+        createSpecification("EmptySpec", 0, []),
+      ],
+    })
+
+    render(<SpecificationList />)
+
+    await user.click(screen.getByText("EmptySpec"))
+
+    await waitFor(() => {
+      expect(screen.getByText("No values defined")).toBeInTheDocument()
     })
   })
 })

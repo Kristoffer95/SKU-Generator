@@ -75,7 +75,7 @@
       "Specs display in order of their order field (lowest first)",
       "Each spec shows name, value count, and individual values with skuFragments"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "sidebar-ui-2",

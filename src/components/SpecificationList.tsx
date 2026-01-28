@@ -2,19 +2,17 @@ import { useState, useMemo, useEffect, useCallback } from "react"
 import { Plus, ChevronDown } from "lucide-react"
 import { AnimatePresence, motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { useSheetsStore } from "@/store/sheets"
-import { parseConfigSheet } from "@/lib/config-sheet"
+import { useSpecificationsStore } from "@/store/specifications"
 import { AddSpecDialog } from "@/components/AddSpecDialog"
 import { registerTourDialogOpeners, unregisterTourDialogOpeners } from "@/lib/guided-tour"
-import type { ParsedSpec } from "@/types"
+import type { Specification } from "@/types"
 
 interface SpecItemProps {
-  spec: ParsedSpec
-  onJumpToConfig: () => void
+  spec: Specification
   isFirst?: boolean
 }
 
-function SpecItem({ spec, onJumpToConfig, isFirst }: SpecItemProps) {
+function SpecItem({ spec, isFirst }: SpecItemProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   return (
@@ -46,14 +44,6 @@ function SpecItem({ spec, onJumpToConfig, isFirst }: SpecItemProps) {
               {spec.values.length} value{spec.values.length !== 1 ? "s" : ""}
             </span>
           </button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs text-muted-foreground"
-            onClick={onJumpToConfig}
-          >
-            Edit
-          </Button>
         </div>
 
         {/* Expandable Content */}
@@ -73,19 +63,19 @@ function SpecItem({ spec, onJumpToConfig, isFirst }: SpecItemProps) {
                   </p>
                 ) : (
                   <AnimatePresence initial={false}>
-                    {spec.values.map((value, index) => (
+                    {spec.values.map((value) => (
                       <motion.div
-                        key={`${value.label}-${index}`}
+                        key={value.id}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -10 }}
                         className="flex items-center gap-2 py-1 px-2 rounded hover:bg-muted/50"
                       >
                         <span className="text-sm flex-1 truncate">
-                          {value.label}
+                          {value.displayValue}
                         </span>
                         <span className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
-                          {value.skuCode || "-"}
+                          {value.skuFragment || "-"}
                         </span>
                       </motion.div>
                     ))}
@@ -102,21 +92,12 @@ function SpecItem({ spec, onJumpToConfig, isFirst }: SpecItemProps) {
 
 export function SpecificationList() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const { getConfigSheet, setActiveSheet } = useSheetsStore()
+  const specifications = useSpecificationsStore((state) => state.specifications)
 
-  // Parse specs from Config sheet
-  const configSheet = getConfigSheet()
-  const specifications = useMemo(() => {
-    if (!configSheet) return []
-    return parseConfigSheet(configSheet.data)
-  }, [configSheet])
-
-  // Jump to Config sheet when clicking edit on a spec
-  const handleJumpToConfig = () => {
-    if (configSheet) {
-      setActiveSheet(configSheet.id)
-    }
-  }
+  // Sort specifications by order field (lowest first)
+  const sortedSpecifications = useMemo(() => {
+    return [...specifications].sort((a, b) => a.order - b.order)
+  }, [specifications])
 
   // Callbacks for tour dialog openers
   const openAddSpecDialog = useCallback(() => {
@@ -142,7 +123,7 @@ export function SpecificationList() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto">
-        {specifications.length === 0 ? (
+        {sortedSpecifications.length === 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -150,16 +131,15 @@ export function SpecificationList() {
           >
             No specifications yet.
             <br />
-            Add specs in the Config sheet.
+            Click "Add Specification" to create one.
           </motion.div>
         ) : (
           <div className="p-2 space-y-1">
             <AnimatePresence initial={false}>
-              {specifications.map((spec, index) => (
+              {sortedSpecifications.map((spec, index) => (
                 <SpecItem
-                  key={spec.name}
+                  key={spec.id}
                   spec={spec}
-                  onJumpToConfig={handleJumpToConfig}
                   isFirst={index === 0}
                 />
               ))}
