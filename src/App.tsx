@@ -4,9 +4,13 @@ import { SpecificationList } from "@/components/SpecificationList"
 import { SpreadsheetContainer } from "@/components/SpreadsheetContainer"
 import { useSheetsStore } from "@/store/sheets"
 import { hasTourCompleted, startGuidedTour } from "@/lib/guided-tour"
+import { useSkuReactivity } from "@/lib/use-sku-reactivity"
 
 function App() {
   const initializeWithSampleData = useSheetsStore(s => s.initializeWithSampleData)
+
+  // Watch for specification changes and regenerate SKUs automatically
+  useSkuReactivity()
 
   // Initialize with sample data on first launch, or Config sheet if sheets already exist
   useEffect(() => {

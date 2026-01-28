@@ -201,7 +201,7 @@
       "All rows using that value have their SKU regenerated",
       "Changes reflect immediately without manual refresh"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "reactivity-2",

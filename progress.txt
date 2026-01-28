@@ -1,3 +1,22 @@
+## reactivity-1: Auto-regenerate SKUs when skuFragment changes
+
+**Completed**: SKUs automatically regenerate when any skuFragment is changed in the specifications store
+
+**Key decisions**:
+- Created `useSkuReactivity` hook that subscribes to specification changes
+- Uses useRef to track previous specifications and detect skuFragment changes
+- `hasSkuFragmentChanged` helper compares valueId->skuFragment maps between renders
+- Reuses existing `updateRowSKU` from auto-sku.ts for SKU regeneration
+- Hook called at App component level to enable app-wide SKU reactivity
+- Only triggers when skuFragment changes, not when displayValue changes (per PRD)
+
+**Files changed**:
+- src/lib/use-sku-reactivity.ts: New hook for SKU reactivity on spec changes
+- src/lib/use-sku-reactivity.test.ts: 9 tests covering all scenarios
+- src/App.tsx: Added useSkuReactivity() hook call
+
+---
+
 ## sidebar-ui-2: Add drag-and-drop reordering to SpecificationList
 
 **Completed**: Specifications can now be reordered via drag-and-drop in the sidebar
