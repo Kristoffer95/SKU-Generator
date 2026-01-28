@@ -9,7 +9,7 @@
       "SKUMatrix type is exported as (SKUCell | null)[][]",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "migration-spreadsheet-adapter",

@@ -1,0 +1,15 @@
+## migration-spreadsheet-types - COMPLETED
+Create extended cell type for react-spreadsheet (SKUCell interface, SKUMatrix type)
+
+### Key decisions
+- Defined CellBase type locally to avoid dependency on uninstalled react-spreadsheet package
+- CellBase matches react-spreadsheet's interface: value, readOnly, className
+- SKUCell extends CellBase<string | number | null> with dropdownOptions field
+- SKUMatrix is (SKUCell | null)[][] to support nullable cells
+
+### Files changed
+- src/types/spreadsheet.ts (new)
+
+### Notes
+- react-spreadsheet not yet installed (handled by migration-dependencies task)
+- CellBase is duplicated locally - will need update once react-spreadsheet installed
