@@ -179,7 +179,7 @@
       "Redo button disabled when at latest state",
       "History clears when switching sheets"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "migration-import-export",

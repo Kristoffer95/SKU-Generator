@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { render, screen, fireEvent, within, act } from '@testing-library/react'
 import { useSheetsStore } from '@/store/sheets'
 import { useSpecificationsStore } from '@/store/specifications'
 
@@ -1445,5 +1445,350 @@ describe('SpreadsheetContainer dropdown selection (migration-dropdowns)', () => 
     expect(dataRow[2]?.dropdownOptions).toEqual(['Small', 'Medium', 'Large'])
     // Col 3 (Material, order 2) -> ['Cotton', 'Polyester']
     expect(dataRow[3]?.dropdownOptions).toEqual(['Cotton', 'Polyester'])
+  })
+})
+
+/**
+ * Tests for migration-undo-redo PRD task
+ * Implement undo/redo functionality for spreadsheet edits
+ */
+describe('SpreadsheetContainer undo/redo (migration-undo-redo)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+    capturedOnChange = null
+    capturedData = []
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('undo reverts cell value to previous state', async () => {
+    // stepsToVerify 1: Edit a cell value, click Undo - value reverts to previous
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-color',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: 'Red' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Edit cell: change 'Red' to 'Blue'
+    await act(async () => {
+      capturedOnChange?.([
+        [{ value: 'SKU' }, { value: 'Color' }],
+        [{ value: 'R' }, { value: 'Blue' }],
+      ])
+    })
+
+    // Verify cell was changed
+    let sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Blue')
+
+    // Undo button should now be enabled
+    const undoButton = screen.getByTestId('spreadsheet-toolbar-undo')
+    expect(undoButton).not.toBeDisabled()
+
+    // Click Undo
+    await act(async () => {
+      fireEvent.click(undoButton)
+    })
+
+    // Verify value reverted to 'Red'
+    sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Red')
+  })
+
+  it('redo re-applies undone change', async () => {
+    // stepsToVerify 2: After Undo, click Redo - value returns to edited state
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-color',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: 'Red' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Edit cell: change 'Red' to 'Blue'
+    await act(async () => {
+      capturedOnChange?.([
+        [{ value: 'SKU' }, { value: 'Color' }],
+        [{ value: 'R' }, { value: 'Blue' }],
+      ])
+    })
+
+    // Undo
+    const undoButton = screen.getByTestId('spreadsheet-toolbar-undo')
+    await act(async () => {
+      fireEvent.click(undoButton)
+    })
+
+    // Verify undone
+    let sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Red')
+
+    // Redo button should now be enabled
+    const redoButton = screen.getByTestId('spreadsheet-toolbar-redo')
+    expect(redoButton).not.toBeDisabled()
+
+    // Click Redo
+    await act(async () => {
+      fireEvent.click(redoButton)
+    })
+
+    // Verify value returned to 'Blue'
+    sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Blue')
+  })
+
+  it('undo button disabled when no history', () => {
+    // stepsToVerify 3: Undo button disabled when no history
+    useSheetsStore.getState().addSheet('Products')
+
+    render(<SpreadsheetContainer />)
+
+    const undoButton = screen.getByTestId('spreadsheet-toolbar-undo')
+    expect(undoButton).toBeDisabled()
+  })
+
+  it('redo button disabled when at latest state', async () => {
+    // stepsToVerify 4: Redo button disabled when at latest state
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-color',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: '' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Make an edit
+    await act(async () => {
+      capturedOnChange?.([
+        [{ value: 'SKU' }, { value: 'Color' }],
+        [{ value: 'R' }, { value: 'Red' }],
+      ])
+    })
+
+    // Redo should be disabled (we're at latest state)
+    const redoButton = screen.getByTestId('spreadsheet-toolbar-redo')
+    expect(redoButton).toBeDisabled()
+  })
+
+  it('history clears when switching sheets', async () => {
+    // stepsToVerify 5: History clears when switching sheets
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-color',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          ],
+        },
+      ],
+    })
+
+    const sheet1Id = useSheetsStore.getState().addSheet('Sheet 1')
+    useSheetsStore.getState().setSheetData(sheet1Id, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: '' }],
+    ])
+
+    const sheet2Id = useSheetsStore.getState().addSheet('Sheet 2')
+    useSheetsStore.getState().setSheetData(sheet2Id, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: '' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Make an edit on Sheet 1
+    await act(async () => {
+      capturedOnChange?.([
+        [{ value: 'SKU' }, { value: 'Color' }],
+        [{ value: 'R' }, { value: 'Red' }],
+      ])
+    })
+
+    // Undo should be enabled
+    let undoButton = screen.getByTestId('spreadsheet-toolbar-undo')
+    expect(undoButton).not.toBeDisabled()
+
+    // Switch to Sheet 2
+    await act(async () => {
+      const sheet2Tab = screen.getByTestId('sheet-tab-' + sheet2Id)
+      fireEvent.click(sheet2Tab)
+    })
+
+    // Undo should now be disabled (history cleared)
+    undoButton = screen.getByTestId('spreadsheet-toolbar-undo')
+    expect(undoButton).toBeDisabled()
+  })
+
+  it('multiple undos revert multiple changes in order', async () => {
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-color',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+            { id: 'v3', displayValue: 'Green', skuFragment: 'G' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: 'Red' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Edit 1: Red -> Blue
+    await act(async () => {
+      capturedOnChange?.([
+        [{ value: 'SKU' }, { value: 'Color' }],
+        [{ value: 'B' }, { value: 'Blue' }],
+      ])
+    })
+
+    // Edit 2: Blue -> Green
+    await act(async () => {
+      capturedOnChange?.([
+        [{ value: 'SKU' }, { value: 'Color' }],
+        [{ value: 'G' }, { value: 'Green' }],
+      ])
+    })
+
+    // Verify at Green
+    let sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Green')
+
+    const undoButton = screen.getByTestId('spreadsheet-toolbar-undo')
+
+    // Undo 1: Green -> Blue
+    await act(async () => {
+      fireEvent.click(undoButton)
+    })
+    sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Blue')
+
+    // Undo 2: Blue -> Red
+    await act(async () => {
+      fireEvent.click(undoButton)
+    })
+    sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Red')
+
+    // Undo should now be disabled
+    expect(undoButton).toBeDisabled()
+  })
+
+  it('new edit after undo clears redo history', async () => {
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-color',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+            { id: 'v3', displayValue: 'Green', skuFragment: 'G' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: 'Red' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Edit: Red -> Blue
+    await act(async () => {
+      capturedOnChange?.([
+        [{ value: 'SKU' }, { value: 'Color' }],
+        [{ value: 'B' }, { value: 'Blue' }],
+      ])
+    })
+
+    // Undo: Blue -> Red
+    const undoButton = screen.getByTestId('spreadsheet-toolbar-undo')
+    await act(async () => {
+      fireEvent.click(undoButton)
+    })
+
+    // Redo should be enabled
+    let redoButton = screen.getByTestId('spreadsheet-toolbar-redo')
+    expect(redoButton).not.toBeDisabled()
+
+    // Make new edit: Red -> Green (should clear redo history)
+    await act(async () => {
+      capturedOnChange?.([
+        [{ value: 'SKU' }, { value: 'Color' }],
+        [{ value: 'G' }, { value: 'Green' }],
+      ])
+    })
+
+    // Redo should now be disabled (redo history cleared)
+    redoButton = screen.getByTestId('spreadsheet-toolbar-redo')
+    expect(redoButton).toBeDisabled()
+
+    // Value should be Green
+    const sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Green')
   })
 })

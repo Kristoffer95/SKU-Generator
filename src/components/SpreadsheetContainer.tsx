@@ -67,12 +67,6 @@ function applyDuplicateHighlighting(matrix: SKUMatrix, duplicateRows: Set<number
   })
 }
 
-// History entry for undo/redo
-interface HistoryEntry {
-  data: CellData[][]
-  sheetId: string
-}
-
 export function SpreadsheetContainer() {
   const { sheets, activeSheetId, setActiveSheet, setSheetData, addSheetWithId, removeSheet, updateSheet } = useSheetsStore()
   const specifications = useSpecificationsStore((state) => state.specifications)
@@ -81,10 +75,18 @@ export function SpreadsheetContainer() {
   const suffix = useSettingsStore((state) => state.suffix)
   const settings = useMemo(() => ({ delimiter, prefix, suffix }), [delimiter, prefix, suffix])
 
-  // Undo/Redo history state
-  const [history, setHistory] = useState<HistoryEntry[]>([])
+  // Undo/Redo history: array of past data states
+  // history[0] = oldest state, history[history.length-1] = most recent saved state
+  // historyIndex points to current position in history (-1 means at latest/unsaved state)
+  const [history, setHistory] = useState<CellData[][][]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
+  const historyIndexRef = useRef(-1)
   const isUndoRedoRef = useRef(false)
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    historyIndexRef.current = historyIndex
+  }, [historyIndex])
 
   // Use ref for previous sheet data to avoid triggering re-renders
   const previousDataRef = useRef<Map<string, CellData[][]>>(new Map())
@@ -140,12 +142,24 @@ export function SpreadsheetContainer() {
 
     // Track history for undo/redo (unless this change is from undo/redo)
     if (!isUndoRedoRef.current) {
+      const currentHistoryIndex = historyIndexRef.current
+      // When making a new edit:
+      // - If we're at latest state (historyIndex === -1), just push oldData to history
+      // - If we're in middle of history (after some undos), truncate redo states only
+      //   (don't push oldData since current state is already in history at historyIndex)
       setHistory(prev => {
-        // Truncate any redo history
-        const truncated = prev.slice(0, historyIndex + 1)
-        return [...truncated, { data: oldData, sheetId: activeSheetId }]
+        if (currentHistoryIndex === -1) {
+          // At latest state - append the old state before this change
+          return [...prev, oldData]
+        } else {
+          // In middle of history - truncate redo states only
+          // The current state is already at history[currentHistoryIndex]
+          return prev.slice(0, currentHistoryIndex + 1)
+        }
       })
-      setHistoryIndex(prev => prev + 1)
+      // Reset to latest state
+      setHistoryIndex(-1)
+      historyIndexRef.current = -1
     }
     isUndoRedoRef.current = false
 
@@ -153,38 +167,59 @@ export function SpreadsheetContainer() {
     processAutoSKU(oldData, newData, specifications, settings)
 
     setSheetData(activeSheetId, newData)
-  }, [activeSheetId, setSheetData, settings, specifications, historyIndex])
+  }, [activeSheetId, setSheetData, settings, specifications])
 
   // Undo handler
   const handleUndo = useCallback(() => {
-    if (historyIndex < 0 || !activeSheetId) return
+    if (!activeSheetId) return
 
-    const entry = history[historyIndex]
-    if (entry && entry.sheetId === activeSheetId) {
-      isUndoRedoRef.current = true
-      // Save current state for redo
+    // Determine which history entry to restore
+    // If historyIndex is -1, we're at latest state, go to last history entry
+    // Otherwise, go to previous entry
+    const targetIndex = historyIndex === -1 ? history.length - 1 : historyIndex - 1
+
+    if (targetIndex < 0 || targetIndex >= history.length) return
+
+    const previousState = history[targetIndex]
+    if (!previousState) return
+
+    // If at latest state, save current state for potential redo
+    if (historyIndex === -1) {
       const currentData = activeSheet?.data ?? []
-      setHistory(prev => {
-        const newHistory = [...prev]
-        newHistory[historyIndex] = { data: currentData, sheetId: activeSheetId }
-        return newHistory
-      })
-      setSheetData(activeSheetId, entry.data)
-      setHistoryIndex(prev => prev - 1)
+      setHistory(prev => [...prev, currentData])
     }
+
+    isUndoRedoRef.current = true
+    setSheetData(activeSheetId, previousState)
+    historyIndexRef.current = targetIndex
+    setHistoryIndex(targetIndex)
+    // Reset ref - in real usage, handleDataChange will reset it when onChange fires
+    // but we also reset here for cases where onChange doesn't fire (e.g., tests)
+    isUndoRedoRef.current = false
   }, [history, historyIndex, activeSheetId, activeSheet?.data, setSheetData])
 
   // Redo handler
   const handleRedo = useCallback(() => {
-    if (historyIndex >= history.length - 1 || !activeSheetId) return
+    if (!activeSheetId || historyIndex === -1) return
+    if (historyIndex >= history.length - 1) return
 
     const nextIndex = historyIndex + 1
-    const entry = history[nextIndex]
-    if (entry && entry.sheetId === activeSheetId) {
-      isUndoRedoRef.current = true
-      setSheetData(activeSheetId, entry.data)
+    const nextState = history[nextIndex]
+    if (!nextState) return
+
+    isUndoRedoRef.current = true
+    setSheetData(activeSheetId, nextState)
+
+    // If we're moving to the last history entry, set index to -1 (latest state)
+    if (nextIndex === history.length - 1) {
+      setHistoryIndex(-1)
+      historyIndexRef.current = -1
+    } else {
       setHistoryIndex(nextIndex)
+      historyIndexRef.current = nextIndex
     }
+    // Reset ref - see comment in handleUndo
+    isUndoRedoRef.current = false
   }, [history, historyIndex, activeSheetId, setSheetData])
 
   // Add row handler
@@ -261,8 +296,8 @@ export function SpreadsheetContainer() {
   return (
     <div className="h-full w-full flex flex-col" data-testid="spreadsheet-container" data-tour="spreadsheet">
       <SpreadsheetToolbar
-        canUndo={historyIndex >= 0}
-        canRedo={historyIndex < history.length - 1}
+        canUndo={historyIndex === -1 ? history.length > 0 : historyIndex > 0}
+        canRedo={historyIndex !== -1 && historyIndex < history.length - 1}
         onUndo={handleUndo}
         onRedo={handleRedo}
         onImport={handleImport}

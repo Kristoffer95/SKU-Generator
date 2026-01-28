@@ -1,3 +1,31 @@
+## migration-undo-redo - COMPLETED
+Implement undo/redo functionality for spreadsheet edits
+
+### Key decisions
+- History stored as CellData[][][] (array of past states)
+- historyIndex = -1 means at latest state, >= 0 means in history
+- historyIndexRef used to track current position across React render cycles
+- When making edit at latest state: push oldData to history, stay at -1
+- When making edit after undo: truncate redo states only (current state already in history)
+- Undo from latest: append current state for redo, restore history[last], set historyIndex = last
+- Undo from history: go to historyIndex - 1
+- Redo: go to historyIndex + 1, reset to -1 when reaching end
+- isUndoRedoRef prevents recording history for undo/redo-triggered changes
+- History clears when switching sheets
+
+### Files changed
+- src/components/SpreadsheetContainer.tsx (rewrote undo/redo logic)
+- src/components/SpreadsheetContainer.test.tsx (added 7 undo/redo tests)
+
+### Notes
+- All 5 stepsToVerify criteria verified via unit tests
+- Fixed bug: isUndoRedoRef wasn't being reset in test environment
+- Fixed bug: history tracking used closure-captured historyIndex instead of ref
+- Tests use act() wrapper to handle React state update timing
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (553 tests total)
+
 ## migration-duplicate-highlight - COMPLETED
 Verify duplicate SKU warning styling works
 
