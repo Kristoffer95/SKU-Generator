@@ -141,7 +141,7 @@
         "Verify exported Excel opens correctly in Excel/Google Sheets",
         "Verify importing an Excel file loads Config and data correctly"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "PRD-011",

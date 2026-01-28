@@ -1,3 +1,29 @@
+## PRD-010: Import/Export - COMPLETE
+- Created src/lib/import-export.ts with Excel and CSV support using xlsx library
+- exportToExcel: exports all sheets (Config + data) to single .xlsx workbook
+- exportToCSV: exports current sheet to CSV file
+- importFromExcel: imports .xlsx file, detects Config sheet (case-insensitive)
+- Config sheet always placed first on import/export
+- Round-trip preserves data through export/import cycle
+- Added Import/Export buttons to AppLayout header
+- Import button with hidden file input for .xlsx/.xls files
+- Export dropdown with Excel (.xlsx) and CSV options
+- Import replaces all sheets with imported data
+- Created dropdown-menu UI component for export options
+- 13 tests: blob export, CSV string, import parsing, round-trip
+- 4 AppLayout tests: import button, export button, dropdown behavior, file input
+- All feedback loops pass (196 tests)
+
+Files created:
+- src/lib/import-export.ts
+- src/lib/import-export.test.ts
+- src/components/ui/dropdown-menu.tsx
+
+Files changed:
+- src/components/AppLayout.tsx (import/export buttons, file handling)
+- src/components/AppLayout.test.tsx (+4 tests)
+- package.json (xlsx dependency)
+
 ## PRD-013: Add Specification Dialog - COMPLETE
 - Created AddSpecDialog component accessible from sidebar Add Specification button
 - Form: spec name input + dynamic list of value/SKU code pairs
