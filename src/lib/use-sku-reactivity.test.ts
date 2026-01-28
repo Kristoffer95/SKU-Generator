@@ -197,7 +197,7 @@ describe('useSkuReactivity', () => {
     expect(updatedSheets[1].data[1][0].v).toBe('RD');
   });
 
-  it('should not regenerate SKUs when only displayValue changes', () => {
+  it('should not regenerate SKUs when only displayValue changes (but should update cell values)', () => {
     const colorSpec = createSpec('spec-color', 'Color', 0, [
       { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
     ]);
@@ -218,9 +218,6 @@ describe('useSkuReactivity', () => {
 
     const { rerender } = renderHook(() => useSkuReactivity());
 
-    // Get initial data state
-    const initialData = JSON.stringify(useSheetsStore.getState().sheets[0].data);
-
     // Change only displayValue (not skuFragment)
     act(() => {
       useSpecificationsStore.getState().updateSpecValue('spec-color', 'v1', {
@@ -230,9 +227,180 @@ describe('useSkuReactivity', () => {
 
     rerender();
 
-    // Data should remain the same (only displayValue changed, not skuFragment)
-    const updatedData = JSON.stringify(useSheetsStore.getState().sheets[0].data);
-    expect(updatedData).toBe(initialData);
+    const updatedData = useSheetsStore.getState().sheets[0].data;
+
+    // SKU should remain unchanged (still 'R', not regenerated)
+    expect(updatedData[1][0].v).toBe('R');
+    // Cell value should be updated to new displayValue
+    expect(updatedData[1][1].v).toBe('Crimson');
+    expect(updatedData[1][1].m).toBe('Crimson');
+  });
+
+  it('should update cell values in multiple sheets when displayValue changes', () => {
+    const colorSpec = createSpec('spec-color', 'Color', 0, [
+      { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+    ]);
+
+    const sheet1Data = createSheetData([
+      ['SKU', 'Color'],
+      ['R', 'Red'],
+    ]);
+
+    const sheet2Data = createSheetData([
+      ['SKU', 'Color'],
+      ['R', 'Red'],
+    ]);
+
+    useSpecificationsStore.setState({
+      specifications: [colorSpec],
+    });
+
+    useSheetsStore.setState({
+      sheets: [
+        { id: 'sheet-1', name: 'Products 1', type: 'data', data: sheet1Data },
+        { id: 'sheet-2', name: 'Products 2', type: 'data', data: sheet2Data },
+      ],
+      activeSheetId: 'sheet-1',
+    });
+
+    const { rerender } = renderHook(() => useSkuReactivity());
+
+    // Change displayValue
+    act(() => {
+      useSpecificationsStore.getState().updateSpecValue('spec-color', 'v1', {
+        displayValue: 'Crimson',
+      });
+    });
+
+    rerender();
+
+    const updatedSheets = useSheetsStore.getState().sheets;
+
+    // Both sheets should have updated cell values
+    expect(updatedSheets[0].data[1][1].v).toBe('Crimson');
+    expect(updatedSheets[1].data[1][1].v).toBe('Crimson');
+    // SKUs should remain unchanged
+    expect(updatedSheets[0].data[1][0].v).toBe('R');
+    expect(updatedSheets[1].data[1][0].v).toBe('R');
+  });
+
+  it('should only update cells matching the old displayValue', () => {
+    const colorSpec = createSpec('spec-color', 'Color', 0, [
+      { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+      { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+    ]);
+
+    const sheetData = createSheetData([
+      ['SKU', 'Color'],
+      ['R', 'Red'],
+      ['B', 'Blue'],
+      ['R', 'Red'],
+    ]);
+
+    useSpecificationsStore.setState({
+      specifications: [colorSpec],
+    });
+
+    useSheetsStore.setState({
+      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData }],
+      activeSheetId: 'sheet-1',
+    });
+
+    const { rerender } = renderHook(() => useSkuReactivity());
+
+    // Change Red to Crimson
+    act(() => {
+      useSpecificationsStore.getState().updateSpecValue('spec-color', 'v1', {
+        displayValue: 'Crimson',
+      });
+    });
+
+    rerender();
+
+    const updatedData = useSheetsStore.getState().sheets[0].data;
+
+    // Red cells should be updated
+    expect(updatedData[1][1].v).toBe('Crimson');
+    expect(updatedData[3][1].v).toBe('Crimson');
+    // Blue cells should remain unchanged
+    expect(updatedData[2][1].v).toBe('Blue');
+  });
+
+  it('should update cells only in columns matching the specification name', () => {
+    const colorSpec = createSpec('spec-color', 'Color', 0, [
+      { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+    ]);
+
+    // Sheet has 'Color' and 'Notes' columns, both with 'Red' text
+    const sheetData = createSheetData([
+      ['SKU', 'Color', 'Notes'],
+      ['R', 'Red', 'Red is a nice color'],
+    ]);
+
+    useSpecificationsStore.setState({
+      specifications: [colorSpec],
+    });
+
+    useSheetsStore.setState({
+      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData }],
+      activeSheetId: 'sheet-1',
+    });
+
+    const { rerender } = renderHook(() => useSkuReactivity());
+
+    // Change Red to Crimson
+    act(() => {
+      useSpecificationsStore.getState().updateSpecValue('spec-color', 'v1', {
+        displayValue: 'Crimson',
+      });
+    });
+
+    rerender();
+
+    const updatedData = useSheetsStore.getState().sheets[0].data;
+
+    // Color column should be updated
+    expect(updatedData[1][1].v).toBe('Crimson');
+    // Notes column should remain unchanged (even though it contains 'Red')
+    expect(updatedData[1][2].v).toBe('Red is a nice color');
+  });
+
+  it('should not update header row when displayValue changes', () => {
+    const colorSpec = createSpec('spec-color', 'Color', 0, [
+      { id: 'v1', displayValue: 'Color', skuFragment: 'C' }, // displayValue matches header name
+    ]);
+
+    const sheetData = createSheetData([
+      ['SKU', 'Color'],
+      ['C', 'Color'],
+    ]);
+
+    useSpecificationsStore.setState({
+      specifications: [colorSpec],
+    });
+
+    useSheetsStore.setState({
+      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData }],
+      activeSheetId: 'sheet-1',
+    });
+
+    const { rerender } = renderHook(() => useSkuReactivity());
+
+    // Change 'Color' displayValue to something else
+    act(() => {
+      useSpecificationsStore.getState().updateSpecValue('spec-color', 'v1', {
+        displayValue: 'Hue',
+      });
+    });
+
+    rerender();
+
+    const updatedData = useSheetsStore.getState().sheets[0].data;
+
+    // Header row should remain unchanged
+    expect(updatedData[0][1].v).toBe('Color');
+    // Data row should be updated
+    expect(updatedData[1][1].v).toBe('Hue');
   });
 
   it('should respect settings when regenerating SKUs', () => {

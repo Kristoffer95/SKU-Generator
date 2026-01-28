@@ -223,7 +223,7 @@
       "All cells showing 'Red' now show 'Crimson'",
       "SKUs remain unchanged (still use skuFragment 'R')"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "cleanup-1",

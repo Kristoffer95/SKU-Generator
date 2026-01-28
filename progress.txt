@@ -1,3 +1,22 @@
+## reactivity-3: Update cells when displayValue renamed
+
+**Completed**: Cells automatically update when a displayValue is renamed in the specifications store
+
+**Key decisions**:
+- Extended `useSkuReactivity` hook to detect displayValue changes (not just skuFragment)
+- `getDisplayValueChanges` helper compares valueId->displayValue maps between renders
+- `updateDisplayValuesInSheets` finds cells with old value in matching spec column and updates them
+- Only updates cells in columns where header matches specification name
+- Header row (row 0) is never modified
+- SKUs remain unchanged (displayValue change does not trigger SKU regeneration)
+- Multiple sheets are updated in a single pass
+
+**Files changed**:
+- src/lib/use-sku-reactivity.ts: Added getDisplayValueChanges, updateDisplayValuesInSheets functions
+- src/lib/use-sku-reactivity.test.ts: Added 5 new tests for displayValue reactivity, updated 1 existing test
+
+---
+
 ## validation-3: ValidationPanel component for error display
 
 **Completed**: ValidationPanel component displays validation errors below spreadsheet with click-to-navigate
