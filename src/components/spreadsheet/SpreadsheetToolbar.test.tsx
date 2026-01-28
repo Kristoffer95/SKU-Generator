@@ -5,9 +5,6 @@ import { SpreadsheetToolbar, SpreadsheetToolbarProps } from "./SpreadsheetToolba
 describe("SpreadsheetToolbar", () => {
   const mockOnUndo = vi.fn();
   const mockOnRedo = vi.fn();
-  const mockOnImport = vi.fn();
-  const mockOnExportExcel = vi.fn();
-  const mockOnExportCSV = vi.fn();
   const mockOnAddRow = vi.fn();
 
   const defaultProps: SpreadsheetToolbarProps = {
@@ -15,9 +12,6 @@ describe("SpreadsheetToolbar", () => {
     canRedo: true,
     onUndo: mockOnUndo,
     onRedo: mockOnRedo,
-    onImport: mockOnImport,
-    onExportExcel: mockOnExportExcel,
-    onExportCSV: mockOnExportCSV,
     onAddRow: mockOnAddRow,
   };
 
@@ -44,18 +38,16 @@ describe("SpreadsheetToolbar", () => {
       expect(screen.getByTestId("spreadsheet-toolbar-redo")).toBeInTheDocument();
     });
 
-    it("renders import button", () => {
+    it("does not render import button", () => {
       render(<SpreadsheetToolbar {...defaultProps} />);
 
-      expect(screen.getByTestId("spreadsheet-toolbar-import")).toBeInTheDocument();
-      expect(screen.getByText("Import")).toBeInTheDocument();
+      expect(screen.queryByTestId("spreadsheet-toolbar-import")).not.toBeInTheDocument();
     });
 
-    it("renders export button", () => {
+    it("does not render export button", () => {
       render(<SpreadsheetToolbar {...defaultProps} />);
 
-      expect(screen.getByTestId("spreadsheet-toolbar-export")).toBeInTheDocument();
-      expect(screen.getByText("Export")).toBeInTheDocument();
+      expect(screen.queryByTestId("spreadsheet-toolbar-export")).not.toBeInTheDocument();
     });
 
     it("renders add row button", () => {
@@ -63,15 +55,6 @@ describe("SpreadsheetToolbar", () => {
 
       expect(screen.getByTestId("spreadsheet-toolbar-add-row")).toBeInTheDocument();
       expect(screen.getByText("Add Row")).toBeInTheDocument();
-    });
-
-    it("renders hidden file input for import", () => {
-      render(<SpreadsheetToolbar {...defaultProps} />);
-
-      const fileInput = screen.getByTestId("spreadsheet-toolbar-file-input");
-      expect(fileInput).toBeInTheDocument();
-      expect(fileInput).toHaveAttribute("type", "file");
-      expect(fileInput).toHaveAttribute("accept", ".xlsx,.xls,.csv");
     });
 
     it("applies custom className", () => {
@@ -141,81 +124,6 @@ describe("SpreadsheetToolbar", () => {
     });
   });
 
-  describe("import button", () => {
-    it("triggers file input when clicked", () => {
-      render(<SpreadsheetToolbar {...defaultProps} />);
-
-      const fileInput = screen.getByTestId("spreadsheet-toolbar-file-input") as HTMLInputElement;
-      const clickSpy = vi.spyOn(fileInput, "click");
-
-      fireEvent.click(screen.getByTestId("spreadsheet-toolbar-import"));
-
-      expect(clickSpy).toHaveBeenCalled();
-    });
-
-    it("calls onImport when file is selected", () => {
-      render(<SpreadsheetToolbar {...defaultProps} />);
-
-      const fileInput = screen.getByTestId("spreadsheet-toolbar-file-input");
-      const testFile = new File(["test"], "test.xlsx", {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-
-      fireEvent.change(fileInput, { target: { files: [testFile] } });
-
-      expect(mockOnImport).toHaveBeenCalledWith(testFile);
-    });
-
-    it("does not call onImport when no file is selected", () => {
-      render(<SpreadsheetToolbar {...defaultProps} />);
-
-      const fileInput = screen.getByTestId("spreadsheet-toolbar-file-input");
-
-      fireEvent.change(fileInput, { target: { files: [] } });
-
-      expect(mockOnImport).not.toHaveBeenCalled();
-    });
-
-    it("resets file input value after selection", () => {
-      render(<SpreadsheetToolbar {...defaultProps} />);
-
-      const fileInput = screen.getByTestId("spreadsheet-toolbar-file-input") as HTMLInputElement;
-      const testFile = new File(["test"], "test.xlsx", {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-
-      fireEvent.change(fileInput, { target: { files: [testFile] } });
-
-      expect(fileInput.value).toBe("");
-    });
-  });
-
-  describe("export dropdown", () => {
-    it("export button has dropdown trigger behavior", () => {
-      render(<SpreadsheetToolbar {...defaultProps} />);
-
-      const exportButton = screen.getByTestId("spreadsheet-toolbar-export");
-
-      // Verify button has dropdown attributes
-      expect(exportButton).toHaveAttribute("aria-haspopup", "menu");
-      expect(exportButton).toHaveAttribute("data-state", "closed");
-    });
-
-    it("export button has correct type", () => {
-      render(<SpreadsheetToolbar {...defaultProps} />);
-
-      const exportButton = screen.getByTestId("spreadsheet-toolbar-export");
-
-      expect(exportButton).toHaveAttribute("type", "button");
-    });
-
-    it("export button displays correct text", () => {
-      render(<SpreadsheetToolbar {...defaultProps} />);
-
-      expect(screen.getByText("Export")).toBeInTheDocument();
-    });
-  });
-
   describe("add row button", () => {
     it("calls onAddRow when clicked", () => {
       render(<SpreadsheetToolbar {...defaultProps} />);
@@ -234,17 +142,6 @@ describe("SpreadsheetToolbar", () => {
 
       expect(screen.getByTestId("spreadsheet-toolbar-undo")).toBeDisabled();
       expect(screen.getByTestId("spreadsheet-toolbar-redo")).toBeDisabled();
-    });
-
-    it("import still works with undefined files", () => {
-      render(<SpreadsheetToolbar {...defaultProps} />);
-
-      const fileInput = screen.getByTestId("spreadsheet-toolbar-file-input");
-
-      // Simulate change with undefined files
-      fireEvent.change(fileInput, { target: { files: undefined } });
-
-      expect(mockOnImport).not.toHaveBeenCalled();
     });
   });
 });

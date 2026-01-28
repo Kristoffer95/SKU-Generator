@@ -1,3 +1,29 @@
+## remove-duplicate-import-export - COMPLETED
+Remove duplicate Import/Export buttons from SpreadsheetToolbar
+
+### Key decisions
+- Removed Import button, Export dropdown, and hidden file input from SpreadsheetToolbar
+- Removed onImport, onExportExcel, onExportCSV props from SpreadsheetToolbarProps interface
+- Removed unused import/export handlers from SpreadsheetContainer
+- Removed unused imports (importFromExcel, importFromCSV, exportToExcel, exportToCSV, processAutoSKUForAllRowsFromColumns)
+- Import/Export remains in AppLayout header (existing tests confirm this)
+- SpreadsheetToolbar now has only: Undo, Redo, Add Row buttons
+- Note: Add Column button is separate task (toolbar-add-column-button)
+
+### Files changed
+- src/components/spreadsheet/SpreadsheetToolbar.tsx (removed import/export UI and props)
+- src/components/spreadsheet/SpreadsheetToolbar.test.tsx (updated tests to verify absence of import/export)
+- src/components/SpreadsheetContainer.tsx (removed import/export props and unused handlers/imports)
+- src/components/SpreadsheetContainer.test.tsx (updated tests to verify import/export not in toolbar)
+
+### Notes
+- All 6 stepsToVerify criteria met (Note: "Add Column" button is a separate task)
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (726 tests)
+- npm run build passes
+- AppLayout header still has working Import/Export per existing AppLayout.test.tsx tests
+
 ## delete-spec-confirmation - COMPLETED
 Create DeleteSpecConfirmDialog component for confirming specification deletion
 

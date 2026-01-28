@@ -323,5 +323,80 @@
       "npm run typecheck passes"
     ],
     "passes": true
+  },
+  {
+    "id": "toolbar-add-column-button",
+    "category": "UX Improvements",
+    "description": "Add discoverable 'Add Column' button to SpreadsheetToolbar. Currently columns can only be added via right-click context menu which is not discoverable. Add button with Columns icon after 'Add Row' button. Wire to existing AddColumnDialog with position set to 'end'.",
+    "stepsToVerify": [
+      "SpreadsheetToolbar has 'Add Column' button visible after 'Add Row' button",
+      "Button has Columns icon from lucide-react",
+      "Clicking button opens AddColumnDialog",
+      "Dialog defaults to inserting column at end",
+      "Can add both spec and free columns via the button",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "spec-name-editing",
+    "category": "UX Improvements",
+    "description": "Add ability to edit specification names after creation. Currently spec VALUES can be edited but spec NAMES cannot. Add pencil edit icon button to SpecItem header. When clicked, show inline Input field with Save/Cancel buttons. On save, call updateSpecification() and sync column headers that reference this spec.",
+    "stepsToVerify": [
+      "SpecItem shows pencil edit icon button next to spec name",
+      "Clicking edit icon enters inline edit mode with Input field",
+      "Input shows current spec name as initial value",
+      "Save button (checkmark) commits the change",
+      "Cancel button (X) reverts to original name",
+      "Validation prevents empty name or duplicate name",
+      "Saving updates spec name in store via updateSpecification()",
+      "All columns with specId matching edited spec have their header updated",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "sheet-tabs-fixed-layout",
+    "category": "UX Improvements",
+    "description": "Fix SheetTabs position so they stay visible at bottom of viewport regardless of row count. Currently with many rows the tabs get pushed down requiring scroll. Ensure spreadsheet area is the scrollable portion while SheetTabs remains fixed at bottom.",
+    "stepsToVerify": [
+      "Add 100+ rows to a sheet",
+      "SheetTabs remain visible at bottom of viewport without scrolling",
+      "Spreadsheet area scrolls internally to show all rows",
+      "ValidationPanel also stays visible below SheetTabs",
+      "Layout works correctly when sidebar is collapsed or expanded",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "remove-duplicate-import-export",
+    "category": "UX Improvements",
+    "description": "Remove duplicate Import/Export buttons from SpreadsheetToolbar. Import/Export functionality exists in both AppLayout header AND SpreadsheetToolbar causing confusion. Remove from toolbar, keep only in header. Toolbar should have: Undo, Redo, Add Row, Add Column.",
+    "stepsToVerify": [
+      "SpreadsheetToolbar no longer has Import button",
+      "SpreadsheetToolbar no longer has Export dropdown",
+      "SpreadsheetToolbar has: Undo, Redo, Add Row, Add Column buttons only",
+      "AppLayout header still has working Import button",
+      "AppLayout header still has working Export dropdown with Excel/CSV options",
+      "npm run typecheck passes"
+    ],
+    "passes": true
+  },
+  {
+    "id": "update-documentation-tour",
+    "category": "Documentation",
+    "description": "Update GUIDE.md and guided-tour.ts to reflect current app architecture. Remove references to deprecated 'Config sheet' approach. Update Fortune-Sheet selectors to react-spreadsheet selectors. Document new features: Add Column button, spec name editing. Simplify tour to ~15-18 steps focused on current sidebar-based workflow.",
+    "stepsToVerify": [
+      "GUIDE.md does not reference 'Config sheet' or 'Config tab'",
+      "GUIDE.md documents sidebar-based specification management",
+      "GUIDE.md has section on adding columns via toolbar button",
+      "GUIDE.md has section on editing specification names",
+      "guided-tour.ts uses [data-tour] selectors not .fortune-sheet-* selectors",
+      "Tour steps reference current UI components and workflow",
+      "Tour completes without errors highlighting missing elements",
+      "npm run test passes for guided-tour tests"
+    ],
+    "passes": false
   }
 ]

@@ -2077,10 +2077,10 @@ describe('SpreadsheetContainer undo/redo (migration-undo-redo)', () => {
 })
 
 /**
- * Tests for migration-import-export PRD task
- * Verify import/export functionality works with new spreadsheet
+ * Tests for toolbar after import/export removal (remove-duplicate-import-export)
+ * Import/export is now in AppLayout header only
  */
-describe('SpreadsheetContainer import/export (migration-import-export)', () => {
+describe('SpreadsheetContainer toolbar buttons', () => {
   beforeEach(() => {
     localStorage.clear()
     useSheetsStore.setState({ sheets: [], activeSheetId: null })
@@ -2095,28 +2095,27 @@ describe('SpreadsheetContainer import/export (migration-import-export)', () => {
     vi.clearAllMocks()
   })
 
-  it('renders import button in toolbar', () => {
+  it('does not render import button in toolbar (moved to AppLayout header)', () => {
     useSheetsStore.getState().addSheet('Products')
     render(<SpreadsheetContainer />)
 
-    const importButton = screen.getByTestId('spreadsheet-toolbar-import')
-    expect(importButton).toBeInTheDocument()
+    expect(screen.queryByTestId('spreadsheet-toolbar-import')).not.toBeInTheDocument()
   })
 
-  it('renders export button in toolbar', () => {
+  it('does not render export button in toolbar (moved to AppLayout header)', () => {
     useSheetsStore.getState().addSheet('Products')
     render(<SpreadsheetContainer />)
 
-    const exportButton = screen.getByTestId('spreadsheet-toolbar-export')
-    expect(exportButton).toBeInTheDocument()
+    expect(screen.queryByTestId('spreadsheet-toolbar-export')).not.toBeInTheDocument()
   })
 
-  it('import accepts xlsx and csv files', () => {
+  it('renders undo/redo and add row buttons in toolbar', () => {
     useSheetsStore.getState().addSheet('Products')
     render(<SpreadsheetContainer />)
 
-    const fileInput = screen.getByTestId('spreadsheet-toolbar-file-input') as HTMLInputElement
-    expect(fileInput.accept).toBe('.xlsx,.xls,.csv')
+    expect(screen.getByTestId('spreadsheet-toolbar-undo')).toBeInTheDocument()
+    expect(screen.getByTestId('spreadsheet-toolbar-redo')).toBeInTheDocument()
+    expect(screen.getByTestId('spreadsheet-toolbar-add-row')).toBeInTheDocument()
   })
 })
 

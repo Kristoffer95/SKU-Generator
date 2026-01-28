@@ -2,7 +2,7 @@ import { useMemo, useCallback, useRef, useEffect, useState } from "react"
 import Spreadsheet, { Matrix, CellBase, Selection, RangeSelection, PointRange } from "react-spreadsheet"
 import { useSheetsStore } from "@/store/sheets"
 import { useSettingsStore } from "@/store/settings"
-import { processAutoSKUFromColumns, processAutoSKUForAllRowsFromColumns } from "@/lib/auto-sku"
+import { processAutoSKUFromColumns } from "@/lib/auto-sku"
 import { validateDataSheetFromColumns, findDuplicateSKUs, ValidationError } from "@/lib/validation"
 import { ValidationPanel } from "@/components/ValidationPanel"
 import { SheetTabs } from "@/components/spreadsheet/SheetTabs"
@@ -13,7 +13,6 @@ import { DraggableColumnHeaders } from "@/components/spreadsheet/DraggableColumn
 import { AddColumnDialog } from "@/components/AddColumnDialog"
 import { DeleteColumnConfirmDialog } from "@/components/DeleteColumnConfirmDialog"
 import { convertToSpreadsheetData, convertFromSpreadsheetData } from "@/lib/spreadsheet-adapter"
-import { importFromExcel, importFromCSV, exportToExcel, exportToCSV } from "@/lib/import-export"
 import type { CellData, ColumnDef } from "@/types"
 import type { SKUMatrix } from "@/types/spreadsheet"
 
@@ -286,54 +285,6 @@ export function SpreadsheetContainer() {
     setSheetData(activeSheet.id, [...currentData, newRow])
   }, [activeSheet, setSheetData, specifications.length])
 
-  // Import handler - loads Excel/CSV files into active sheet
-  const handleImport = useCallback(async (file: File) => {
-    if (!activeSheetId) return
-
-    const isCSV = file.name.toLowerCase().endsWith('.csv')
-
-    try {
-      let importedData: CellData[][]
-
-      if (isCSV) {
-        // Import CSV directly into active sheet
-        importedData = await importFromCSV(file)
-      } else {
-        // Import Excel - use first data sheet (or first sheet if no data sheets)
-        const importedSheets = await importFromExcel(file)
-        const dataSheet = importedSheets.find(s => s.type === 'data') || importedSheets[0]
-        if (!dataSheet) {
-          console.error("No sheets found in imported file")
-          return
-        }
-        importedData = dataSheet.data
-      }
-
-      // Regenerate SKUs for all rows (only spec columns contribute)
-      processAutoSKUForAllRowsFromColumns(importedData, columns, specifications, settings)
-
-      // Update the active sheet with imported data
-      setSheetData(activeSheetId, importedData)
-
-      // Clear history after import
-      setHistory([])
-      setHistoryIndex(-1)
-    } catch (error) {
-      console.error("Import failed:", error)
-    }
-  }, [activeSheetId, setSheetData, columns, specifications, settings])
-
-  // Export all sheets to Excel
-  const handleExportExcel = useCallback(() => {
-    exportToExcel(sheets, 'sku-data.xlsx')
-  }, [sheets])
-
-  // Export current sheet to CSV
-  const handleExportCSV = useCallback(() => {
-    if (!activeSheet) return
-    exportToCSV(activeSheet, `${activeSheet.name}.csv`)
-  }, [activeSheet])
-
   // Handle clicking a validation error to navigate to the affected cell
   const handleErrorClick = useCallback((error: ValidationError) => {
     // Create a point for the error cell
@@ -542,9 +493,6 @@ export function SpreadsheetContainer() {
         canRedo={historyIndex !== -1 && historyIndex < history.length - 1}
         onUndo={handleUndo}
         onRedo={handleRedo}
-        onImport={handleImport}
-        onExportExcel={handleExportExcel}
-        onExportCSV={handleExportCSV}
         onAddRow={handleAddRow}
       />
       <DraggableColumnHeaders
