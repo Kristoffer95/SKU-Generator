@@ -147,3 +147,161 @@
 .driver-popover.sku-tour-popover .driver-popover-arrow-side-bottom.driver-popover-arrow {
   border-color: hsl(var(--border));
 }
+
+/* ========================================
+   SKU Spreadsheet Customizations
+   ======================================== */
+
+/* Main spreadsheet container wrapper */
+.sku-spreadsheet {
+  width: 100%;
+  height: 100%;
+}
+
+/* Base spreadsheet table styling */
+.sku-spreadsheet .Spreadsheet {
+  --spreadsheet-header-bg: #f8fafc;
+  --spreadsheet-readonly-bg: #f1f5f9;
+  --spreadsheet-duplicate-bg: #fef3c7;
+  --spreadsheet-cell-border: #e2e8f0;
+}
+
+.sku-spreadsheet .Spreadsheet__table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+/* Header row styling (first row) */
+.sku-spreadsheet .Spreadsheet__cell--header,
+.sku-spreadsheet tr:first-child .Spreadsheet__cell {
+  background-color: var(--spreadsheet-header-bg);
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+/* Read-only cell styling (SKU column) */
+.sku-spreadsheet .Spreadsheet__cell.cell-readonly,
+.sku-spreadsheet .Spreadsheet__cell[data-readonly="true"] {
+  background-color: var(--spreadsheet-readonly-bg) !important;
+  color: hsl(var(--muted-foreground));
+  cursor: default;
+}
+
+/* Duplicate SKU warning styling */
+.sku-spreadsheet .Spreadsheet__cell.cell-duplicate {
+  background-color: var(--spreadsheet-duplicate-bg) !important;
+}
+
+/* Apply Tailwind arbitrary background colors for cells */
+.sku-spreadsheet .Spreadsheet__cell[class*="bg-[#f1f5f9]"],
+.sku-spreadsheet [class*="bg-[#f1f5f9]"] {
+  background-color: #f1f5f9 !important;
+}
+
+.sku-spreadsheet .Spreadsheet__cell[class*="bg-[#fef3c7]"],
+.sku-spreadsheet [class*="bg-[#fef3c7]"] {
+  background-color: #fef3c7 !important;
+}
+
+/* General cell styling */
+.sku-spreadsheet .Spreadsheet__cell {
+  border: 1px solid var(--spreadsheet-cell-border);
+  padding: 4px 8px;
+  min-width: 80px;
+  height: 32px;
+  vertical-align: middle;
+}
+
+/* Active/selected cell styling */
+.sku-spreadsheet .Spreadsheet__active-cell {
+  box-shadow: 0 0 0 2px hsl(var(--ring));
+  z-index: 1;
+}
+
+/* Selection rectangle */
+.sku-spreadsheet .Spreadsheet__floating-rect--selected {
+  border: 2px solid hsl(var(--primary));
+  background-color: hsl(var(--primary) / 0.1);
+}
+
+/* Dropdown editor styling */
+.sku-spreadsheet .Spreadsheet__data-editor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+}
+
+.sku-spreadsheet .Spreadsheet__data-editor select,
+.sku-spreadsheet .Spreadsheet__data-editor input {
+  width: 100%;
+  height: 100%;
+  padding: 4px 8px;
+  font-size: inherit;
+  font-family: inherit;
+  border: none;
+  outline: none;
+  background-color: white;
+}
+
+.sku-spreadsheet .Spreadsheet__data-editor select:focus,
+.sku-spreadsheet .Spreadsheet__data-editor input:focus {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: -2px;
+}
+
+/* Dropdown select specific styling */
+.sku-spreadsheet .Spreadsheet__data-editor select {
+  cursor: pointer;
+  appearance: menulist;
+}
+
+.sku-spreadsheet .Spreadsheet__data-editor select option {
+  padding: 4px 8px;
+}
+
+/* Data viewer (non-edit mode) */
+.sku-spreadsheet .Spreadsheet__data-viewer {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Column/row headers */
+.sku-spreadsheet .Spreadsheet__header {
+  background-color: var(--spreadsheet-header-bg);
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  text-align: center;
+  min-width: 40px;
+}
+
+.sku-spreadsheet .Spreadsheet__header--selected {
+  background-color: hsl(var(--primary) / 0.1);
+}
+
+/* Dark mode support */
+.dark .sku-spreadsheet .Spreadsheet {
+  --spreadsheet-header-bg: hsl(217.2 32.6% 17.5%);
+  --spreadsheet-readonly-bg: hsl(217.2 32.6% 20%);
+  --spreadsheet-duplicate-bg: hsl(45 93% 30%);
+  --spreadsheet-cell-border: hsl(217.2 32.6% 25%);
+}
+
+.dark .sku-spreadsheet .Spreadsheet__data-editor select,
+.dark .sku-spreadsheet .Spreadsheet__data-editor input {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.dark .sku-spreadsheet .Spreadsheet__cell[class*="bg-[#f1f5f9]"],
+.dark .sku-spreadsheet [class*="bg-[#f1f5f9]"] {
+  background-color: hsl(217.2 32.6% 20%) !important;
+}
+
+.dark .sku-spreadsheet .Spreadsheet__cell[class*="bg-[#fef3c7]"],
+.dark .sku-spreadsheet [class*="bg-[#fef3c7]"] {
+  background-color: hsl(45 93% 30%) !important;
+}

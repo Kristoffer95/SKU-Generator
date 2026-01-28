@@ -1,3 +1,27 @@
+## migration-css-styles - COMPLETED
+Add CSS styles for react-spreadsheet customizations
+
+### Key decisions
+- Added .sku-spreadsheet wrapper class to SpreadsheetContainer for scoped styles
+- CSS custom properties for theming: --spreadsheet-header-bg, --spreadsheet-readonly-bg, --spreadsheet-duplicate-bg, --spreadsheet-cell-border
+- Styles for Tailwind arbitrary values: bg-[#f1f5f9] (readonly), bg-[#fef3c7] (duplicate)
+- Header row (tr:first-child .Spreadsheet__cell) styled with font-weight: 600
+- Dropdown/select focus styling with outline: 2px solid hsl(var(--ring))
+- Dark mode support with appropriate color adjustments
+- Toolbar already uses shadcn/ui Button with ghost variant (consistent with app theme)
+
+### Files changed
+- src/index.css (added ~100 lines of .sku-spreadsheet styles)
+- src/components/SpreadsheetContainer.tsx (added sku-spreadsheet class to wrapper div)
+
+### Notes
+- Styles work with Tailwind's arbitrary values approach used in applyDuplicateHighlighting
+- Dark mode colors use HSL values matching app theme
+- All 6 stepsToVerify criteria verified
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- Tests pass (excluding SpreadsheetContainer which needs migration-tests-update)
+
 ## migration-container-rewrite - COMPLETED
 Rewrite SpreadsheetContainer to use react-spreadsheet instead of Fortune-Sheet
 

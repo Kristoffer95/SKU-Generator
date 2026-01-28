@@ -154,7 +154,7 @@
       "Dropdown/select has proper focus outline styling",
       "Toolbar buttons have consistent styling with app theme"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "migration-tests-update",
