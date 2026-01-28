@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { PanelLeft, Settings, Upload, Download, FileSpreadsheet, FileText } from "lucide-react"
 import {
   Sidebar,
@@ -20,6 +20,7 @@ import {
 import { SettingsDialog } from "@/components/SettingsDialog"
 import { GuidedTourButton } from "@/components/GuidedTourButton"
 import { exportToExcel, exportToCSV, importFromExcel } from "@/lib/import-export"
+import { registerTourDialogOpeners, unregisterTourDialogOpeners } from "@/lib/guided-tour"
 import { useSheetsStore } from "@/store/sheets"
 
 interface AppLayoutProps {
@@ -32,6 +33,27 @@ export function AppLayout({ sidebar, children }: AppLayoutProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const sheets = useSheetsStore((state) => state.sheets)
   const getActiveSheet = useSheetsStore((state) => state.getActiveSheet)
+
+  // Callbacks for tour dialog openers
+  const openSettingsDialog = useCallback(() => {
+    setSettingsOpen(true)
+  }, [])
+
+  const closeAllDialogs = useCallback(() => {
+    setSettingsOpen(false)
+  }, [])
+
+  // Register dialog openers for guided tour
+  useEffect(() => {
+    registerTourDialogOpeners({
+      settings: openSettingsDialog,
+      closeAll: closeAllDialogs,
+    })
+
+    return () => {
+      unregisterTourDialogOpeners(["settings"])
+    }
+  }, [openSettingsDialog, closeAllDialogs])
 
   const handleExportExcel = () => {
     exportToExcel(sheets, 'sku-data.xlsx')

@@ -1,18 +1,20 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useCallback } from "react"
 import { Plus, ChevronDown } from "lucide-react"
 import { AnimatePresence, motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { useSheetsStore } from "@/store/sheets"
 import { parseConfigSheet } from "@/lib/config-sheet"
 import { AddSpecDialog } from "@/components/AddSpecDialog"
+import { registerTourDialogOpeners, unregisterTourDialogOpeners } from "@/lib/guided-tour"
 import type { ParsedSpec } from "@/types"
 
 interface SpecItemProps {
   spec: ParsedSpec
   onJumpToConfig: () => void
+  isFirst?: boolean
 }
 
-function SpecItem({ spec, onJumpToConfig }: SpecItemProps) {
+function SpecItem({ spec, onJumpToConfig, isFirst }: SpecItemProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   return (
@@ -22,6 +24,7 @@ function SpecItem({ spec, onJumpToConfig }: SpecItemProps) {
       exit={{ opacity: 0, height: 0 }}
       transition={{ duration: 0.2 }}
       className="overflow-hidden"
+      {...(isFirst ? { "data-tour": "spec-item" } : {})}
     >
       <div className="rounded-md border bg-card">
         {/* Header */}
@@ -115,6 +118,27 @@ export function SpecificationList() {
     }
   }
 
+  // Callbacks for tour dialog openers
+  const openAddSpecDialog = useCallback(() => {
+    setIsAddDialogOpen(true)
+  }, [])
+
+  const closeAllDialogs = useCallback(() => {
+    setIsAddDialogOpen(false)
+  }, [])
+
+  // Register dialog openers for guided tour
+  useEffect(() => {
+    registerTourDialogOpeners({
+      addSpec: openAddSpecDialog,
+      closeAll: closeAllDialogs,
+    })
+
+    return () => {
+      unregisterTourDialogOpeners(["addSpec"])
+    }
+  }, [openAddSpecDialog, closeAllDialogs])
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto">
@@ -131,11 +155,12 @@ export function SpecificationList() {
         ) : (
           <div className="p-2 space-y-1">
             <AnimatePresence initial={false}>
-              {specifications.map((spec) => (
+              {specifications.map((spec, index) => (
                 <SpecItem
                   key={spec.name}
                   spec={spec}
                   onJumpToConfig={handleJumpToConfig}
+                  isFirst={index === 0}
                 />
               ))}
             </AnimatePresence>

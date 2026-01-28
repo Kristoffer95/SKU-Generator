@@ -166,7 +166,7 @@ export function AddSpecDialog({ open, onOpenChange }: AddSpecDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px]" data-tour="add-spec-dialog">
         <DialogHeader>
           <DialogTitle>Add Specification</DialogTitle>
           <DialogDescription>
@@ -186,10 +186,11 @@ export function AddSpecDialog({ open, onOpenChange }: AddSpecDialogProps) {
                 setError(null)
               }}
               placeholder="e.g., Color, Size, Material"
+              data-tour="spec-name-input"
             />
           </div>
 
-          <div className="grid gap-2">
+          <div className="grid gap-2" data-tour="spec-values-section">
             <Label>Values</Label>
             <div className="space-y-2 max-h-[200px] overflow-y-auto">
               {values.map((entry, index) => (

@@ -1,3 +1,24 @@
+## PRD-016: Enhanced User Onboarding with 24-Step Driver.js Tutorial - COMPLETE
+- Rewrote guided-tour.ts with 24 detailed steps in 3 phases: Foundation (1-7), Create SKU (8-17), Advanced (18-24)
+- Created dialog opener registry: registerTourDialogOpeners(), unregisterTourDialogOpeners()
+- Added onHighlightStarted hook to auto-open AddSpecDialog at steps 8-11 and SettingsDialog at steps 18-19
+- Added onDeselected hook to close dialogs when leaving dialog step groups
+- Added data-tour attributes: add-spec-dialog, spec-name-input, spec-values-section to AddSpecDialog
+- Added data-tour="settings-dialog" attribute to SettingsDialog
+- Added data-tour="spec-item" to first SpecItem card in SpecificationList
+- Registered dialog openers in SpecificationList (addSpec, closeAll) and AppLayout (settings, closeAll)
+- Added stopGuidedTour() function to destroy active tour
+- 19 tests for guided-tour.ts covering all registry and step content
+- All feedback loops pass (246 tests, typecheck, lint)
+
+Files changed:
+- src/lib/guided-tour.ts (complete rewrite with 24 steps, dialog registry, hooks)
+- src/lib/guided-tour.test.ts (expanded test suite for new features)
+- src/components/AddSpecDialog.tsx (data-tour attributes)
+- src/components/SettingsDialog.tsx (data-tour attribute)
+- src/components/SpecificationList.tsx (data-tour on first spec, dialog opener registration)
+- src/components/AppLayout.tsx (settings dialog opener registration)
+
 ## PRD-018: Config Sheet Overwrite Bug Fix - COMPLETE
 - Fixed bug where specifications disappear when editing any cell
 - Config sheet was being overwritten by Fortune-Sheet onChange handler
