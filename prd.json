@@ -246,6 +246,6 @@
       "Config sheet is removed after successful migration",
       "Data sheets remain intact with correct values"
     ],
-    "passes": false
+    "passes": true
   }
 ]

@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { SheetConfig, CellData } from '../types';
 import { createSampleProductSheet, getSampleSpecifications, isFirstLaunch, markAsInitialized } from '../lib/sample-data';
 import { useSpecificationsStore } from './specifications';
+import { migrateConfigSheetData } from '../lib/migration';
 
 interface SheetsState {
   sheets: SheetConfig[];
@@ -226,7 +227,26 @@ export const useSheetsStore = create<SheetsState>()(
           state.activeSheetId = productSheet.id;
           markAsInitialized();
         } else if (state && state.sheets.length > 0) {
-          // Mark as initialized if we already have data
+          // Check if migration from Config sheet is needed
+          const configSheet = state.sheets.find((s) => s.type === 'config');
+          const specsStore = useSpecificationsStore.getState();
+
+          if (configSheet && specsStore.specifications.length === 0) {
+            // Migrate Config sheet data to specifications store
+            const migratedSpecs = migrateConfigSheetData(configSheet.data);
+            if (migratedSpecs && migratedSpecs.length > 0) {
+              useSpecificationsStore.setState({ specifications: migratedSpecs });
+            }
+
+            // Remove Config sheet from sheets array
+            state.sheets = state.sheets.filter((s) => s.type !== 'config');
+
+            // Update activeSheetId if it was the Config sheet
+            if (state.activeSheetId === configSheet.id) {
+              state.activeSheetId = state.sheets[0]?.id ?? null;
+            }
+          }
+
           markAsInitialized();
         }
       },

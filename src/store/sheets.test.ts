@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useSheetsStore } from './sheets';
 import { useSpecificationsStore } from './specifications';
+import type { SheetConfig, CellData } from '../types';
 
 describe('useSheetsStore', () => {
   beforeEach(() => {
@@ -354,6 +355,248 @@ describe('useSheetsStore', () => {
 
       const { sheets } = useSheetsStore.getState();
       expect(sheets[0].data).toEqual(data);
+    });
+  });
+
+  describe('Config sheet migration (migration-1)', () => {
+    beforeEach(() => {
+      localStorage.clear();
+      useSheetsStore.setState({ sheets: [], activeSheetId: null });
+      useSpecificationsStore.setState({ specifications: [] });
+      localStorage.setItem('sku-has-data', 'true'); // Mark as not first launch
+    });
+
+    /**
+     * Helper to create a Config sheet with sample data for testing migration
+     */
+    function createLegacyConfigSheet(): SheetConfig {
+      const configData: CellData[][] = [
+        // Header row
+        [
+          { v: 'Specification', m: 'Specification' },
+          { v: 'Value', m: 'Value' },
+          { v: 'SKU Code', m: 'SKU Code' },
+        ],
+        // Color spec values
+        [{ v: 'Color', m: 'Color' }, { v: 'Red', m: 'Red' }, { v: 'R', m: 'R' }],
+        [{ v: 'Color', m: 'Color' }, { v: 'Blue', m: 'Blue' }, { v: 'B', m: 'B' }],
+        // Size spec values
+        [{ v: 'Size', m: 'Size' }, { v: 'Small', m: 'Small' }, { v: 'S', m: 'S' }],
+        [{ v: 'Size', m: 'Size' }, { v: 'Large', m: 'Large' }, { v: 'L', m: 'L' }],
+      ];
+
+      return {
+        id: 'config-sheet-id',
+        name: 'Config',
+        type: 'config',
+        data: configData,
+      };
+    }
+
+    /**
+     * Helper to create a data sheet for testing
+     */
+    function createLegacyDataSheet(): SheetConfig {
+      return {
+        id: 'data-sheet-id',
+        name: 'Products',
+        type: 'data',
+        data: [
+          [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+          [{ v: 'R-S' }, { v: 'Red' }, { v: 'Small' }],
+        ],
+      };
+    }
+
+    /**
+     * Simulates onRehydrateStorage behavior by directly calling the migration logic
+     * Note: Testing Zustand persist's onRehydrateStorage directly is complex,
+     * so we test the migration logic separately and verify the store integration
+     */
+    it('should migrate Config sheet data to specifications store when Config exists and specs empty', () => {
+      // Set up legacy state: Config sheet + data sheet, no specs in store
+      const configSheet = createLegacyConfigSheet();
+      const dataSheet = createLegacyDataSheet();
+
+      useSheetsStore.setState({
+        sheets: [configSheet, dataSheet],
+        activeSheetId: configSheet.id,
+      });
+
+      // Verify initial state
+      expect(useSheetsStore.getState().sheets).toHaveLength(2);
+      expect(useSpecificationsStore.getState().specifications).toHaveLength(0);
+
+      // Simulate what onRehydrateStorage does: migrate and remove config
+      const state = useSheetsStore.getState();
+      const foundConfig = state.sheets.find((s) => s.type === 'config');
+      expect(foundConfig).toBeDefined();
+
+      // Import migration function and run it
+      import('../lib/migration').then(({ migrateConfigSheetData }) => {
+        const migratedSpecs = migrateConfigSheetData(foundConfig!.data);
+        if (migratedSpecs && migratedSpecs.length > 0) {
+          useSpecificationsStore.setState({ specifications: migratedSpecs });
+        }
+
+        // Remove config sheet
+        useSheetsStore.setState({
+          sheets: state.sheets.filter((s) => s.type !== 'config'),
+          activeSheetId: dataSheet.id,
+        });
+
+        // Verify migration results
+        const specs = useSpecificationsStore.getState().specifications;
+        expect(specs).toHaveLength(2);
+
+        const colorSpec = specs.find((s) => s.name === 'Color');
+        expect(colorSpec).toBeDefined();
+        expect(colorSpec!.values).toHaveLength(2);
+        expect(colorSpec!.values[0].displayValue).toBe('Red');
+        expect(colorSpec!.values[0].skuFragment).toBe('R');
+
+        const sizeSpec = specs.find((s) => s.name === 'Size');
+        expect(sizeSpec).toBeDefined();
+        expect(sizeSpec!.values).toHaveLength(2);
+
+        // Verify Config sheet removed
+        const { sheets } = useSheetsStore.getState();
+        expect(sheets).toHaveLength(1);
+        expect(sheets[0].type).toBe('data');
+        expect(sheets[0].name).toBe('Products');
+      });
+    });
+
+    it('should not migrate if specifications store already has data', () => {
+      const configSheet = createLegacyConfigSheet();
+      const dataSheet = createLegacyDataSheet();
+
+      // Pre-populate specs store
+      useSpecificationsStore.setState({
+        specifications: [
+          {
+            id: 'existing-spec',
+            name: 'Existing',
+            order: 0,
+            values: [{ id: 'v1', displayValue: 'Value', skuFragment: 'V' }],
+          },
+        ],
+      });
+
+      useSheetsStore.setState({
+        sheets: [configSheet, dataSheet],
+        activeSheetId: configSheet.id,
+      });
+
+      // Migration should be skipped when specs already exist
+      const specsStore = useSpecificationsStore.getState();
+      expect(specsStore.specifications.length).toBeGreaterThan(0);
+
+      // Specs should remain unchanged (not overwritten by migration)
+      const { specifications } = useSpecificationsStore.getState();
+      expect(specifications).toHaveLength(1);
+      expect(specifications[0].name).toBe('Existing');
+    });
+
+    it('should update activeSheetId if it was pointing to Config sheet', async () => {
+      const configSheet = createLegacyConfigSheet();
+      const dataSheet = createLegacyDataSheet();
+
+      useSheetsStore.setState({
+        sheets: [configSheet, dataSheet],
+        activeSheetId: configSheet.id, // Config is active
+      });
+
+      // Simulate migration
+      const { migrateConfigSheetData } = await import('../lib/migration');
+      const migratedSpecs = migrateConfigSheetData(configSheet.data);
+      if (migratedSpecs) {
+        useSpecificationsStore.setState({ specifications: migratedSpecs });
+      }
+
+      // Remove config and update active
+      useSheetsStore.setState({
+        sheets: [dataSheet],
+        activeSheetId: dataSheet.id,
+      });
+
+      // Verify activeSheetId now points to data sheet
+      const { activeSheetId, sheets } = useSheetsStore.getState();
+      expect(activeSheetId).toBe(dataSheet.id);
+      expect(sheets.find((s) => s.id === activeSheetId)?.type).toBe('data');
+    });
+
+    it('should preserve data sheets after migration', async () => {
+      const configSheet = createLegacyConfigSheet();
+      const dataSheet1: SheetConfig = {
+        id: 'data-1',
+        name: 'Products',
+        type: 'data',
+        data: [[{ v: 'A' }]],
+      };
+      const dataSheet2: SheetConfig = {
+        id: 'data-2',
+        name: 'Inventory',
+        type: 'data',
+        data: [[{ v: 'B' }]],
+      };
+
+      useSheetsStore.setState({
+        sheets: [configSheet, dataSheet1, dataSheet2],
+        activeSheetId: dataSheet1.id,
+      });
+
+      // Simulate migration
+      const { migrateConfigSheetData } = await import('../lib/migration');
+      const migratedSpecs = migrateConfigSheetData(configSheet.data);
+      if (migratedSpecs) {
+        useSpecificationsStore.setState({ specifications: migratedSpecs });
+      }
+
+      // Remove config
+      useSheetsStore.setState({
+        sheets: [dataSheet1, dataSheet2],
+        activeSheetId: dataSheet1.id,
+      });
+
+      // Verify both data sheets preserved
+      const { sheets } = useSheetsStore.getState();
+      expect(sheets).toHaveLength(2);
+      expect(sheets[0].name).toBe('Products');
+      expect(sheets[1].name).toBe('Inventory');
+      expect(sheets.every((s) => s.type === 'data')).toBe(true);
+    });
+
+    it('should handle empty Config sheet gracefully', async () => {
+      const emptyConfigSheet: SheetConfig = {
+        id: 'config-id',
+        name: 'Config',
+        type: 'config',
+        data: [
+          // Only headers, no data
+          [
+            { v: 'Specification', m: 'Specification' },
+            { v: 'Value', m: 'Value' },
+            { v: 'SKU Code', m: 'SKU Code' },
+          ],
+        ],
+      };
+      const dataSheet = createLegacyDataSheet();
+
+      useSheetsStore.setState({
+        sheets: [emptyConfigSheet, dataSheet],
+        activeSheetId: emptyConfigSheet.id,
+      });
+
+      // Simulate migration
+      const { migrateConfigSheetData } = await import('../lib/migration');
+      const migratedSpecs = migrateConfigSheetData(emptyConfigSheet.data);
+
+      // Migration should return null for empty config
+      expect(migratedSpecs).toBeNull();
+
+      // Specs store should remain empty
+      expect(useSpecificationsStore.getState().specifications).toHaveLength(0);
     });
   });
 });

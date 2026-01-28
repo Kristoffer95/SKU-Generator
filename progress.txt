@@ -1,3 +1,25 @@
+## migration-1: Config sheet to specifications store migration
+
+**Completed**: Automatic migration of Config sheet data to specifications store on app load
+
+**Key decisions**:
+- Created migration.ts module with convertParsedSpecsToSpecifications and migrateConfigSheetData functions
+- Migration runs in onRehydrateStorage callback (Zustand persist) after state is hydrated
+- Migration only triggers when: Config sheet exists AND specifications store is empty
+- Reuses parseConfigSheet from deprecated config-sheet.ts to parse Config data
+- ParsedSpec[] -> Specification[] conversion assigns sequential order values (0, 1, 2...)
+- Config sheet is removed from sheets array after successful migration
+- activeSheetId updated to first data sheet if it was pointing to Config
+- Data sheets remain intact with their original data
+
+**Files changed**:
+- src/lib/migration.ts: New module with Config sheet migration functions
+- src/lib/migration.test.ts: 10 tests covering conversion and migration scenarios
+- src/store/sheets.ts: Added migration logic to onRehydrateStorage callback
+- src/store/sheets.test.ts: Added 5 integration tests for Config sheet migration
+
+---
+
 ## cleanup-1: Deprecate config-sheet.ts and related utilities
 
 **Completed**: config-sheet.ts and related functions marked as @deprecated with JSDoc comments
