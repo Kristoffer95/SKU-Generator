@@ -140,7 +140,7 @@
       "Affected cell is selected/highlighted",
       "Works for both missing-value and duplicate-sku error types"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "migration-css-styles",

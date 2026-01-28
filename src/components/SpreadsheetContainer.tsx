@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useRef, useEffect, useState } from "react"
-import Spreadsheet, { Matrix, CellBase } from "react-spreadsheet"
+import Spreadsheet, { Matrix, CellBase, Selection, RangeSelection, PointRange } from "react-spreadsheet"
 import { useSheetsStore } from "@/store/sheets"
 import { useSettingsStore } from "@/store/settings"
 import { useSpecificationsStore } from "@/store/specifications"
@@ -82,6 +82,11 @@ export function SpreadsheetContainer() {
   const [historyIndex, setHistoryIndex] = useState(-1)
   const historyIndexRef = useRef(-1)
   const isUndoRedoRef = useRef(false)
+
+  // Selection state for programmatic cell navigation
+  const [selected, setSelected] = useState<Selection | undefined>(undefined)
+  // Ref for the spreadsheet scroll container
+  const spreadsheetContainerRef = useRef<HTMLDivElement>(null)
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -250,8 +255,40 @@ export function SpreadsheetContainer() {
 
   // Handle clicking a validation error to navigate to the affected cell
   const handleErrorClick = useCallback((error: ValidationError) => {
-    // TODO: Implement cell selection in migration-click-navigate task
-    console.log("Navigate to error:", error)
+    // Create a point for the error cell
+    const point = { row: error.row, column: error.column }
+    // Create a single-cell selection using PointRange and RangeSelection
+    const range = new PointRange(point, point)
+    const selection = new RangeSelection(range)
+    setSelected(selection)
+
+    // Scroll to the cell - find the cell element and scroll it into view
+    // Use setTimeout to allow React to update the selection state first
+    setTimeout(() => {
+      const container = spreadsheetContainerRef.current
+      if (container) {
+        // Find the cell by navigating the table structure
+        // The table has row indicators (first column) and a header row
+        // So the actual cell is at: tbody > tr[rowIndex+1] > td[columnIndex+1]
+        // (+1 for header row, +1 for row indicator column)
+        const tbody = container.querySelector("tbody")
+        if (tbody) {
+          // Get all rows (including header row which is in thead, so tbody rows start at data row 0)
+          const rows = tbody.querySelectorAll("tr")
+          // Row index in tbody corresponds to error.row (0-indexed)
+          const targetRow = rows[error.row]
+          if (targetRow) {
+            // Get all cells in the row (th for row indicator, td for data cells)
+            const cells = targetRow.querySelectorAll("th, td")
+            // Column 0 is the row indicator, so actual data column is at error.column + 1
+            const cellElement = cells[error.column + 1] as HTMLElement | null
+            if (cellElement) {
+              cellElement.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" })
+            }
+          }
+        }
+      }
+    }, 0)
   }, [])
 
   // Compute validation errors for the active sheet
@@ -285,6 +322,11 @@ export function SpreadsheetContainer() {
     }))
   }, [sheets])
 
+  // Handle selection changes from user interaction
+  const handleSelectionChange = useCallback((newSelection: Selection) => {
+    setSelected(newSelection)
+  }, [])
+
   if (sheets.length === 0) {
     return (
       <div className="flex h-full items-center justify-center text-muted-foreground">
@@ -305,11 +347,13 @@ export function SpreadsheetContainer() {
         onExportCSV={handleExportCSV}
         onAddRow={handleAddRow}
       />
-      <div className="flex-1 min-h-0 overflow-auto sku-spreadsheet">
+      <div ref={spreadsheetContainerRef} className="flex-1 min-h-0 overflow-auto sku-spreadsheet">
         <Spreadsheet
           data={spreadsheetData as Matrix<CellBase<string | number | null>>}
           onChange={handleDataChange}
           DataEditor={DropdownEditor}
+          selected={selected}
+          onSelect={handleSelectionChange}
         />
       </div>
       <SheetTabs

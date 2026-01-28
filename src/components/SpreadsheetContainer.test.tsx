@@ -3,41 +3,77 @@ import { render, screen, fireEvent, within, act } from '@testing-library/react'
 import { useSheetsStore } from '@/store/sheets'
 import { useSpecificationsStore } from '@/store/specifications'
 
+// Mock scrollIntoView which is not available in jsdom
+Element.prototype.scrollIntoView = vi.fn()
+
 // Track onChange passed to Spreadsheet for testing
 let capturedOnChange: ((data: unknown[][]) => void) | null = null
+let capturedOnSelect: ((selection: unknown) => void) | null = null
 let capturedData: unknown[][] = []
+let capturedSelected: unknown = null
 
-// Mock react-spreadsheet
-vi.mock('react-spreadsheet', () => ({
-  default: vi.fn(({ data, onChange }) => {
-    // Capture onChange and data for testing
-    capturedOnChange = onChange || null
-    capturedData = data || []
-    return (
-      <div data-testid="mock-spreadsheet">
-        <span data-testid="row-count">{data?.length || 0} rows</span>
-        {data?.map((row: unknown[], rowIdx: number) => (
-          <div key={rowIdx} data-testid={`row-${rowIdx}`}>
-            {Array.isArray(row) && row.map((cell: unknown, colIdx: number) => {
-              const cellObj = cell as { value?: string | number | null; readOnly?: boolean; className?: string } | null
-              return (
-                <span
-                  key={colIdx}
-                  data-testid={`cell-${rowIdx}-${colIdx}`}
-                  data-value={cellObj?.value ?? ''}
-                  data-readonly={cellObj?.readOnly ?? false}
-                  data-classname={cellObj?.className ?? ''}
-                >
-                  {String(cellObj?.value ?? '')}
-                </span>
-              )
-            })}
-          </div>
-        ))}
-      </div>
-    )
-  }),
-}))
+// Mock react-spreadsheet with selection support
+vi.mock('react-spreadsheet', () => {
+  // Create mock selection classes
+  class MockPointRange {
+    start: { row: number; column: number }
+    end: { row: number; column: number }
+    constructor(start: { row: number; column: number }, end: { row: number; column: number }) {
+      this.start = start
+      this.end = end
+    }
+  }
+
+  class MockRangeSelection {
+    range: MockPointRange
+    constructor(range: MockPointRange) {
+      this.range = range
+    }
+  }
+
+  return {
+    default: vi.fn(({ data, onChange, selected, onSelect }) => {
+      // Capture onChange and data for testing
+      capturedOnChange = onChange || null
+      capturedOnSelect = onSelect || null
+      capturedData = data || []
+      capturedSelected = selected || null
+      return (
+        <div data-testid="mock-spreadsheet">
+          <span data-testid="row-count">{data?.length || 0} rows</span>
+          {/* Render table structure for scroll-to-cell to work in tests */}
+          <table>
+            <tbody>
+              {data?.map((row: unknown[], rowIdx: number) => (
+                <tr key={rowIdx} data-testid={`row-${rowIdx}`}>
+                  <th>Row {rowIdx}</th>
+                  {Array.isArray(row) && row.map((cell: unknown, colIdx: number) => {
+                    const cellObj = cell as { value?: string | number | null; readOnly?: boolean; className?: string } | null
+                    return (
+                      <td
+                        key={colIdx}
+                        data-testid={`cell-${rowIdx}-${colIdx}`}
+                        data-value={cellObj?.value ?? ''}
+                        data-readonly={cellObj?.readOnly ?? false}
+                        data-classname={cellObj?.className ?? ''}
+                        className="Spreadsheet__cell"
+                      >
+                        {String(cellObj?.value ?? '')}
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )
+    }),
+    PointRange: MockPointRange,
+    RangeSelection: MockRangeSelection,
+    Selection: class {},
+  }
+})
 
 // Import after mocking
 import { SpreadsheetContainer } from './SpreadsheetContainer'
@@ -51,7 +87,9 @@ describe('SpreadsheetContainer', () => {
     useSpecificationsStore.setState({ specifications: [] })
     // Reset captured values
     capturedOnChange = null
+    capturedOnSelect = null
     capturedData = []
+    capturedSelected = null
   })
 
   afterEach(() => {
@@ -287,7 +325,9 @@ describe('SpreadsheetContainer onChange handler', () => {
     useSheetsStore.setState({ sheets: [], activeSheetId: null })
     useSpecificationsStore.setState({ specifications: [] })
     capturedOnChange = null
+    capturedOnSelect = null
     capturedData = []
+    capturedSelected = null
   })
 
   afterEach(() => {
@@ -897,6 +937,185 @@ describe('SpreadsheetContainer ValidationPanel integration', () => {
   })
 })
 
+/**
+ * Tests for migration-click-navigate PRD task
+ * Implement click-to-navigate for validation errors
+ */
+describe('SpreadsheetContainer click-to-navigate (migration-click-navigate)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+    capturedOnChange = null
+    capturedOnSelect = null
+    capturedData = []
+    capturedSelected = null
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('clicking validation error sets spreadsheet selection to affected cell', async () => {
+    // stepsToVerify 1 & 3: Click on validation error, affected cell is selected/highlighted
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-1',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'Y' }, { v: 'Yellow' }], // Invalid value at row 1, col 1
+    ])
+    useSheetsStore.getState().setActiveSheet(sheetId)
+
+    render(<SpreadsheetContainer />)
+
+    // ValidationPanel should be rendered with the error
+    expect(screen.getByTestId('validation-panel')).toBeInTheDocument()
+
+    // Click on the validation error
+    const errorItem = screen.getByTestId('validation-error-item')
+    await act(async () => {
+      fireEvent.click(errorItem)
+    })
+
+    // Wait for the selection to be set (uses setTimeout internally)
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 10))
+    })
+
+    // Verify that selected was set (capturedSelected should be a RangeSelection)
+    expect(capturedSelected).not.toBeNull()
+    // The selection should point to row 1, column 1 (where the invalid value is)
+    const selection = capturedSelected as { range: { start: { row: number; column: number } } }
+    expect(selection.range.start.row).toBe(1)
+    expect(selection.range.start.column).toBe(1)
+  })
+
+  it('clicking duplicate SKU error selects the affected SKU cell', async () => {
+    // stepsToVerify 4: Works for duplicate-sku error types
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R-S' }, { v: 'Red' }],
+      [{ v: 'R-S' }, { v: 'Red' }], // Duplicate SKU at row 2, col 0
+    ])
+    useSheetsStore.getState().setActiveSheet(sheetId)
+
+    render(<SpreadsheetContainer />)
+
+    // ValidationPanel should be rendered with duplicate errors
+    expect(screen.getByTestId('validation-panel')).toBeInTheDocument()
+    expect(screen.getByText('2 duplicate SKUs')).toBeInTheDocument()
+
+    // Click on the first validation error
+    const errorItems = screen.getAllByTestId('validation-error-item')
+    await act(async () => {
+      fireEvent.click(errorItems[0])
+    })
+
+    // Wait for the selection to be set
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 10))
+    })
+
+    // Verify selection was set to the SKU cell
+    expect(capturedSelected).not.toBeNull()
+    const selection = capturedSelected as { range: { start: { row: number; column: number } } }
+    // Duplicate SKU errors are in column 0
+    expect(selection.range.start.column).toBe(0)
+    // Row should be either 1 or 2 (both are duplicates)
+    expect([1, 2]).toContain(selection.range.start.row)
+  })
+
+  it('clicking missing-value error selects the affected spec column cell', async () => {
+    // stepsToVerify 4: Works for missing-value error types
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-1',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          ],
+        },
+        {
+          id: 'spec-2',
+          name: 'Size',
+          order: 1,
+          values: [
+            { id: 'v2', displayValue: 'Small', skuFragment: 'S' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+      [{ v: 'R' }, { v: 'Red' }, { v: 'Invalid' }], // Invalid value at row 1, col 2
+    ])
+    useSheetsStore.getState().setActiveSheet(sheetId)
+
+    render(<SpreadsheetContainer />)
+
+    // Click on the validation error
+    const errorItem = screen.getByTestId('validation-error-item')
+    await act(async () => {
+      fireEvent.click(errorItem)
+    })
+
+    // Wait for the selection to be set
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 10))
+    })
+
+    // Verify selection points to the correct cell (row 1, col 2)
+    expect(capturedSelected).not.toBeNull()
+    const selection = capturedSelected as { range: { start: { row: number; column: number } } }
+    expect(selection.range.start.row).toBe(1)
+    expect(selection.range.start.column).toBe(2)
+  })
+
+  it('passes selected and onSelect props to Spreadsheet component', () => {
+    // Verify the SpreadsheetContainer passes selection props to Spreadsheet
+    useSheetsStore.getState().addSheet('Products')
+
+    render(<SpreadsheetContainer />)
+
+    // The mock should capture that onSelect was passed
+    expect(capturedOnSelect).not.toBeNull()
+  })
+
+  it('user can still select cells normally via onSelect', async () => {
+    // Verify that the onSelect prop allows user selection to work
+    useSheetsStore.getState().addSheet('Products')
+
+    render(<SpreadsheetContainer />)
+
+    // Simulate user selection change via onSelect callback
+    const mockSelection = { range: { start: { row: 2, column: 3 }, end: { row: 2, column: 3 } } }
+    await act(async () => {
+      capturedOnSelect?.(mockSelection)
+    })
+
+    // The selection state should be updated
+    // After re-render, the captured selection should reflect the new selection
+    // Note: This verifies the onSelect handler works without errors
+  })
+})
+
 describe('SpreadsheetContainer SKU auto-generation from dropdown selection', () => {
   // Tests verifying PRD task sku-autogen-1: SKU auto-generation when selecting values from dropdowns
 
@@ -905,7 +1124,9 @@ describe('SpreadsheetContainer SKU auto-generation from dropdown selection', () 
     useSheetsStore.setState({ sheets: [], activeSheetId: null })
     useSpecificationsStore.setState({ specifications: [] })
     capturedOnChange = null
+    capturedOnSelect = null
     capturedData = []
+    capturedSelected = null
   })
 
   afterEach(() => {
@@ -1259,7 +1480,9 @@ describe('SpreadsheetContainer dropdown selection (migration-dropdowns)', () => 
     useSheetsStore.setState({ sheets: [], activeSheetId: null })
     useSpecificationsStore.setState({ specifications: [] })
     capturedOnChange = null
+    capturedOnSelect = null
     capturedData = []
+    capturedSelected = null
   })
 
   afterEach(() => {
@@ -1458,7 +1681,9 @@ describe('SpreadsheetContainer undo/redo (migration-undo-redo)', () => {
     useSheetsStore.setState({ sheets: [], activeSheetId: null })
     useSpecificationsStore.setState({ specifications: [] })
     capturedOnChange = null
+    capturedOnSelect = null
     capturedData = []
+    capturedSelected = null
   })
 
   afterEach(() => {

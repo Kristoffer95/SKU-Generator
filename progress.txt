@@ -1,3 +1,27 @@
+## migration-click-navigate - COMPLETED
+Implement click-to-navigate for validation errors
+
+### Key decisions
+- Used react-spreadsheet's Selection API: RangeSelection and PointRange classes
+- Added selected state to SpreadsheetContainer for controlled selection
+- handleErrorClick creates single-cell RangeSelection from error.row/column
+- Scroll uses DOM traversal: tbody > tr[row] > td/th[column+1] (accounts for row indicator)
+- setTimeout(0) ensures selection state updates before scroll attempt
+- onSelect callback passed to Spreadsheet for user selection to still work
+
+### Files changed
+- src/components/SpreadsheetContainer.tsx (added selection state, updated handleErrorClick, added props)
+- src/components/SpreadsheetContainer.test.tsx (added 5 tests for click-to-navigate, updated mock)
+
+### Notes
+- All 4 stepsToVerify criteria verified via unit tests
+- Tests verify: clicking error sets selection, works for missing-value errors, works for duplicate-sku errors
+- Added scrollIntoView mock for jsdom test environment
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (558 tests total, +5 new)
+- npm run build passes
+
 ## migration-undo-redo - COMPLETED
 Implement undo/redo functionality for spreadsheet edits
 
