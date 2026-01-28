@@ -40,6 +40,7 @@ export function SpreadsheetToolbar({
         className
       )}
       data-testid="spreadsheet-toolbar"
+      data-tour="toolbar"
     >
       {/* Undo button */}
       <Button
@@ -87,6 +88,7 @@ export function SpreadsheetToolbar({
         onClick={onAddColumn}
         title="Add Column"
         data-testid="spreadsheet-toolbar-add-column"
+        data-tour="add-column-button"
       >
         <Columns className="h-4 w-4" />
         <span className="ml-1">Add Column</span>

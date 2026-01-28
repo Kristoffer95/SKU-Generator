@@ -5,15 +5,15 @@ A comprehensive guide to using the SKU Generator application for creating and ma
 ## Table of Contents
 
 - [Getting Started](#getting-started)
-- [Config Sheet](#config-sheet)
+- [Understanding the Interface](#understanding-the-interface)
 - [Adding Specifications](#adding-specifications)
-- [Data Sheets](#data-sheets)
-- [Column Headers](#column-headers)
+- [Managing Specification Values](#managing-specification-values)
+- [Adding Columns](#adding-columns)
 - [Using Dropdowns](#using-dropdowns)
 - [SKU Generation](#sku-generation)
 - [Settings](#settings)
-- [Import and Export](#import-and-export)
 - [Multi-Sheet Workflow](#multi-sheet-workflow)
+- [Import and Export](#import-and-export)
 - [Tips and Best Practices](#tips-and-best-practices)
 - [Troubleshooting](#troubleshooting)
 
@@ -21,55 +21,52 @@ A comprehensive guide to using the SKU Generator application for creating and ma
 
 SKU Generator is a web application that helps you create standardized SKU (Stock Keeping Unit) codes for your products. The app uses a spreadsheet interface where you:
 
-1. **Define specifications** in the Config sheet (e.g., Color, Size, Material)
+1. **Define specifications** in the sidebar (e.g., Color, Size, Material)
 2. **Map values to SKU codes** (e.g., "Red" → "R", "Large" → "L")
-3. **Create data sheets** with columns matching your specifications
+3. **Add specification columns** to your spreadsheet
 4. **Auto-generate SKUs** as you select values from dropdowns
 
 ### First Launch
 
 When you first open the app, you'll see:
-- **Left sidebar**: Shows your specifications (initially empty)
-- **Spreadsheet area**: Contains the Config sheet with header columns
-- **Header bar**: Import, Export, and Tour buttons
+- **Left sidebar**: Manage your specifications (initially empty)
+- **Spreadsheet area**: Your data sheet with the SKU column
+- **Header bar**: Import, Export, Settings, and Tour buttons
+- **Sheet tabs**: At the bottom for multi-sheet navigation
 
 Click the **Tour** button (question mark icon) to take an interactive guided tour of all features.
 
-## Config Sheet
+## Understanding the Interface
 
-The **Config** sheet is the single source of truth for all your specifications. It's always the first tab (styled in orange) and cannot be deleted or renamed.
+### Sidebar
+The collapsible sidebar on the left is your specification management area:
+- View all specifications as expandable cards
+- Edit specification names by clicking the pencil icon
+- Edit values and SKU codes inline
+- Drag to reorder specifications (affects SKU fragment order)
+- Delete specifications with the trash icon
 
-### Config Sheet Structure
+### Spreadsheet Area
+The main spreadsheet where you enter product data:
+- **Column A (SKU)**: Auto-generated, read-only SKU codes
+- **Spec columns**: Columns linked to specifications (show dropdowns)
+- **Free columns**: Plain text columns for notes (don't affect SKU)
+- **Toolbar**: Undo, Redo, Add Row, Add Column buttons
 
-| Specification | Value     | SKU Code |
-|---------------|-----------|----------|
-| Color         | Red       | R        |
-| Color         | Blue      | B        |
-| Color         | Green     | G        |
-| Size          | Small     | S        |
-| Size          | Medium    | M        |
-| Size          | Large     | L        |
+### Sheet Tabs
+At the bottom of the spreadsheet:
+- Click tabs to switch between sheets
+- Double-click to rename a sheet
+- Click X to delete (not available for the last sheet)
+- Click + to add a new sheet
 
-- **Specification**: The category name (e.g., Color, Size, Material)
-- **Value**: The human-readable option (e.g., Red, Large)
-- **SKU Code**: The abbreviated code used in the generated SKU (e.g., R, L)
-
-### Adding Entries Directly
-
-You can add specification entries directly in the Config sheet:
-1. Click on the Config tab
-2. Add a new row below the header
-3. Enter the specification name, value, and SKU code
-
-### How Specifications Are Grouped
-
-Rows with the same Specification name are automatically grouped together. For example, all rows with "Color" as the Specification become values under the "Color" specification.
+Each sheet has its own independent set of specifications and data.
 
 ## Adding Specifications
 
-There are two ways to add specifications:
+Specifications define the categories and values that make up your SKUs.
 
-### Method 1: Using the Add Specification Dialog
+### Using the Add Specification Dialog
 
 1. In the left sidebar, click **"Add Specification"**
 2. Enter the specification name (e.g., "Material")
@@ -78,102 +75,104 @@ There are two ways to add specifications:
    - Value: "Polyester", SKU Code: "POL"
 4. Click **Add** to save
 
-This automatically:
-- Adds rows to the Config sheet
-- Adds a column with the spec name to the active data sheet
+This creates the specification in the sidebar. To use it in your spreadsheet, you need to add a column (see [Adding Columns](#adding-columns)).
 
-### Method 2: Editing the Config Sheet Directly
+### Editing Specification Names
 
-1. Switch to the Config tab
-2. Add new rows with your specification data
-3. The sidebar updates automatically to reflect changes
+To rename a specification after creation:
+1. Find the specification in the sidebar
+2. Click the **pencil icon** next to the name
+3. Type the new name
+4. Press **Enter** to save or **Escape** to cancel
 
-## Data Sheets
+Column headers that use this specification will update automatically.
 
-Data sheets are where you enter your product data and generate SKUs.
+## Managing Specification Values
 
-### Creating a New Data Sheet
+### Viewing Values
+Click on any specification card in the sidebar to expand it and see all values with their SKU codes.
 
-1. Click the **+** button in the sheet tab bar (bottom of spreadsheet)
-2. A new "Sheet 1" (or next number) is created
-3. Double-click the tab to rename it (e.g., "Winter Collection")
+### Editing Values
+1. Click on a value row to enter edit mode
+2. Modify the display value or SKU code
+3. Press **Enter** to save or **Escape** to cancel
 
-### Data Sheet Structure
+SKU codes must be unique within each specification.
 
-| SKU       | Color | Size   | Material |
-|-----------|-------|--------|----------|
-| R-L-COT   | Red   | Large  | Cotton   |
-| B-S-POL   | Blue  | Small  | Polyester|
+### Adding Values
+When creating a specification, use the **"Add Value"** button to add more value/code pairs.
 
-- **Column A (SKU)**: Auto-generated, read-only display of the combined SKU
-- **Columns B+**: Your specification columns matching names from Config
+### Deleting Specifications
+1. Click the **trash icon** on a specification card
+2. Confirm deletion in the dialog
+3. Any columns using that specification will also be removed
 
-### Deleting Data Sheets
+## Adding Columns
 
-Click the **X** on any data sheet tab to delete it. The Config sheet cannot be deleted.
+There are two ways to add columns to your spreadsheet:
 
-## Column Headers
+### Using the Toolbar Button
+1. Click **"Add Column"** in the spreadsheet toolbar
+2. Choose the column type:
+   - **Specification**: Links to a spec for dropdown selection
+   - **Free**: Plain text column (doesn't affect SKU)
+3. For spec columns, select an existing specification or create a new one
+4. Choose where to insert (at end or before a specific column)
+5. Click **Add Column**
 
-Column headers in data sheets link to specifications defined in the Config sheet.
+### Using the Context Menu
+1. Right-click on any column header
+2. Choose **"Insert column before"** or **"Insert column after"**
+3. Complete the Add Column dialog
 
-### How Headers Work
+### Reordering Columns
+Drag column headers left or right to reorder them. The SKU column always stays in the first position.
 
-1. Header names must **exactly match** specification names in Config
-2. Case-sensitive: "Color" and "color" are different
-3. Matching headers enable dropdown selection for that column
-
-### Setting Up Headers
-
-For a new data sheet:
-1. Row 1 is the header row
-2. Column A should be "SKU" (auto-filled)
-3. Add spec names in columns B, C, D, etc.
-
-Example header row: `SKU | Color | Size | Material`
+### Deleting Columns
+1. Right-click on the column header
+2. Select **"Delete column"**
+3. Confirm deletion (SKU column cannot be deleted)
 
 ## Using Dropdowns
 
-When a column header matches a specification name, cells in that column show dropdown menus.
+Specification columns automatically show dropdown menus for data entry.
 
 ### Selecting Values
-
-1. Click any cell below a spec header (e.g., under "Color")
-2. A dropdown appears with values from Config (Red, Blue, Green)
+1. Click any cell in a specification column
+2. A dropdown appears with all values from that spec
 3. Select a value
 4. The SKU in Column A updates automatically
 
-### Dropdown Availability
-
-- Dropdowns only appear for columns matching Config specifications
-- Row 1 (headers) does not have dropdowns
-- Dropdowns show all values defined for that specification
+### Keyboard Navigation
+- **Tab** / **Enter**: Confirm selection and move to next cell
+- **Escape**: Cancel editing
 
 ## SKU Generation
 
 SKUs are automatically generated in Column A based on selected values.
 
-### Generation Rules
+### How SKUs Are Built
 
-1. **Order**: SKU codes are joined in the order columns appear (left to right)
+1. **Order**: SKU codes are combined based on specification order in the sidebar (not column order)
 2. **Delimiter**: Codes are joined with a separator (default: hyphen `-`)
-3. **Empty Values**: Columns without selections are skipped
+3. **Empty Values**: Cells without selections are skipped
+4. **Free Columns**: Values in free columns don't affect the SKU
 
 ### Example
 
-| Column | Header   | Value Selected | SKU Code |
-|--------|----------|----------------|----------|
-| B      | Color    | Red            | R        |
-| C      | Size     | Large          | L        |
-| D      | Material | Cotton         | COT      |
+| Sidebar Order | Specification | Selected Value | SKU Code |
+|---------------|---------------|----------------|----------|
+| 1             | Color         | Red            | R        |
+| 2             | Size          | Large          | L        |
+| 3             | Material      | Cotton         | COT      |
 
 Generated SKU: `R-L-COT`
 
-### When SKUs Update
+### Reordering Specification Order
+Drag specifications in the sidebar to change the order of fragments in generated SKUs.
 
-SKUs regenerate whenever:
-- A cell value is changed via dropdown selection
-- Settings are modified (delimiter, prefix, suffix)
-- Any value in the row changes
+### Duplicate SKU Warning
+When multiple rows generate the same SKU, those SKU cells are highlighted in amber. Check the validation panel at the bottom for details.
 
 ## Settings
 
@@ -201,7 +200,38 @@ Access settings by clicking the **Settings** button in the sidebar footer.
 
 ### Applying Changes
 
-Clicking **Save** immediately recalculates all SKUs in all data sheets.
+Clicking **Save** immediately recalculates all SKUs across all sheets.
+
+## Multi-Sheet Workflow
+
+Use multiple sheets to organize products by category, season, or any grouping.
+
+### Sheet Independence
+
+Each sheet has:
+- Its own set of specifications
+- Its own columns configuration
+- Its own data rows
+
+Specifications are NOT shared between sheets. This allows different product categories to have different attribute structures.
+
+### Creating a New Sheet
+
+1. Click the **+** button in the sheet tab bar
+2. A new sheet is created with 50 empty rows and only the SKU column
+3. Double-click the tab to rename it (e.g., "Winter Collection")
+4. Add specifications and columns as needed
+
+### Workflow Example
+
+1. Create "T-Shirts" sheet with: Color, Size specifications
+2. Create "Pants" sheet with: Color, Waist, Length specifications
+3. Each sheet generates SKUs based on its own specifications
+4. Export all sheets together to one Excel file
+
+### Switching Between Sheets
+
+Click any tab at the bottom to switch sheets. The sidebar updates to show that sheet's specifications.
 
 ## Import and Export
 
@@ -210,8 +240,7 @@ Clicking **Save** immediately recalculates all SKUs in all data sheets.
 Click the **Export** button in the header to access options:
 
 #### Export to Excel (.xlsx)
-- Creates a workbook with all sheets (Config + data sheets)
-- Config sheet is always first
+- Creates a workbook with all sheets
 - File downloads as `sku-data.xlsx`
 
 #### Export Current Sheet to CSV
@@ -220,39 +249,16 @@ Click the **Export** button in the header to access options:
 
 ### Importing
 
-Click **Import** to select an Excel file (.xlsx or .xls):
+Click **Import** to select an Excel or CSV file:
 
 1. Select a file from your computer
 2. The file is parsed and loaded
 3. **All current data is replaced** with imported data
-4. If the file contains a "Config" sheet, it becomes the spec source
+4. SKUs are regenerated for imported data
 
 ### Round-Trip Compatibility
 
-Exported files can be re-imported without data loss. The Config sheet is detected automatically (case-insensitive match).
-
-## Multi-Sheet Workflow
-
-Use multiple data sheets to organize products by category, season, or any grouping.
-
-### All Sheets Share Config
-
-Every data sheet:
-- Uses the same specifications from Config
-- Has access to the same dropdown values
-- Generates SKUs using the same settings
-
-### Workflow Example
-
-1. Create Config with: Brand, Category, Color
-2. Create "Summer 2024" data sheet for summer products
-3. Create "Winter 2024" data sheet for winter products
-4. Both sheets use the same Brand/Category/Color dropdowns
-5. Export all sheets together to one Excel file
-
-### Switching Between Sheets
-
-Click any tab at the bottom to switch sheets. The sidebar always shows specs from Config.
+Exported files can be re-imported without data loss.
 
 ## Tips and Best Practices
 
@@ -264,16 +270,23 @@ Click any tab at the bottom to switch sheets. The sidebar always shows specs fro
 
 ### Organizing Specifications
 
-- List specifications in a logical order (general → specific)
-- Group related values together in Config sheet
-- Use clear, descriptive value names
+- Order specifications by importance in the sidebar
+- The order determines SKU fragment order
+- More general attributes first (category), specific ones last (variant)
 
 ### Efficient Data Entry
 
-1. Set up all specifications in Config first
-2. Create data sheet with correct headers
+1. Set up all specifications first
+2. Add columns for each specification needed
 3. Use Tab/Enter to navigate between cells
 4. Select from dropdowns for fast, accurate entry
+
+### Using Free Columns
+
+Free columns are useful for:
+- Notes or comments
+- Internal reference numbers
+- Data that shouldn't affect the SKU
 
 ### SKU Design
 
@@ -282,10 +295,15 @@ Click any tab at the bottom to switch sheets. The sidebar always shows specs fro
 - Consider prefix for brand/year identification
 - Keep total SKU length reasonable (8-15 characters)
 
+### Undo/Redo
+
+Use the toolbar buttons or:
+- Changes can be undone/redone
+- Includes cell edits, column reordering, and row additions
+
 ### Backup Your Work
 
 - Export to Excel regularly
-- Config sheet exports with your data
 - Excel files can be shared and re-imported
 
 ## Troubleshooting
@@ -295,26 +313,26 @@ Click any tab at the bottom to switch sheets. The sidebar always shows specs fro
 **Problem**: Clicking a cell doesn't show a dropdown
 
 **Solutions**:
-- Check the column header matches a Config specification exactly
-- Verify the specification has values defined in Config
-- Ensure you're not clicking on Row 1 (header row)
+- Ensure the column is a specification column (not a free column)
+- Check that the specification has values defined
+- The SKU column and header row don't have dropdowns
 
 ### SKU Not Generating
 
 **Problem**: SKU column stays empty
 
 **Solutions**:
-- Verify Column A header is "SKU"
-- Check that selected values have SKU codes in Config
-- Confirm you're on a data sheet, not the Config sheet
+- Make sure you have specification columns (not just free columns)
+- Check that cells have values selected from dropdowns
+- Verify specifications have SKU codes defined for values
 
 ### Wrong SKU Codes
 
 **Problem**: Generated SKU uses wrong codes
 
 **Solutions**:
-- Check Config sheet for the correct value-to-code mappings
-- Verify the column header matches the specification name exactly
+- Check specification values in the sidebar for correct SKU codes
+- Review the specification order in the sidebar
 - Review settings for unexpected prefix/suffix/delimiter
 
 ### Import Not Working
@@ -322,9 +340,9 @@ Click any tab at the bottom to switch sheets. The sidebar always shows specs fro
 **Problem**: Imported file doesn't load correctly
 
 **Solutions**:
-- Ensure file is .xlsx or .xls format
-- Check that Config sheet (if present) has correct column headers
+- Ensure file is .xlsx, .xls, or .csv format
 - Verify the file isn't corrupted or password-protected
+- Try exporting a sample file first to see the expected format
 
 ### Data Not Saving
 

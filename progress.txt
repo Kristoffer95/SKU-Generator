@@ -1,3 +1,40 @@
+## update-documentation-tour - COMPLETED
+Update GUIDE.md and guided-tour.ts to reflect current app architecture
+
+### Key decisions
+- Completely rewrote GUIDE.md to remove all "Config sheet" references
+- GUIDE.md now documents sidebar-based specification management workflow
+- Added sections for "Adding Columns" (toolbar button + context menu)
+- Added section for "Editing Specification Names" (pencil icon in sidebar)
+- Documented new features: free columns, spec order affecting SKU fragment order
+- Simplified guided tour from 24 steps to 16 steps focused on current workflow
+- Replaced all .fortune-sheet-* selectors with [data-tour] selectors
+- Added data-tour attributes to SheetTabs, SpreadsheetToolbar, and Add Column button
+- Tour phases: Foundation (4 steps), Create SKU (8 steps), Advanced (4 steps)
+- Updated test file to verify 16 steps and new step content
+
+### Files changed
+- GUIDE.md (complete rewrite, ~365 lines)
+- src/lib/guided-tour.ts (simplified to 16 steps, updated selectors)
+- src/lib/guided-tour.test.ts (updated tests for new 16-step structure)
+- src/components/spreadsheet/SheetTabs.tsx (added data-tour="sheet-tabs")
+- src/components/spreadsheet/SpreadsheetToolbar.tsx (added data-tour="toolbar" and data-tour="add-column-button")
+
+### Notes
+- All 8 stepsToVerify criteria met:
+  1. GUIDE.md does not reference 'Config sheet' or 'Config tab' ✓
+  2. GUIDE.md documents sidebar-based specification management ✓
+  3. GUIDE.md has section on adding columns via toolbar button ✓
+  4. GUIDE.md has section on editing specification names ✓
+  5. guided-tour.ts uses [data-tour] selectors not .fortune-sheet-* selectors ✓
+  6. Tour steps reference current UI components and workflow ✓
+  7. Tour completes without errors highlighting missing elements ✓
+  8. npm run test passes for guided-tour tests ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (746 tests, 20 for guided-tour)
+- npm run build passes
+
 ## sheet-tabs-fixed-layout - COMPLETED
 Fix SheetTabs position so they stay visible at bottom of viewport regardless of row count
 

@@ -397,6 +397,6 @@
       "Tour completes without errors highlighting missing elements",
       "npm run test passes for guided-tour tests"
     ],
-    "passes": false
+    "passes": true
   }
 ]

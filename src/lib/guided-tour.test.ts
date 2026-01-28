@@ -73,7 +73,7 @@ describe("guided-tour", () => {
   })
 
   describe("startGuidedTour", () => {
-    it("creates driver instance and starts tour with 24 steps", async () => {
+    it("creates driver instance and starts tour with 16 steps", async () => {
       const { driver } = await import("driver.js")
 
       startGuidedTour()
@@ -89,9 +89,9 @@ describe("guided-tour", () => {
         })
       )
 
-      // Verify 24 steps
+      // Verify 16 steps
       const calledConfig = vi.mocked(driver).mock.calls[0]?.[0]
-      expect(calledConfig?.steps).toHaveLength(24)
+      expect(calledConfig?.steps).toHaveLength(16)
 
       expect(mockDrive).toHaveBeenCalled()
     })
@@ -141,9 +141,9 @@ describe("guided-tour", () => {
 
       registerTourDialogOpeners({ addSpec, settings, closeAll })
 
-      // Start tour and trigger step 7 (0-indexed) to open AddSpec dialog
+      // Start tour and trigger step 4 (0-indexed) to open AddSpec dialog
       startGuidedTour()
-      capturedOnHighlightStarted?.(null, null, { state: { activeIndex: 7 } })
+      capturedOnHighlightStarted?.(null, null, { state: { activeIndex: 4 } })
 
       expect(addSpec).toHaveBeenCalled()
     })
@@ -154,19 +154,19 @@ describe("guided-tour", () => {
       unregisterTourDialogOpeners(["addSpec"])
 
       startGuidedTour()
-      capturedOnHighlightStarted?.(null, null, { state: { activeIndex: 7 } })
+      capturedOnHighlightStarted?.(null, null, { state: { activeIndex: 4 } })
 
       expect(addSpec).not.toHaveBeenCalled()
     })
 
-    it("opens AddSpecDialog on steps 8-11 (0-indexed: 7-10)", () => {
+    it("opens AddSpecDialog on steps 5-8 (0-indexed: 4-7)", () => {
       const addSpec = vi.fn()
       registerTourDialogOpeners({ addSpec })
 
       startGuidedTour()
 
       // Test all AddSpec dialog steps
-      const addSpecSteps = [7, 8, 9, 10]
+      const addSpecSteps = [4, 5, 6, 7]
       addSpecSteps.forEach((stepIndex) => {
         capturedOnHighlightStarted?.(null, null, { state: { activeIndex: stepIndex } })
       })
@@ -174,14 +174,14 @@ describe("guided-tour", () => {
       expect(addSpec).toHaveBeenCalledTimes(4)
     })
 
-    it("opens SettingsDialog on steps 18-19 (0-indexed: 17-18)", () => {
+    it("opens SettingsDialog on steps 13-14 (0-indexed: 12-13)", () => {
       const settings = vi.fn()
       registerTourDialogOpeners({ settings })
 
       startGuidedTour()
 
       // Test Settings dialog steps
-      const settingsSteps = [17, 18]
+      const settingsSteps = [12, 13]
       settingsSteps.forEach((stepIndex) => {
         capturedOnHighlightStarted?.(null, null, { state: { activeIndex: stepIndex } })
       })
@@ -195,8 +195,8 @@ describe("guided-tour", () => {
 
       startGuidedTour()
 
-      // Leave last AddSpec step (10) to step 11
-      capturedOnDeselected?.(null, null, { state: { activeIndex: 10 } })
+      // Leave last AddSpec step (7) to step 8
+      capturedOnDeselected?.(null, null, { state: { activeIndex: 7 } })
 
       expect(closeAll).toHaveBeenCalled()
     })
@@ -207,15 +207,15 @@ describe("guided-tour", () => {
 
       startGuidedTour()
 
-      // Move from step 7 to step 8 (both AddSpec)
-      capturedOnDeselected?.(null, null, { state: { activeIndex: 7 } })
+      // Move from step 4 to step 5 (both AddSpec)
+      capturedOnDeselected?.(null, null, { state: { activeIndex: 4 } })
 
       expect(closeAll).not.toHaveBeenCalled()
     })
   })
 
   describe("tour step content", () => {
-    it("includes Phase 1 Foundation steps (1-7)", async () => {
+    it("includes Phase 1 Foundation steps (1-4)", async () => {
       const { driver } = await import("driver.js")
       startGuidedTour()
 
@@ -225,45 +225,78 @@ describe("guided-tour", () => {
       // Step 1: Welcome
       expect(steps[0].popover?.title).toBe("Welcome to SKU Generator!")
 
-      // Step 2: Config tab
-      expect(steps[1].popover?.title).toBe("Phase 1: The Config Sheet")
+      // Step 2: Sidebar overview
+      expect(steps[1].popover?.title).toBe("Specifications Sidebar")
+      expect(steps[1].element).toBe('[data-tour="sidebar"]')
 
-      // Step 7: Foundation checkpoint
-      expect(steps[6].popover?.title).toBe("Foundation Complete!")
+      // Step 3: Spreadsheet overview
+      expect(steps[2].popover?.title).toBe("The Spreadsheet")
+      expect(steps[2].element).toBe('[data-tour="spreadsheet"]')
+
+      // Step 4: Foundation checkpoint
+      expect(steps[3].popover?.title).toBe("Foundation Complete!")
     })
 
-    it("includes Phase 2 Create SKU steps (8-17)", async () => {
+    it("includes Phase 2 Create SKU steps (5-12)", async () => {
       const { driver } = await import("driver.js")
       startGuidedTour()
 
       const calledConfig = vi.mocked(driver).mock.calls[0]?.[0]
       const steps = calledConfig?.steps ?? []
 
-      // Step 8: Add spec button
-      expect(steps[7].popover?.title).toBe("Phase 2: Add a Specification")
+      // Step 5: Add spec button
+      expect(steps[4].popover?.title).toBe("Phase 2: Add a Specification")
+      expect(steps[4].element).toBe('[data-tour="add-spec-button"]')
 
-      // Step 9: Dialog overview
-      expect(steps[8].element).toBe('[data-tour="add-spec-dialog"]')
+      // Step 6: Dialog overview
+      expect(steps[5].element).toBe('[data-tour="add-spec-dialog"]')
 
-      // Step 17: Checkpoint
-      expect(steps[16].popover?.title).toBe("SKU Creation Complete!")
+      // Step 9: Spec item
+      expect(steps[8].element).toBe('[data-tour="spec-item"]')
+
+      // Step 10: Add Column button
+      expect(steps[9].popover?.title).toBe("Add Columns")
+      expect(steps[9].element).toBe('[data-tour="add-column-button"]')
+
+      // Step 12: Checkpoint
+      expect(steps[11].popover?.title).toBe("SKU Creation Complete!")
     })
 
-    it("includes Phase 3 Advanced steps (18-24)", async () => {
+    it("includes Phase 3 Advanced steps (13-16)", async () => {
       const { driver } = await import("driver.js")
       startGuidedTour()
 
       const calledConfig = vi.mocked(driver).mock.calls[0]?.[0]
       const steps = calledConfig?.steps ?? []
 
-      // Step 18: Settings button
-      expect(steps[17].popover?.title).toBe("Phase 3: SKU Settings")
+      // Step 13: Settings button
+      expect(steps[12].popover?.title).toBe("Phase 3: SKU Settings")
+      expect(steps[12].element).toBe('[data-tour="settings-button"]')
 
-      // Step 19: Settings dialog
-      expect(steps[18].element).toBe('[data-tour="settings-dialog"]')
+      // Step 14: Settings dialog
+      expect(steps[13].element).toBe('[data-tour="settings-dialog"]')
 
-      // Step 24: Completion
-      expect(steps[23].popover?.title).toBe("You're Ready!")
+      // Step 15: Sheet tabs
+      expect(steps[14].popover?.title).toBe("Multiple Sheets")
+      expect(steps[14].element).toBe('[data-tour="sheet-tabs"]')
+
+      // Step 16: Completion
+      expect(steps[15].popover?.title).toBe("You're Ready!")
+    })
+
+    it("uses only data-tour selectors (no .fortune-sheet-* selectors)", async () => {
+      const { driver } = await import("driver.js")
+      startGuidedTour()
+
+      const calledConfig = vi.mocked(driver).mock.calls[0]?.[0]
+      const steps = calledConfig?.steps ?? []
+
+      steps.forEach((step) => {
+        if (step.element) {
+          expect(step.element).not.toMatch(/fortune-sheet/i)
+          expect(step.element).toMatch(/^\[data-tour=|^\[data-testid=/)
+        }
+      })
     })
   })
 })

@@ -34,19 +34,19 @@ export function unregisterTourDialogOpeners(keys: (keyof DialogOpenerRegistry)[]
   })
 }
 
-// Steps where AddSpecDialog should be open (8-11, 0-indexed: 7-10)
-const ADD_SPEC_DIALOG_STEPS = [7, 8, 9, 10]
-// Steps where SettingsDialog should be open (18-19, 0-indexed: 17-18)
-const SETTINGS_DIALOG_STEPS = [17, 18]
+// Steps where AddSpecDialog should be open (5-8, 0-indexed: 4-7)
+const ADD_SPEC_DIALOG_STEPS = [4, 5, 6, 7]
+// Steps where SettingsDialog should be open (13-14, 0-indexed: 12-13)
+const SETTINGS_DIALOG_STEPS = [12, 13]
 
 /**
- * 24-step guided tutorial organized into 3 phases:
- * - Phase 1: Foundation (Steps 1-7) - Understanding the app structure
- * - Phase 2: Create SKU (Steps 8-17) - Creating specifications and generating SKUs
- * - Phase 3: Advanced (Steps 18-24) - Settings, import/export, and tips
+ * 16-step guided tutorial organized into 3 phases:
+ * - Phase 1: Foundation (Steps 1-4) - Understanding the app structure
+ * - Phase 2: Create SKU (Steps 5-12) - Creating specifications and generating SKUs
+ * - Phase 3: Advanced (Steps 13-16) - Settings, import/export, and tips
  */
 const tourSteps: DriveStep[] = [
-  // ============ PHASE 1: FOUNDATION (Steps 1-7) ============
+  // ============ PHASE 1: FOUNDATION (Steps 1-4) ============
   {
     // Step 1: Welcome
     popover: {
@@ -58,107 +58,74 @@ const tourSteps: DriveStep[] = [
     },
   },
   {
-    // Step 2: Config tab intro
-    element: ".fortune-sheet-tab-container",
+    // Step 2: Sidebar overview
+    element: '[data-tour="sidebar"]',
     popover: {
-      title: "Phase 1: The Config Sheet",
+      title: "Specifications Sidebar",
       description:
-        "The orange 'Config' tab is your single source of truth. It stores all specification definitions (like Color, Size) with their values and SKU codes. Click on it to view or edit specs.",
-      side: "top",
-      align: "center",
+        "This sidebar is where you manage specifications. Specifications define attributes like Color, Size, or Material - each with values that map to SKU codes. Let's explore how it works.",
+      side: "right",
+      align: "start",
     },
   },
   {
-    // Step 3: Config structure
+    // Step 3: Spreadsheet overview
     element: '[data-tour="spreadsheet"]',
     popover: {
-      title: "Config Sheet Structure",
+      title: "The Spreadsheet",
       description:
-        "The Config sheet has 3 columns: Specification (name), Value (label shown to users), and SKU Code (code used in generated SKUs). Each row defines one value for a specification.",
+        "This is your data entry area. Column A shows auto-generated SKUs (read-only). Add specification columns to create dropdowns for selecting values. SKUs update automatically as you select values.",
       side: "left",
       align: "start",
     },
   },
   {
-    // Step 4: Row mapping demo
-    element: ".fortune-sheet-cell-area",
-    popover: {
-      title: "How Rows Map to SKUs",
-      description:
-        "Example: A row with 'Color', 'Red', 'R' means when a user selects 'Red' for Color, the letter 'R' appears in the generated SKU. Multiple rows with the same Specification name create dropdown options.",
-      side: "top",
-      align: "center",
-    },
-  },
-  {
-    // Step 5: Sidebar overview
-    element: '[data-tour="sidebar"]',
-    popover: {
-      title: "Specifications Sidebar",
-      description:
-        "This sidebar shows a summary of all specifications defined in Config. It updates automatically when you modify the Config sheet. Use it for quick reference without switching tabs.",
-      side: "right",
-      align: "start",
-    },
-  },
-  {
-    // Step 6: Spec cards explanation
-    element: '[data-tour="spec-item"]',
-    popover: {
-      title: "Specification Cards",
-      description:
-        "Each card shows a specification name and value count. Click to expand and see all values with their SKU codes. Click 'Edit' to jump to the Config sheet for changes.",
-      side: "right",
-      align: "start",
-    },
-  },
-  {
-    // Step 7: Foundation checkpoint
+    // Step 4: Foundation checkpoint
     popover: {
       title: "Foundation Complete!",
       description:
-        "You now understand the app structure: Config sheet defines specs, sidebar displays them. Next, let's create a new specification and generate your first SKU!",
+        "You now understand the app structure: sidebar for specifications, spreadsheet for data. Next, let's create a specification and see SKU generation in action!",
       side: "over",
       align: "center",
     },
   },
 
-  // ============ PHASE 2: CREATE SKU (Steps 8-17) ============
+  // ============ PHASE 2: CREATE SKU (Steps 5-12) ============
   {
-    // Step 8: Add spec button
+    // Step 5: Add spec button
     element: '[data-tour="add-spec-button"]',
     popover: {
       title: "Phase 2: Add a Specification",
       description:
-        "Click this button to add a new specification. This opens a dialog where you can define the spec name and its values. Let's see what happens when you click it.",
+        "Click this button to add a new specification. This opens a dialog where you can define the spec name and its values with SKU codes.",
       side: "right",
       align: "start",
     },
   },
   {
-    // Step 9: Add spec dialog overview
+    // Step 6: Add spec dialog overview
     element: '[data-tour="add-spec-dialog"]',
     popover: {
       title: "Add Specification Dialog",
       description:
-        "This dialog lets you create a specification with multiple values at once. Fill in the fields and click 'Add Specification' to add rows to Config and a column to your data sheet.",
+        "This dialog lets you create a specification with multiple values at once. Each value has a display name (like 'Red') and a SKU code (like 'R').",
       side: "left",
       align: "center",
     },
   },
   {
-    // Step 10: Spec name field
+    // Step 7: Spec name field
     element: '[data-tour="spec-name-input"]',
     popover: {
       title: "Specification Name",
       description:
-        "Enter a descriptive name like 'Color', 'Size', or 'Material'. This name becomes a column header in data sheets and groups related values together in Config.",
+        "Enter a descriptive name like 'Color', 'Size', or 'Material'. This name appears in the sidebar and as column headers when you add spec columns.",
       side: "bottom",
       align: "start",
     },
   },
   {
-    // Step 11: Values section
+    // Step 8: Values section
     element: '[data-tour="spec-values-section"]',
     popover: {
       title: "Define Values",
@@ -169,74 +136,52 @@ const tourSteps: DriveStep[] = [
     },
   },
   {
-    // Step 12: Create data sheet
-    element: ".fortune-sheet-tab-container",
+    // Step 9: Spec cards explanation
+    element: '[data-tour="spec-item"]',
     popover: {
-      title: "Create a Data Sheet",
+      title: "Specification Cards",
       description:
-        "Click the '+' button to create a new data sheet. Data sheets are where you enter product information and see auto-generated SKUs. Each sheet can have different products.",
-      side: "top",
-      align: "center",
+        "After adding a spec, it appears as a card here. Click to expand and see values. Use the pencil icon to edit the name, or trash to delete. Drag cards to reorder (affects SKU fragment order).",
+      side: "right",
+      align: "start",
     },
   },
   {
-    // Step 13: Column headers setup
-    element: ".fortune-sheet-cell-area",
+    // Step 10: Add Column button in toolbar
+    element: '[data-tour="add-column-button"]',
     popover: {
-      title: "Set Up Column Headers",
+      title: "Add Columns",
       description:
-        "In row 1, type specification names as headers (e.g., 'Color', 'Size'). Column A is reserved for SKU. Headers must match Config specification names exactly to enable dropdowns.",
-      side: "top",
-      align: "center",
+        "Use 'Add Column' to add specification columns to your spreadsheet. You can also right-click column headers for a context menu with insert/delete options.",
+      side: "bottom",
+      align: "start",
     },
   },
   {
-    // Step 14: SKU column explanation
+    // Step 11: Spreadsheet usage
     element: '[data-tour="spreadsheet"]',
     popover: {
-      title: "The SKU Column",
+      title: "Using Dropdowns & SKU Generation",
       description:
-        "Column A automatically displays the generated SKU. You don't edit this column - it updates automatically when you select values in other columns. It combines SKU codes with a delimiter.",
+        "Click cells in spec columns to see dropdowns with your defined values. Select values and watch the SKU in Column A update automatically. The SKU combines codes based on spec order in the sidebar.",
       side: "left",
       align: "start",
     },
   },
   {
-    // Step 15: Dropdown usage
-    element: ".fortune-sheet-cell-area",
-    popover: {
-      title: "Using Dropdowns",
-      description:
-        "Click any cell below a header that matches a Config spec name. A dropdown appears with all values defined for that spec. Select a value to populate the cell.",
-      side: "top",
-      align: "center",
-    },
-  },
-  {
-    // Step 16: SKU generation explanation
-    element: '[data-tour="spreadsheet"]',
-    popover: {
-      title: "SKU Auto-Generation",
-      description:
-        "As you select values, the SKU in Column A updates instantly. It combines SKU codes from each column using the configured delimiter (default: hyphen). Example: R-L-BLK for Red-Large-Black.",
-      side: "left",
-      align: "start",
-    },
-  },
-  {
-    // Step 17: Create SKU checkpoint
+    // Step 12: Create SKU checkpoint
     popover: {
       title: "SKU Creation Complete!",
       description:
-        "You've learned to add specs, create data sheets, and generate SKUs. The SKU updates automatically when you change any value. Now let's explore advanced features!",
+        "You've learned to add specs, create columns, and generate SKUs. The SKU updates automatically when you change any value. Now let's explore advanced features!",
       side: "over",
       align: "center",
     },
   },
 
-  // ============ PHASE 3: ADVANCED (Steps 18-24) ============
+  // ============ PHASE 3: ADVANCED (Steps 13-16) ============
   {
-    // Step 18: Settings button
+    // Step 13: Settings button
     element: '[data-tour="settings-button"]',
     popover: {
       title: "Phase 3: SKU Settings",
@@ -247,66 +192,33 @@ const tourSteps: DriveStep[] = [
     },
   },
   {
-    // Step 19: Settings dialog
+    // Step 14: Settings dialog
     element: '[data-tour="settings-dialog"]',
     popover: {
       title: "Configure SKU Format",
       description:
-        "Choose a delimiter (hyphen, underscore, none, or custom). Add prefix/suffix for branding. Changes apply to ALL existing SKUs immediately across all data sheets.",
+        "Choose a delimiter (hyphen, underscore, none, or custom). Add prefix/suffix for branding. Changes apply to ALL existing SKUs immediately across all sheets.",
       side: "left",
       align: "center",
     },
   },
   {
-    // Step 20: Import button
-    element: '[data-tour="import-button"]',
+    // Step 15: Sheet tabs
+    element: '[data-tour="sheet-tabs"]',
     popover: {
-      title: "Import Data",
+      title: "Multiple Sheets",
       description:
-        "Import Excel files (.xlsx) with existing Config and data sheets. This replaces current data, so export first if needed. Great for loading templates or backups.",
-      side: "bottom",
-      align: "end",
-    },
-  },
-  {
-    // Step 21: Export button
-    element: '[data-tour="export-button"]',
-    popover: {
-      title: "Export Your Work",
-      description:
-        "Export to Excel (.xlsx) to save all sheets including Config. Or export just the current sheet to CSV. Use exports for backups, sharing, or opening in other apps.",
-      side: "bottom",
-      align: "end",
-    },
-  },
-  {
-    // Step 22: Multi-sheet overview
-    element: ".fortune-sheet-tab-container",
-    popover: {
-      title: "Working with Multiple Sheets",
-      description:
-        "Create multiple data sheets for different product lines or categories. All sheets share the same Config specs. Double-click a tab to rename it. Click X to delete (except Config).",
+        "Each sheet has its own specifications and data. Click + to add sheets, double-click to rename, click X to delete. Useful for organizing different product categories.",
       side: "top",
       align: "center",
     },
   },
   {
-    // Step 23: Tour restart button
-    element: '[data-testid="start-tour-button"]',
-    popover: {
-      title: "Restart This Tour",
-      description:
-        "Click the Tour button anytime to revisit this tutorial. It's helpful when you need a refresher on any feature. The tour is always available from the header.",
-      side: "bottom",
-      align: "end",
-    },
-  },
-  {
-    // Step 24: Completion
+    // Step 16: Completion
     popover: {
       title: "You're Ready!",
       description:
-        "Congratulations! You've completed the SKU Generator tutorial. Remember: Config defines specs, data sheets use them via matching column headers, and SKUs auto-generate. Happy generating!",
+        "Congratulations! You've completed the SKU Generator tutorial. Create specs in the sidebar, add columns, select values, and SKUs generate automatically. Use Import/Export in the header to save your work. Happy generating!",
       side: "over",
       align: "center",
     },
@@ -330,11 +242,11 @@ export function startGuidedTour(onComplete?: () => void): void {
     onHighlightStarted: (_element, _step, { state }) => {
       const stepIndex = state.activeIndex ?? 0
 
-      // Open AddSpecDialog for steps 8-11 (0-indexed: 7-10)
+      // Open AddSpecDialog for steps 5-8 (0-indexed: 4-7)
       if (ADD_SPEC_DIALOG_STEPS.includes(stepIndex)) {
         dialogOpeners.addSpec?.()
       }
-      // Open SettingsDialog for steps 18-19 (0-indexed: 17-18)
+      // Open SettingsDialog for steps 13-14 (0-indexed: 12-13)
       else if (SETTINGS_DIALOG_STEPS.includes(stepIndex)) {
         dialogOpeners.settings?.()
       }

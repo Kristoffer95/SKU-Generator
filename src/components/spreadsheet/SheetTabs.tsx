@@ -136,6 +136,7 @@ export function SheetTabs({
     <div
       className="flex items-center gap-1 border-t bg-muted/30 px-2 py-1"
       data-testid="sheet-tabs"
+      data-tour="sheet-tabs"
     >
       {/* Sheet tabs */}
       {sheets.map((sheet) => {
