@@ -51,16 +51,16 @@ export function generateRowSKU(
 
 /**
  * Extract column headers from a data sheet's first row
- * Excludes the last column (assumed to be SKU column)
+ * Excludes the first column (assumed to be SKU column at index 0)
  */
 export function extractColumnHeaders(headerRow: CellData[]): string[] {
   if (!headerRow || headerRow.length === 0) {
     return [];
   }
 
-  // Exclude last column (SKU column)
+  // Exclude first column (SKU column at index 0)
   const headers: string[] = [];
-  for (let i = 0; i < headerRow.length - 1; i++) {
+  for (let i = 1; i < headerRow.length; i++) {
     headers.push(getCellValue(headerRow[i]));
   }
 
@@ -68,11 +68,11 @@ export function extractColumnHeaders(headerRow: CellData[]): string[] {
 }
 
 /**
- * Get row values excluding the SKU column (last column)
+ * Get row values excluding the SKU column (first column at index 0)
  */
 export function getRowValuesWithoutSKU(row: CellData[]): CellData[] {
   if (!row || row.length <= 1) {
     return [];
   }
-  return row.slice(0, -1);
+  return row.slice(1);
 }

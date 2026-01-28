@@ -230,8 +230,8 @@ describe('generateRowSKU', () => {
 });
 
 describe('extractColumnHeaders', () => {
-  it('extracts headers excluding last column (SKU)', () => {
-    const headerRow = [cell('Color'), cell('Size'), cell('SKU')];
+  it('extracts headers excluding first column (SKU)', () => {
+    const headerRow = [cell('SKU'), cell('Color'), cell('Size')];
 
     const result = extractColumnHeaders(headerRow);
 
@@ -249,7 +249,7 @@ describe('extractColumnHeaders', () => {
   });
 
   it('handles cells with undefined values', () => {
-    const headerRow = [{ v: undefined }, cell('Size'), cell('SKU')];
+    const headerRow = [cell('SKU'), { v: undefined }, cell('Size')];
 
     const result = extractColumnHeaders(headerRow);
 
@@ -258,8 +258,8 @@ describe('extractColumnHeaders', () => {
 });
 
 describe('getRowValuesWithoutSKU', () => {
-  it('returns row values excluding last column', () => {
-    const row = [cell('Red'), cell('Small'), cell('R-S')];
+  it('returns row values excluding first column (SKU)', () => {
+    const row = [cell('R-S'), cell('Red'), cell('Small')];
 
     const result = getRowValuesWithoutSKU(row);
 

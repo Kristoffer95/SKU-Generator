@@ -209,6 +209,82 @@
         "Run npm run test with all tests passing"
       ],
       "passes": true
+    },
+    {
+      "id": "PRD-015",
+      "category": "Feature Enhancement",
+      "description": "Move SKU column from last column to Column A (index 0) in data sheets for improved visibility and workflow",
+      "stepsToVerify": [
+        "Update src/lib/sheet-sku.ts extractColumnHeaders() to skip first column (index 0) instead of last column",
+        "Update src/lib/sheet-sku.ts getRowValuesWithoutSKU() to use row.slice(1) instead of row.slice(0, -1)",
+        "Update src/lib/auto-sku.ts updateRowSKU() to write SKU to row[0] instead of row[headers.length]",
+        "Update src/lib/auto-sku.ts findChangedRows() to compare columns starting from index 1 (skip SKU column)",
+        "Update src/components/SpreadsheetContainer.tsx extractHeaders() to skip first column instead of last",
+        "Update src/components/SpreadsheetContainer.tsx buildDataVerification() to apply dropdowns to columns 1+ (colIndex = headerIndex + 1)",
+        "Update test file src/lib/sheet-sku.test.ts with new column order (SKU first)",
+        "Update test file src/lib/auto-sku.test.ts with new column order (SKU first)",
+        "Update test file src/lib/e2e-workflow.test.ts with new column order (SKU first)",
+        "Verify npm run typecheck passes with no errors",
+        "Verify npm run lint passes with no errors",
+        "Verify npm run test passes with all tests passing",
+        "Manual test: Create new data sheet, verify Column A header is 'SKU'",
+        "Manual test: Add spec columns (Color, Size) starting from Column B",
+        "Manual test: Select values from dropdowns in spec columns",
+        "Manual test: Verify SKU auto-generates in Column A when values are selected"
+      ],
+      "passes": true
+    },
+    {
+      "id": "PRD-016",
+      "category": "User Onboarding",
+      "description": "Integrate Driver.js to provide interactive guided tours covering all app features including Config sheet setup, spec creation, data entry with dropdowns, SKU generation, import/export, and settings",
+      "stepsToVerify": [
+        "Install driver.js package: npm install driver.js",
+        "Create src/lib/guided-tour.ts with tour step definitions",
+        "Define tour steps for: sidebar overview, Config sheet explanation, adding specifications, data sheet columns, dropdown usage, SKU auto-generation, import/export buttons, settings dialog",
+        "Create src/components/GuidedTourButton.tsx component to trigger the tour",
+        "Add 'Start Tour' button to app header or help menu",
+        "Style tour popover to match app theme using driver.js CSS customization",
+        "Tour Step 1: Welcome and sidebar introduction",
+        "Tour Step 2: Config sheet tab explanation (orange tab, spec definitions)",
+        "Tour Step 3: How to add specifications (Specification, Value, SKU Code columns)",
+        "Tour Step 4: Data sheet creation (+ button to add new sheet)",
+        "Tour Step 5: Column headers matching spec names for dropdowns",
+        "Tour Step 6: SKU column (Column A) auto-generation explanation",
+        "Tour Step 7: Dropdown selection demonstration",
+        "Tour Step 8: Import/Export buttons functionality",
+        "Tour Step 9: Settings dialog (delimiter, prefix, suffix)",
+        "Tour Step 10: Tour completion with link to GUIDE.md",
+        "Verify tour starts when clicking 'Start Tour' button",
+        "Verify tour highlights correct elements at each step",
+        "Verify tour can be dismissed at any point",
+        "Verify tour remembers completion state (optional localStorage flag)"
+      ],
+      "passes": false
+    },
+    {
+      "id": "PRD-017",
+      "category": "Documentation",
+      "description": "Create comprehensive GUIDE.md documentation covering all app features, workflows, and best practices for SKU generation",
+      "stepsToVerify": [
+        "Create GUIDE.md in project root",
+        "Section: Getting Started - app overview and initial setup",
+        "Section: Config Sheet - how to define specifications with value-to-SKU mappings",
+        "Section: Adding Specifications - step-by-step for adding new specs",
+        "Section: Data Sheets - creating and managing multiple data sheets",
+        "Section: Column Headers - how headers link to Config specs for dropdowns",
+        "Section: Dropdowns - how to use dropdowns to select values",
+        "Section: SKU Generation - how SKU is auto-generated in Column A",
+        "Section: Settings - configuring delimiter, prefix, and suffix",
+        "Section: Import/Export - exporting to Excel/CSV and importing data",
+        "Section: Multi-Sheet Workflow - working with multiple data sheets",
+        "Section: Tips and Best Practices - common patterns and recommendations",
+        "Section: Troubleshooting - common issues and solutions",
+        "Include screenshots or diagrams for key workflows (optional)",
+        "Verify GUIDE.md renders correctly in GitHub markdown preview",
+        "Link GUIDE.md from README.md for easy discoverability"
+      ],
+      "passes": false
     }
   ]
 }

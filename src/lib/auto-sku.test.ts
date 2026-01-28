@@ -8,78 +8,78 @@ describe('findChangedRows', () => {
   });
 
   it('returns empty array when only header row exists and is same', () => {
-    const oldData: CellData[][] = [[{ v: 'Color' }, { v: 'SKU' }]];
-    const newData: CellData[][] = [[{ v: 'Color' }, { v: 'SKU' }]];
+    const oldData: CellData[][] = [[{ v: 'SKU' }, { v: 'Color' }]];
+    const newData: CellData[][] = [[{ v: 'SKU' }, { v: 'Color' }]];
     expect(findChangedRows(oldData, newData)).toEqual([]);
   });
 
   it('detects new row added', () => {
-    const oldData: CellData[][] = [[{ v: 'Color' }, { v: 'SKU' }]];
+    const oldData: CellData[][] = [[{ v: 'SKU' }, { v: 'Color' }]];
     const newData: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
-      [{ v: 'Red' }, { v: '' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: 'Red' }],
     ];
     expect(findChangedRows(oldData, newData)).toEqual([1]);
   });
 
   it('detects cell value change in existing row', () => {
     const oldData: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
-      [{ v: 'Red' }, { v: 'R' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R' }, { v: 'Red' }],
     ];
     const newData: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
-      [{ v: 'Blue' }, { v: 'R' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R' }, { v: 'Blue' }],
     ];
     expect(findChangedRows(oldData, newData)).toEqual([1]);
   });
 
-  it('ignores SKU column changes (last column)', () => {
+  it('ignores SKU column changes (first column)', () => {
     const oldData: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
-      [{ v: 'Red' }, { v: '' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: 'Red' }],
     ];
     const newData: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
-      [{ v: 'Red' }, { v: 'R' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R' }, { v: 'Red' }],
     ];
     expect(findChangedRows(oldData, newData)).toEqual([]);
   });
 
   it('detects multiple changed rows', () => {
     const oldData: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
-      [{ v: 'Red' }, { v: '' }],
-      [{ v: 'Blue' }, { v: '' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: 'Red' }],
+      [{ v: '' }, { v: 'Blue' }],
     ];
     const newData: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
-      [{ v: 'Green' }, { v: '' }],
-      [{ v: 'Yellow' }, { v: '' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: 'Green' }],
+      [{ v: '' }, { v: 'Yellow' }],
     ];
     expect(findChangedRows(oldData, newData)).toEqual([1, 2]);
   });
 
   it('handles m property fallback', () => {
     const oldData: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
-      [{ m: 'Red' }, { v: '' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { m: 'Red' }],
     ];
     const newData: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
-      [{ m: 'Blue' }, { v: '' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { m: 'Blue' }],
     ];
     expect(findChangedRows(oldData, newData)).toEqual([1]);
   });
 
   it('trims whitespace when comparing', () => {
     const oldData: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
-      [{ v: 'Red' }, { v: '' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: 'Red' }],
     ];
     const newData: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
-      [{ v: '  Red  ' }, { v: '' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: '  Red  ' }],
     ];
     expect(findChangedRows(oldData, newData)).toEqual([]);
   });
@@ -93,77 +93,75 @@ describe('updateRowSKU', () => {
   ];
 
   it('skips header row (index 0)', () => {
-    const data: CellData[][] = [[{ v: 'Color' }, { v: 'Size' }, { v: 'SKU' }]];
+    const data: CellData[][] = [[{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }]];
     updateRowSKU(data, 0, parsedSpecs, defaultSettings);
-    expect(data[0][2]).toEqual({ v: 'SKU' });
+    expect(data[0][0]).toEqual({ v: 'SKU' });
   });
 
   it('skips row index out of bounds', () => {
-    const data: CellData[][] = [[{ v: 'Color' }, { v: 'SKU' }]];
+    const data: CellData[][] = [[{ v: 'SKU' }, { v: 'Color' }]];
     updateRowSKU(data, 5, parsedSpecs, defaultSettings);
     expect(data.length).toBe(1);
   });
 
   it('generates SKU for single value', () => {
     const data: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
-      [{ v: 'Red' }, { v: '' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: 'Red' }],
     ];
     updateRowSKU(data, 1, parsedSpecs, defaultSettings);
-    expect(data[1][1]).toEqual({ v: 'R', m: 'R' });
+    expect(data[1][0]).toEqual({ v: 'R', m: 'R' });
   });
 
   it('generates SKU for multiple values with delimiter', () => {
     const data: CellData[][] = [
-      [{ v: 'Color' }, { v: 'Size' }, { v: 'SKU' }],
-      [{ v: 'Red' }, { v: 'Small' }, { v: '' }],
+      [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+      [{ v: '' }, { v: 'Red' }, { v: 'Small' }],
     ];
     updateRowSKU(data, 1, parsedSpecs, defaultSettings);
-    expect(data[1][2]).toEqual({ v: 'R-S', m: 'R-S' });
+    expect(data[1][0]).toEqual({ v: 'R-S', m: 'R-S' });
   });
 
   it('uses custom delimiter', () => {
     const data: CellData[][] = [
-      [{ v: 'Color' }, { v: 'Size' }, { v: 'SKU' }],
-      [{ v: 'Red' }, { v: 'Small' }, { v: '' }],
+      [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+      [{ v: '' }, { v: 'Red' }, { v: 'Small' }],
     ];
     updateRowSKU(data, 1, parsedSpecs, { delimiter: '_', prefix: '', suffix: '' });
-    expect(data[1][2]).toEqual({ v: 'R_S', m: 'R_S' });
+    expect(data[1][0]).toEqual({ v: 'R_S', m: 'R_S' });
   });
 
   it('adds prefix and suffix', () => {
     const data: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
-      [{ v: 'Red' }, { v: '' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: 'Red' }],
     ];
     updateRowSKU(data, 1, parsedSpecs, { delimiter: '-', prefix: 'PRE-', suffix: '-SUF' });
-    expect(data[1][1]).toEqual({ v: 'PRE-R-SUF', m: 'PRE-R-SUF' });
+    expect(data[1][0]).toEqual({ v: 'PRE-R-SUF', m: 'PRE-R-SUF' });
   });
 
   it('generates empty SKU when no matching values', () => {
     const data: CellData[][] = [
-      [{ v: 'Unknown' }, { v: 'SKU' }],
-      [{ v: 'Value' }, { v: 'old' }],
+      [{ v: 'SKU' }, { v: 'Unknown' }],
+      [{ v: 'old' }, { v: 'Value' }],
     ];
     updateRowSKU(data, 1, parsedSpecs, defaultSettings);
-    expect(data[1][1]).toEqual({ v: '', m: '' });
+    expect(data[1][0]).toEqual({ v: '', m: '' });
   });
 
-  it('extends row if SKU column is missing', () => {
-    // Header has 2 columns (Color, SKU), data row should have at least Color value
-    // When data row has fewer columns than header, we need to extend it
+  it('overwrites SKU column (first column)', () => {
+    // SKU is now at index 0, so no extending needed - just overwrite
     const data: CellData[][] = [
-      [{ v: 'Color' }, { v: 'Size' }, { v: 'SKU' }],
-      [{ v: 'Red' }, { v: 'Small' }], // Missing SKU column
+      [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+      [{ v: '' }, { v: 'Red' }, { v: 'Small' }],
     ];
     updateRowSKU(data, 1, parsedSpecs, defaultSettings);
-    expect(data[1].length).toBe(3);
-    expect(data[1][2]).toEqual({ v: 'R-S', m: 'R-S' });
+    expect(data[1][0]).toEqual({ v: 'R-S', m: 'R-S' });
   });
 
   it('handles empty row gracefully', () => {
     const data: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
       [],
     ];
     updateRowSKU(data, 1, parsedSpecs, defaultSettings);
@@ -180,75 +178,75 @@ describe('processAutoSKU', () => {
 
   it('updates SKU for changed row', () => {
     const oldData: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
       [{ v: '' }, { v: '' }],
     ];
     const newData: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
-      [{ v: 'Red' }, { v: '' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: 'Red' }],
     ];
 
     processAutoSKU(oldData, newData, parsedSpecs, defaultSettings);
-    expect(newData[1][1]).toEqual({ v: 'R', m: 'R' });
+    expect(newData[1][0]).toEqual({ v: 'R', m: 'R' });
   });
 
   it('updates multiple changed rows', () => {
     const oldData: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
       [{ v: '' }, { v: '' }],
       [{ v: '' }, { v: '' }],
     ];
     const newData: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
-      [{ v: 'Red' }, { v: '' }],
-      [{ v: 'Blue' }, { v: '' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: 'Red' }],
+      [{ v: '' }, { v: 'Blue' }],
     ];
 
     processAutoSKU(oldData, newData, parsedSpecs, defaultSettings);
-    expect(newData[1][1]).toEqual({ v: 'R', m: 'R' });
-    expect(newData[2][1]).toEqual({ v: 'B', m: 'B' });
+    expect(newData[1][0]).toEqual({ v: 'R', m: 'R' });
+    expect(newData[2][0]).toEqual({ v: 'B', m: 'B' });
   });
 
   it('does not modify unchanged rows', () => {
     const oldData: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
-      [{ v: 'Red' }, { v: 'R' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R' }, { v: 'Red' }],
     ];
     const newData: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
-      [{ v: 'Red' }, { v: 'OLD' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'OLD' }, { v: 'Red' }],
     ];
 
     processAutoSKU(oldData, newData, parsedSpecs, defaultSettings);
     // SKU column was changed but value column was not, so no update
-    expect(newData[1][1]).toEqual({ v: 'OLD' });
+    expect(newData[1][0]).toEqual({ v: 'OLD' });
   });
 
   it('handles complete workflow: select Red, Small -> R-S', () => {
     const oldData: CellData[][] = [
-      [{ v: 'Color' }, { v: 'Size' }, { v: 'SKU' }],
+      [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
       [{ v: '' }, { v: '' }, { v: '' }],
     ];
     const newData: CellData[][] = [
-      [{ v: 'Color' }, { v: 'Size' }, { v: 'SKU' }],
-      [{ v: 'Red' }, { v: 'Small' }, { v: '' }],
+      [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+      [{ v: '' }, { v: 'Red' }, { v: 'Small' }],
     ];
 
     processAutoSKU(oldData, newData, parsedSpecs, defaultSettings);
-    expect(newData[1][2]).toEqual({ v: 'R-S', m: 'R-S' });
+    expect(newData[1][0]).toEqual({ v: 'R-S', m: 'R-S' });
   });
 
   it('updates SKU when value changes: Red->Blue', () => {
     const oldData: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
-      [{ v: 'Red' }, { v: 'R' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R' }, { v: 'Red' }],
     ];
     const newData: CellData[][] = [
-      [{ v: 'Color' }, { v: 'SKU' }],
-      [{ v: 'Blue' }, { v: 'R' }],
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R' }, { v: 'Blue' }],
     ];
 
     processAutoSKU(oldData, newData, parsedSpecs, defaultSettings);
-    expect(newData[1][1]).toEqual({ v: 'B', m: 'B' });
+    expect(newData[1][0]).toEqual({ v: 'B', m: 'B' });
   });
 });

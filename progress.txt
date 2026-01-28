@@ -1,3 +1,23 @@
+## PRD-015: Move SKU Column to Column A - COMPLETE
+- Moved SKU column from last position to first position (index 0)
+- Updated extractColumnHeaders() in sheet-sku.ts to skip first column instead of last
+- Updated getRowValuesWithoutSKU() to use slice(1) instead of slice(0, -1)
+- Updated updateRowSKU() in auto-sku.ts to write SKU to row[0] instead of row[headers.length]
+- Updated findChangedRows() to compare columns starting from index 1 (skip SKU column 0)
+- Updated extractHeaders() in SpreadsheetContainer.tsx to skip first column
+- Updated buildDataVerification() to apply dropdowns to columns 1+ (colIndex = headerIndex + 1)
+- Updated all test files with new column order (SKU first)
+- All feedback loops pass (219 tests, typecheck, lint)
+
+Files changed:
+- src/lib/sheet-sku.ts (extractColumnHeaders, getRowValuesWithoutSKU)
+- src/lib/auto-sku.ts (updateRowSKU, findChangedRows)
+- src/components/SpreadsheetContainer.tsx (extractHeaders, buildDataVerification)
+- src/lib/sheet-sku.test.ts (updated test data for SKU-first order)
+- src/lib/auto-sku.test.ts (updated test data for SKU-first order)
+- src/lib/e2e-workflow.test.ts (updated test data for SKU-first order)
+- src/components/SettingsDialog.test.tsx (updated test data for SKU-first order)
+
 ## PRD-014: Infinite Re-render Fix - COMPLETE
 - Fixed 'Maximum update depth exceeded' error in SpreadsheetContainer
 - Added isDataEqual helper for deep CellData[][] comparison

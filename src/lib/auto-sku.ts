@@ -3,7 +3,7 @@ import { generateRowSKU, extractColumnHeaders } from './sheet-sku';
 
 /**
  * Update SKU for a single row in a data sheet
- * Modifies the data array in place by setting the last column value
+ * Modifies the data array in place by setting the first column value (index 0)
  */
 export function updateRowSKU(
   data: CellData[][],
@@ -16,27 +16,18 @@ export function updateRowSKU(
   const row = data[rowIndex];
   if (!row || row.length === 0) return;
 
-  // Get headers from first row (excluding SKU column)
+  // Get headers from first row (excluding SKU column at index 0)
   const headers = data[0] ? extractColumnHeaders(data[0]) : [];
   if (headers.length === 0) return;
 
-  // Get row values for the spec columns (based on header count, not row length)
-  // This handles cases where the row might not have the SKU column yet
-  const rowValues = row.slice(0, headers.length);
+  // Get row values for the spec columns (starting from index 1, skip SKU column)
+  const rowValues = row.slice(1, headers.length + 1);
 
   // Generate SKU
   const sku = generateRowSKU(rowValues, headers, parsedSpecs, settings);
 
-  // Determine SKU column index (last column or headers.length)
-  const skuColIndex = headers.length;
-
-  // Ensure row has enough columns
-  while (row.length <= skuColIndex) {
-    row.push({});
-  }
-
-  // Update SKU cell
-  row[skuColIndex] = { v: sku, m: sku };
+  // SKU is always at index 0
+  row[0] = { v: sku, m: sku };
 }
 
 /**
@@ -57,9 +48,9 @@ export function findChangedRows(oldData: CellData[][], newData: CellData[][]): n
       continue;
     }
 
-    // Compare cell values (excluding last column which is SKU)
-    const colCount = Math.max(oldRow.length, newRow.length) - 1;
-    for (let colIndex = 0; colIndex < colCount; colIndex++) {
+    // Compare cell values (excluding first column which is SKU at index 0)
+    // Start from column 1
+    for (let colIndex = 1; colIndex < Math.max(oldRow.length, newRow.length); colIndex++) {
       const oldVal = oldRow[colIndex]?.v ?? oldRow[colIndex]?.m ?? '';
       const newVal = newRow[colIndex]?.v ?? newRow[colIndex]?.m ?? '';
       if (String(oldVal).trim() !== String(newVal).trim()) {

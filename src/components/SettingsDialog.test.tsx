@@ -99,6 +99,7 @@ describe('SettingsDialog', () => {
 
   it('recalculates SKUs in data sheets when settings change', () => {
     // Setup: Config sheet with specs and a data sheet with values
+    // SKU is now at index 0 (Column A)
     useSheetsStore.setState({
       sheets: [
         {
@@ -116,8 +117,8 @@ describe('SettingsDialog', () => {
           name: 'Sheet 1',
           type: 'data',
           data: [
-            [{ v: 'Color' }, { v: 'Size' }, { v: 'SKU' }],
-            [{ v: 'Red' }, { v: 'Small' }, { v: 'R-S' }], // Old SKU with hyphen
+            [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+            [{ v: 'R-S' }, { v: 'Red' }, { v: 'Small' }], // Old SKU with hyphen at index 0
           ],
         },
       ],
@@ -130,13 +131,14 @@ describe('SettingsDialog', () => {
     fireEvent.click(screen.getByText('Underscore (_)'))
     fireEvent.click(screen.getByText('Save changes'))
 
-    // Check that SKU was recalculated
+    // Check that SKU was recalculated at index 0
     const sheets = useSheetsStore.getState().sheets
     const dataSheet = sheets.find(s => s.id === 'data-1')
-    expect(dataSheet?.data[1][2].v).toBe('R_S')
+    expect(dataSheet?.data[1][0].v).toBe('R_S')
   })
 
   it('applies prefix and suffix to recalculated SKUs', () => {
+    // SKU is now at index 0 (Column A)
     useSheetsStore.setState({
       sheets: [
         {
@@ -153,8 +155,8 @@ describe('SettingsDialog', () => {
           name: 'Sheet 1',
           type: 'data',
           data: [
-            [{ v: 'Color' }, { v: 'SKU' }],
-            [{ v: 'Red' }, { v: 'R' }],
+            [{ v: 'SKU' }, { v: 'Color' }],
+            [{ v: 'R' }, { v: 'Red' }],
           ],
         },
       ],
@@ -170,6 +172,6 @@ describe('SettingsDialog', () => {
 
     const sheets = useSheetsStore.getState().sheets
     const dataSheet = sheets.find(s => s.id === 'data-1')
-    expect(dataSheet?.data[1][1].v).toBe('PRE-R-END')
+    expect(dataSheet?.data[1][0].v).toBe('PRE-R-END')
   })
 })

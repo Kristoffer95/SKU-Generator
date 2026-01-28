@@ -42,7 +42,8 @@ function buildDataVerification(
   const dataVerification: Record<string, { type: string; value1: string; prohibitInput: boolean }> = {}
 
   // For each column header that matches a spec name
-  columnHeaders.forEach((header, colIndex) => {
+  // Headers start from column 1 (index 0 is SKU column)
+  columnHeaders.forEach((header, headerIndex) => {
     if (!header) return
 
     const specValues = getSpecValues(parsedSpecs, header)
@@ -50,6 +51,9 @@ function buildDataVerification(
 
     // Create dropdown options (comma-separated labels)
     const options = specValues.map(v => v.label).join(",")
+
+    // Actual column index is headerIndex + 1 (SKU is at column 0)
+    const colIndex = headerIndex + 1
 
     // Apply to all data rows (skip header row 0)
     for (let row = 1; row < rowCount; row++) {
@@ -67,15 +71,15 @@ function buildDataVerification(
 
 /**
  * Extract column headers from the first row of sheet data
- * Excludes last column (SKU column)
+ * Excludes first column (SKU column at index 0)
  */
 function extractHeaders(data: CellData[][]): string[] {
   if (!data || data.length === 0 || !data[0]) return []
 
   const firstRow = data[0]
-  // Exclude last column (SKU column)
+  // Exclude first column (SKU column at index 0)
   const headers: string[] = []
-  for (let i = 0; i < firstRow.length - 1; i++) {
+  for (let i = 1; i < firstRow.length; i++) {
     const cell = firstRow[i]
     headers.push(String(cell?.v ?? cell?.m ?? "").trim())
   }
