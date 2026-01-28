@@ -1105,3 +1105,272 @@ describe('SpreadsheetContainer ValidationPanel integration', () => {
     expect(screen.getByText(/Yellow/)).toBeInTheDocument()
   })
 })
+
+describe('SpreadsheetContainer SKU auto-generation from dropdown selection', () => {
+  // Tests verifying PRD task sku-autogen-1: SKU auto-generation when selecting values from dropdowns
+
+  beforeEach(() => {
+    localStorage.clear()
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+    capturedHooks = {}
+    capturedOnChange = null
+    capturedData = []
+  })
+
+  it('generates SKU when selecting a single value from dropdown', () => {
+    // Set up specifications
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-color',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+          ],
+        },
+      ],
+    })
+
+    // Create new sheet (has proper headers via sheet-headers-1)
+    const sheetId = useSheetsStore.getState().addSheet('Test Products')
+    // Sheet should be initialized with SKU and Color headers
+    const initialSheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(initialSheet.data[0][0]?.v).toBe('SKU')
+    expect(initialSheet.data[0][1]?.v).toBe('Color')
+
+    render(<SpreadsheetContainer />)
+
+    // Simulate user selecting Red from dropdown in column B (Color column)
+    capturedOnChange?.([{
+      id: sheetId,
+      name: 'Test Products',
+      data: [
+        [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+        [{ v: '', m: '' }, { v: 'Red', m: 'Red' }], // User selected Red
+      ],
+    }])
+
+    // SKU in column A should auto-generate with Red's skuFragment
+    const sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][0]?.v).toBe('R')
+  })
+
+  it('generates SKU with all fragments joined by delimiter when selecting multiple values', () => {
+    // Set up specifications for Color and Size
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-color',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+          ],
+        },
+        {
+          id: 'spec-size',
+          name: 'Size',
+          order: 1,
+          values: [
+            { id: 'v3', displayValue: 'Small', skuFragment: 'S' },
+            { id: 'v4', displayValue: 'Large', skuFragment: 'L' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    // Verify headers are correct
+    const initialSheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(initialSheet.data[0][0]?.v).toBe('SKU')
+    expect(initialSheet.data[0][1]?.v).toBe('Color')
+    expect(initialSheet.data[0][2]?.v).toBe('Size')
+
+    render(<SpreadsheetContainer />)
+
+    // Step 1: User selects Red from Color dropdown
+    capturedOnChange?.([{
+      id: sheetId,
+      name: 'Products',
+      data: [
+        [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }, { v: 'Size', m: 'Size' }],
+        [{ v: '', m: '' }, { v: 'Red', m: 'Red' }, { v: '', m: '' }],
+      ],
+    }])
+
+    // SKU should be 'R' after selecting Color
+    let sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][0]?.v).toBe('R')
+
+    // Step 2: User selects Small from Size dropdown
+    capturedOnChange?.([{
+      id: sheetId,
+      name: 'Products',
+      data: [
+        [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }, { v: 'Size', m: 'Size' }],
+        [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }, { v: 'Small', m: 'Small' }],
+      ],
+    }])
+
+    // SKU should be 'R-S' (fragments joined by default delimiter '-')
+    sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][0]?.v).toBe('R-S')
+  })
+
+  it('generates example SKU: Red (R) and Small (S) produces R-S', () => {
+    // This test exactly matches the PRD example
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-color',
+          name: 'Color',
+          order: 0,
+          values: [{ id: 'v1', displayValue: 'Red', skuFragment: 'R' }],
+        },
+        {
+          id: 'spec-size',
+          name: 'Size',
+          order: 1,
+          values: [{ id: 'v2', displayValue: 'Small', skuFragment: 'S' }],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+
+    render(<SpreadsheetContainer />)
+
+    // Simulate selecting Red and Small
+    capturedOnChange?.([{
+      id: sheetId,
+      name: 'Products',
+      data: [
+        [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }, { v: 'Size', m: 'Size' }],
+        [{ v: '', m: '' }, { v: 'Red', m: 'Red' }, { v: 'Small', m: 'Small' }],
+      ],
+    }])
+
+    const sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][0]?.v).toBe('R-S')
+  })
+
+  it('does not generate SKU when headers are missing', () => {
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-color',
+          name: 'Color',
+          order: 0,
+          values: [{ id: 'v1', displayValue: 'Red', skuFragment: 'R' }],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    // Manually set sheet with missing/wrong headers
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'WrongHeader' }], // Header doesn't match spec name
+      [{ v: '' }, { v: '' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Simulate selecting Red in a column with wrong header
+    capturedOnChange?.([{
+      id: sheetId,
+      name: 'Products',
+      data: [
+        [{ v: 'SKU', m: 'SKU' }, { v: 'WrongHeader', m: 'WrongHeader' }],
+        [{ v: '', m: '' }, { v: 'Red', m: 'Red' }],
+      ],
+    }])
+
+    // SKU should be empty (header doesn't match any spec name)
+    const sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][0]?.v).toBe('')
+  })
+
+  it('generates SKU correctly when headers match spec names exactly', () => {
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-1',
+          name: 'Material',
+          order: 0,
+          values: [{ id: 'v1', displayValue: 'Cotton', skuFragment: 'CTN' }],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    // Set sheet with correct header that matches spec name exactly
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Material' }],
+      [{ v: '' }, { v: '' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    capturedOnChange?.([{
+      id: sheetId,
+      name: 'Products',
+      data: [
+        [{ v: 'SKU', m: 'SKU' }, { v: 'Material', m: 'Material' }],
+        [{ v: '', m: '' }, { v: 'Cotton', m: 'Cotton' }],
+      ],
+    }])
+
+    const sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][0]?.v).toBe('CTN')
+  })
+
+  it('updates SKU in column A when dropdown value changes', () => {
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-color',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+
+    render(<SpreadsheetContainer />)
+
+    // First selection: Red
+    capturedOnChange?.([{
+      id: sheetId,
+      name: 'Products',
+      data: [
+        [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+        [{ v: '', m: '' }, { v: 'Red', m: 'Red' }],
+      ],
+    }])
+
+    let sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][0]?.v).toBe('R')
+
+    // Change selection to Blue
+    capturedOnChange?.([{
+      id: sheetId,
+      name: 'Products',
+      data: [
+        [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+        [{ v: 'R', m: 'R' }, { v: 'Blue', m: 'Blue' }],
+      ],
+    }])
+
+    sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][0]?.v).toBe('B')
+  })
+})

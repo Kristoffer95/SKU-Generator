@@ -287,6 +287,6 @@
       "SKU in column A shows all fragments joined by delimiter",
       "Example: selecting Red (R) and Small (S) produces 'R-S' in SKU column"
     ],
-    "passes": false
+    "passes": true
   }
 ]

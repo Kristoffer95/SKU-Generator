@@ -1,3 +1,19 @@
+## sku-autogen-1: Verify SKU auto-generation from dropdown selection
+
+**Completed**: Added tests verifying SKU auto-generation works when selecting values from dropdowns
+
+**Key decisions**:
+- Added 6 new tests to SpreadsheetContainer.test.tsx covering the exact PRD verification steps
+- Tests verify: single value selection, multiple value selection, example "R-S" case
+- Tests verify: header mismatch handling (SKU not generated when headers wrong)
+- Tests verify: value change triggers SKU update
+- Existing implementation was already correct; task was verification-focused
+
+**Files changed**:
+- src/components/SpreadsheetContainer.test.tsx: Added new describe block "SKU auto-generation from dropdown selection" with 6 tests
+
+---
+
 ## sheet-headers-2: Fix AddSpecDialog column insertion logic
 
 **Completed**: New spec columns now appended at end instead of before SKU column
