@@ -6,12 +6,12 @@ import { useSheetsStore } from "@/store/sheets"
 import { hasTourCompleted, startGuidedTour } from "@/lib/guided-tour"
 
 function App() {
-  const initializeWithConfigSheet = useSheetsStore(s => s.initializeWithConfigSheet)
+  const initializeWithSampleData = useSheetsStore(s => s.initializeWithSampleData)
 
-  // Initialize Config sheet on app start
+  // Initialize with sample data on first launch, or Config sheet if sheets already exist
   useEffect(() => {
-    initializeWithConfigSheet()
-  }, [initializeWithConfigSheet])
+    initializeWithSampleData()
+  }, [initializeWithSampleData])
 
   // Auto-start guided tour on first page load
   useEffect(() => {

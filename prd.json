@@ -239,6 +239,11 @@
       "category": "User Onboarding",
       "description": "Implement comprehensive 24-step Driver.js guided tutorial organized into 3 phases (Foundation, Create SKU, Advanced) that teaches users how to use the app step-by-step with auto-opening dialogs at relevant steps",
       "stepsToVerify": [
+        "Create src/lib/sample-data.ts with getSampleConfigData() returning sample Config rows: Color (Red/R, Blue/B, Green/G), Size (Small/S, Medium/M, Large/L), Material (Cotton/COT, Polyester/POL, Wool/WOL)",
+        "Create getSampleProductData() returning 5 sample products with pre-filled values and auto-generated SKUs",
+        "Create initializeWithSampleData() that checks if first launch (no sheets in localStorage) and populates Config + Sample Products sheet",
+        "Update App.tsx to use initializeWithSampleData() instead of initializeWithConfigSheet()",
+        "Sample products should demonstrate: R-S-COT, B-M-POL, G-L-WOL, R-L-COT, B-S-POL as SKU examples",
         "Auto-start tour on first page load: In App.tsx useEffect, check hasTourCompleted() and call startGuidedTour() if false",
         "Add small delay (500-1000ms) before auto-starting tour to ensure all elements are rendered",
         "Phase 1 - Foundation (Steps 1-7): Welcome, Config tab intro, Config structure explanation, row mapping demo, sidebar overview, spec cards explanation, foundation checkpoint",
@@ -267,6 +272,9 @@
         "Verify tour completion state persists to localStorage",
         "Verify tour auto-starts on first page load (clear localStorage, refresh page)",
         "Verify tour does NOT auto-start on subsequent visits (after completion)",
+        "Verify sample data appears on first page load: Config sheet has 9 spec entries (3 Colors, 3 Sizes, 3 Materials)",
+        "Verify sample data includes 'Sample Products' data sheet with 5 products showing SKU generation examples",
+        "Verify sidebar shows Color, Size, Material specs parsed from sample Config data",
         "Run npm run typecheck with no errors",
         "Run npm run lint with no errors",
         "Run npm run test with all tests passing"

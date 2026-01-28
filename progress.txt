@@ -1,3 +1,23 @@
+## PRD-016: Sample Data on First Launch - COMPLETE
+- Created src/lib/sample-data.ts with sample Config data and sample products
+- getSampleConfigData(): Color (R/B/G), Size (S/M/L), Material (COT/POL/WOL) - 9 specs total
+- getSampleProductData(): 5 products with SKUs (R-S-COT, B-M-POL, G-L-WOL, R-L-COT, B-S-POL)
+- createSampleSheets(): Creates Config + Sample Products sheets for first-time users
+- isFirstLaunch(): Checks localStorage for existing sheets
+- Added initializeWithSampleData() to sheets store with fallback to Config sheet if sheets exist
+- Updated App.tsx to use initializeWithSampleData() instead of initializeWithConfigSheet()
+- 21 tests for sample-data.ts + 4 tests for initializeWithSampleData in sheets.test.ts
+- All feedback loops pass (273 tests, typecheck, lint)
+
+Files created:
+- src/lib/sample-data.ts
+- src/lib/sample-data.test.ts
+
+Files changed:
+- src/store/sheets.ts (added initializeWithSampleData function)
+- src/store/sheets.test.ts (+4 tests for initializeWithSampleData)
+- src/App.tsx (use initializeWithSampleData)
+
 ## PRD-016: Auto-Start Tour on First Page Load - COMPLETE
 - Added useEffect in App.tsx to auto-start guided tour on first visit
 - Checks hasTourCompleted() before starting tour

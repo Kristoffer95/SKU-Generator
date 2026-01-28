@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { SheetConfig, CellData } from '../types';
+import { createSampleSheets, isFirstLaunch } from '../lib/sample-data';
 
 interface SheetsState {
   sheets: SheetConfig[];
@@ -15,6 +16,7 @@ interface SheetsState {
   updateCellData: (sheetId: string, row: number, col: number, cell: CellData) => void;
   setSheetData: (sheetId: string, data: CellData[][]) => void;
   initializeWithConfigSheet: () => void;
+  initializeWithSampleData: () => void;
 }
 
 const generateId = () => crypto.randomUUID();
@@ -56,6 +58,28 @@ export const useSheetsStore = create<SheetsState>()(
             sheets: [configSheet, ...sheets],
             activeSheetId: configSheet.id,
           });
+        }
+      },
+
+      initializeWithSampleData: () => {
+        const { sheets } = get();
+        // Only initialize on first launch (no existing sheets)
+        if (sheets.length === 0 && isFirstLaunch()) {
+          const { configSheet, productSheet } = createSampleSheets();
+          set({
+            sheets: [configSheet, productSheet],
+            activeSheetId: configSheet.id,
+          });
+        } else {
+          // Fall back to normal init if sheets exist
+          const hasConfigSheet = sheets.some((s) => s.type === 'config');
+          if (!hasConfigSheet) {
+            const configSheet = createConfigSheet();
+            set({
+              sheets: [configSheet, ...sheets],
+              activeSheetId: configSheet.id,
+            });
+          }
         }
       },
 
