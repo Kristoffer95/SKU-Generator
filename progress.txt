@@ -1,3 +1,23 @@
+## migration-tests-update - COMPLETED
+Update SpreadsheetContainer tests for react-spreadsheet
+
+### Key decisions
+- Mocked 'react-spreadsheet' instead of '@fortune-sheet/react'
+- Test mock captures data and onChange from Spreadsheet component
+- Updated tests to verify dropdownOptions, readOnly, className properties
+- Dropdown options assigned by column position (col 1 = spec[0]) not header matching
+- Sheet tab test IDs use 'sheet-tab-*' pattern from SheetTabs component
+- addSheet sets new sheet as active (test logic updated accordingly)
+
+### Files changed
+- src/components/SpreadsheetContainer.test.tsx (complete rewrite)
+
+### Notes
+- 42 tests pass covering: rendering, dropdowns, onChange, SheetTabs, readOnly, styling, duplicates, validation, SKU auto-generation, toolbar
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (539 tests total)
+
 ## migration-readonly-sku - COMPLETED
 Verify SKU column is read-only in react-spreadsheet implementation
 

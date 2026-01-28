@@ -166,7 +166,7 @@
       "Tests verify sheet tab interactions",
       "npm run test passes for SpreadsheetContainer tests"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "migration-undo-redo",
