@@ -1,3 +1,17 @@
+## spec-store-2: Revive useSpecificationsStore as single source of truth
+
+**Completed**: Store already fully implemented in spec-store-1
+
+**Key decisions**:
+- All requirements met: addSpecification, updateSpecification, removeSpecification, reorderSpec actions
+- reorderSpec properly shifts other specs' orders for contiguity
+- Persists to localStorage with key 'sku-specifications'
+- 14 store tests all pass
+
+**Files changed**: None (already complete from spec-store-1)
+
+---
+
 ## spec-store-1: Update Specification type with order field
 
 **Completed**: Updated data model types and specifications store

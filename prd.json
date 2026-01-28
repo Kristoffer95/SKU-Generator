@@ -20,7 +20,7 @@
       "Store persists to localStorage with key 'sku-specifications'",
       "npm run test passes for specification store tests"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "spec-store-3",
