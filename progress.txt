@@ -1,3 +1,25 @@
+## migration-dropdown-editor - COMPLETED
+Custom DataEditor component for dropdown selection in spec columns
+
+### Key decisions
+- Implemented DropdownEditorProps interface matching react-spreadsheet's DataEditorProps
+- Props: cell (SKUCell), onChange, exitEditMode, row, column
+- Renders <select> when cell.dropdownOptions exists and has values
+- Renders <input type="text"> as fallback when no dropdown options
+- Keyboard: Enter/Tab/Escape all call exitEditMode() for consistent UX
+- Auto-focus on mount for both select and input elements
+- Empty "Select..." placeholder option in dropdown for clearing selection
+- Uses data-testid attributes for testing
+
+### Files changed
+- src/components/spreadsheet/DropdownEditor.tsx (new)
+- src/components/spreadsheet/DropdownEditor.test.tsx (new, 21 tests)
+
+### Notes
+- Created new src/components/spreadsheet directory for migration components
+- Component is standalone, ready to integrate with react-spreadsheet once dependencies installed
+- Tests cover: dropdown vs input rendering, onChange callbacks, keyboard events, auto-focus, edge cases
+
 ## migration-spreadsheet-adapter - COMPLETED
 Create data conversion utilities for react-spreadsheet (convertToSpreadsheetData, convertFromSpreadsheetData)
 

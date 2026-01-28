@@ -35,7 +35,7 @@
       "Keyboard: Enter/Tab commits and exits edit, Escape cancels",
       "Select auto-focuses on mount"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "migration-sheet-tabs",
