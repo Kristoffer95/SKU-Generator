@@ -111,6 +111,8 @@ export async function importFromExcel(file: File): Promise<SheetConfig[]> {
             name: sheetName,
             type: isConfig ? 'config' : 'data',
             data: sheetData,
+            columns: [],
+            specifications: [],
           });
         }
 

@@ -6,7 +6,7 @@ import { useSpecificationsStore } from "@/store/specifications"
 import { useSheetsStore } from "@/store/sheets"
 import { useSettingsStore } from "@/store/settings"
 import { updateRowSKU } from "@/lib/auto-sku"
-import type { Specification, CellData } from "@/types"
+import type { Specification, CellData, SheetConfig } from "@/types"
 
 // Helper to create specifications
 const createSpecification = (
@@ -23,6 +23,33 @@ const createSpecification = (
     skuFragment: v.skuFragment,
   })),
 })
+
+/**
+ * Helper to create a sheet with per-sheet specifications.
+ * Sets the sheet as active and returns the sheet ID.
+ */
+function createSheetWithSpecs(
+  name: string,
+  data: CellData[][],
+  specifications: Specification[]
+): string {
+  const sheetId = crypto.randomUUID()
+  const sheet: SheetConfig = {
+    id: sheetId,
+    name,
+    type: "data",
+    data,
+    columns: [],
+    specifications,
+  }
+  useSheetsStore.setState((state) => ({
+    sheets: [...state.sheets, sheet],
+    activeSheetId: sheetId,
+  }))
+  // Also sync global store for backward compat with methods like updateSpecValue
+  useSpecificationsStore.setState({ specifications })
+  return sheetId
+}
 
 // Reset stores before each test
 beforeEach(() => {
@@ -63,18 +90,17 @@ describe("SpecificationList", () => {
   })
 
   it("displays specifications from store", () => {
-    useSpecificationsStore.setState({
-      specifications: [
-        createSpecification("Temperature", 0, [
-          { displayValue: "29deg C", skuFragment: "29C" },
-          { displayValue: "30deg C", skuFragment: "30C" },
-        ]),
-        createSpecification("Color", 1, [
-          { displayValue: "Red", skuFragment: "R" },
-          { displayValue: "Blue", skuFragment: "B" },
-        ]),
-      ],
-    })
+    const specs = [
+      createSpecification("Temperature", 0, [
+        { displayValue: "29deg C", skuFragment: "29C" },
+        { displayValue: "30deg C", skuFragment: "30C" },
+      ]),
+      createSpecification("Color", 1, [
+        { displayValue: "Red", skuFragment: "R" },
+        { displayValue: "Blue", skuFragment: "B" },
+      ]),
+    ]
+    createSheetWithSpecs("Test Sheet", [], specs)
 
     render(<SpecificationList />)
 
@@ -83,17 +109,16 @@ describe("SpecificationList", () => {
   })
 
   it("shows correct value count for each spec", () => {
-    useSpecificationsStore.setState({
-      specifications: [
-        createSpecification("Color", 0, [
-          { displayValue: "Red", skuFragment: "R" },
-          { displayValue: "Blue", skuFragment: "B" },
-        ]),
-        createSpecification("Size", 1, [
-          { displayValue: "Small", skuFragment: "S" },
-        ]),
-      ],
-    })
+    const specs = [
+      createSpecification("Color", 0, [
+        { displayValue: "Red", skuFragment: "R" },
+        { displayValue: "Blue", skuFragment: "B" },
+      ]),
+      createSpecification("Size", 1, [
+        { displayValue: "Small", skuFragment: "S" },
+      ]),
+    ]
+    createSheetWithSpecs("Test Sheet", [], specs)
 
     render(<SpecificationList />)
 
@@ -103,14 +128,13 @@ describe("SpecificationList", () => {
 
   it("expands specification to show values with skuFragments", async () => {
     const user = userEvent.setup()
-    useSpecificationsStore.setState({
-      specifications: [
-        createSpecification("Color", 0, [
-          { displayValue: "Red", skuFragment: "R" },
-          { displayValue: "Blue", skuFragment: "B" },
-        ]),
-      ],
-    })
+    const specs = [
+      createSpecification("Color", 0, [
+        { displayValue: "Red", skuFragment: "R" },
+        { displayValue: "Blue", skuFragment: "B" },
+      ]),
+    ]
+    createSheetWithSpecs("Test Sheet", [], specs)
 
     render(<SpecificationList />)
 
@@ -127,13 +151,12 @@ describe("SpecificationList", () => {
 
   it("collapses specification when clicked again", async () => {
     const user = userEvent.setup()
-    useSpecificationsStore.setState({
-      specifications: [
-        createSpecification("Color", 0, [
-          { displayValue: "Red", skuFragment: "R" },
-        ]),
-      ],
-    })
+    const specs = [
+      createSpecification("Color", 0, [
+        { displayValue: "Red", skuFragment: "R" },
+      ]),
+    ]
+    createSheetWithSpecs("Test Sheet", [], specs)
 
     render(<SpecificationList />)
 
@@ -151,13 +174,12 @@ describe("SpecificationList", () => {
   })
 
   it("sorts specifications by order field (lowest first)", () => {
-    useSpecificationsStore.setState({
-      specifications: [
-        createSpecification("Size", 2, []),
-        createSpecification("Color", 0, []),
-        createSpecification("Material", 1, []),
-      ],
-    })
+    const specs = [
+      createSpecification("Size", 2, []),
+      createSpecification("Color", 0, []),
+      createSpecification("Material", 1, []),
+    ]
+    createSheetWithSpecs("Test Sheet", [], specs)
 
     render(<SpecificationList />)
 
@@ -182,13 +204,12 @@ describe("SpecificationList", () => {
 
   it("handles spec with empty skuFragment", async () => {
     const user = userEvent.setup()
-    useSpecificationsStore.setState({
-      specifications: [
-        createSpecification("Color", 0, [
-          { displayValue: "Red", skuFragment: "" },
-        ]),
-      ],
-    })
+    const specs = [
+      createSpecification("Color", 0, [
+        { displayValue: "Red", skuFragment: "" },
+      ]),
+    ]
+    createSheetWithSpecs("Test Sheet", [], specs)
 
     render(<SpecificationList />)
 
@@ -205,29 +226,32 @@ describe("SpecificationList", () => {
       { displayValue: "Red", skuFragment: "R" },
     ])
 
-    useSpecificationsStore.setState({
-      specifications: [colorSpec],
-    })
+    const sheetId = createSheetWithSpecs("Test Sheet", [], [colorSpec])
 
     const { rerender } = render(<SpecificationList />)
     expect(screen.getByText("Color")).toBeInTheDocument()
     expect(screen.getByText("1 value")).toBeInTheDocument()
 
     // Update existing spec and add a new one (reuse the ID to ensure proper update)
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          ...colorSpec,
-          values: [
-            { id: crypto.randomUUID(), displayValue: "Red", skuFragment: "R" },
-            { id: crypto.randomUUID(), displayValue: "Blue", skuFragment: "B" },
-          ],
-        },
-        createSpecification("Size", 1, [
-          { displayValue: "Small", skuFragment: "S" },
-        ]),
-      ],
-    })
+    const updatedSpecs = [
+      {
+        ...colorSpec,
+        values: [
+          { id: crypto.randomUUID(), displayValue: "Red", skuFragment: "R" },
+          { id: crypto.randomUUID(), displayValue: "Blue", skuFragment: "B" },
+        ],
+      },
+      createSpecification("Size", 1, [
+        { displayValue: "Small", skuFragment: "S" },
+      ]),
+    ]
+    // Update both the sheet and global store
+    useSheetsStore.setState((state) => ({
+      sheets: state.sheets.map(s =>
+        s.id === sheetId ? { ...s, specifications: updatedSpecs } : s
+      ),
+    }))
+    useSpecificationsStore.setState({ specifications: updatedSpecs })
 
     rerender(<SpecificationList />)
     // Use getAllBy since the same Color spec may show with updated values
@@ -239,11 +263,10 @@ describe("SpecificationList", () => {
 
   it("shows spec with no values defined message when expanded", async () => {
     const user = userEvent.setup()
-    useSpecificationsStore.setState({
-      specifications: [
-        createSpecification("EmptySpec", 0, []),
-      ],
-    })
+    const specs = [
+      createSpecification("EmptySpec", 0, []),
+    ]
+    createSheetWithSpecs("Test Sheet", [], specs)
 
     render(<SpecificationList />)
 
@@ -256,12 +279,11 @@ describe("SpecificationList", () => {
 
   describe("drag-and-drop reordering", () => {
     it("renders drag handles for each specification", () => {
-      useSpecificationsStore.setState({
-        specifications: [
-          createSpecification("Color", 0, []),
-          createSpecification("Size", 1, []),
-        ],
-      })
+      const specs = [
+        createSpecification("Color", 0, []),
+        createSpecification("Size", 1, []),
+      ]
+      createSheetWithSpecs("Test Sheet", [], specs)
 
       render(<SpecificationList />)
 
@@ -342,6 +364,8 @@ describe("SpecificationList", () => {
           name: "Products",
           type: "data",
           data: sheetData,
+          columns: [],
+          specifications: [],
         }],
         activeSheetId: "sheet-1",
       })
@@ -411,13 +435,12 @@ describe("SpecificationList", () => {
   describe("inline editing", () => {
     it("shows edit form when clicking on a value", async () => {
       const user = userEvent.setup()
-      useSpecificationsStore.setState({
-        specifications: [
-          createSpecification("Color", 0, [
-            { displayValue: "Red", skuFragment: "R" },
-          ]),
-        ],
-      })
+      const specs = [
+        createSpecification("Color", 0, [
+          { displayValue: "Red", skuFragment: "R" },
+        ]),
+      ]
+      createSheetWithSpecs("Test Sheet", [], specs)
 
       render(<SpecificationList />)
 
@@ -440,13 +463,12 @@ describe("SpecificationList", () => {
 
     it("pre-fills edit inputs with current values", async () => {
       const user = userEvent.setup()
-      useSpecificationsStore.setState({
-        specifications: [
-          createSpecification("Color", 0, [
-            { displayValue: "Red", skuFragment: "R" },
-          ]),
-        ],
-      })
+      const specs = [
+        createSpecification("Color", 0, [
+          { displayValue: "Red", skuFragment: "R" },
+        ]),
+      ]
+      createSheetWithSpecs("Test Sheet", [], specs)
 
       render(<SpecificationList />)
 
@@ -468,7 +490,7 @@ describe("SpecificationList", () => {
       const spec = createSpecification("Color", 0, [
         { displayValue: "Red", skuFragment: "R" },
       ])
-      useSpecificationsStore.setState({ specifications: [spec] })
+      createSheetWithSpecs("Test Sheet", [], [spec])
 
       render(<SpecificationList />)
 
@@ -505,7 +527,7 @@ describe("SpecificationList", () => {
       const spec = createSpecification("Color", 0, [
         { displayValue: "Red", skuFragment: "R" },
       ])
-      useSpecificationsStore.setState({ specifications: [spec] })
+      createSheetWithSpecs("Test Sheet", [], [spec])
 
       render(<SpecificationList />)
 
@@ -535,13 +557,12 @@ describe("SpecificationList", () => {
 
     it("cancels editing when clicking cancel button", async () => {
       const user = userEvent.setup()
-      useSpecificationsStore.setState({
-        specifications: [
-          createSpecification("Color", 0, [
-            { displayValue: "Red", skuFragment: "R" },
-          ]),
-        ],
-      })
+      const specs = [
+        createSpecification("Color", 0, [
+          { displayValue: "Red", skuFragment: "R" },
+        ]),
+      ]
+      createSheetWithSpecs("Test Sheet", [], specs)
 
       render(<SpecificationList />)
 
@@ -570,19 +591,18 @@ describe("SpecificationList", () => {
       })
 
       // Store should not be updated
-      const specs = useSpecificationsStore.getState().specifications
-      expect(specs[0].values[0].displayValue).toBe("Red")
+      const storeSpecs = useSpecificationsStore.getState().specifications
+      expect(storeSpecs[0].values[0].displayValue).toBe("Red")
     })
 
     it("cancels editing when pressing Escape", async () => {
       const user = userEvent.setup()
-      useSpecificationsStore.setState({
-        specifications: [
-          createSpecification("Color", 0, [
-            { displayValue: "Red", skuFragment: "R" },
-          ]),
-        ],
-      })
+      const specs = [
+        createSpecification("Color", 0, [
+          { displayValue: "Red", skuFragment: "R" },
+        ]),
+      ]
+      createSheetWithSpecs("Test Sheet", [], specs)
 
       render(<SpecificationList />)
 
@@ -618,7 +638,7 @@ describe("SpecificationList", () => {
           { id: "v2", displayValue: "Blue", skuFragment: "B" },
         ],
       }
-      useSpecificationsStore.setState({ specifications: [spec] })
+      createSheetWithSpecs("Test Sheet", [], [spec])
 
       render(<SpecificationList />)
 
@@ -658,22 +678,21 @@ describe("SpecificationList", () => {
 
     it("allows same skuFragment in different specs", async () => {
       const user = userEvent.setup()
-      useSpecificationsStore.setState({
-        specifications: [
-          {
-            id: "spec-color",
-            name: "Color",
-            order: 0,
-            values: [{ id: "v1", displayValue: "Red", skuFragment: "R" }],
-          },
-          {
-            id: "spec-size",
-            name: "Size",
-            order: 1,
-            values: [{ id: "v2", displayValue: "Regular", skuFragment: "X" }],
-          },
-        ],
-      })
+      const specs: Specification[] = [
+        {
+          id: "spec-color",
+          name: "Color",
+          order: 0,
+          values: [{ id: "v1", displayValue: "Red", skuFragment: "R" }],
+        },
+        {
+          id: "spec-size",
+          name: "Size",
+          order: 1,
+          values: [{ id: "v2", displayValue: "Regular", skuFragment: "X" }],
+        },
+      ]
+      createSheetWithSpecs("Test Sheet", [], specs)
 
       render(<SpecificationList />)
 
@@ -705,8 +724,8 @@ describe("SpecificationList", () => {
       })
 
       // Verify store was updated
-      const specs = useSpecificationsStore.getState().specifications
-      const sizeSpec = specs.find((s) => s.id === "spec-size")
+      const storeSpecs = useSpecificationsStore.getState().specifications
+      const sizeSpec = storeSpecs.find((s) => s.id === "spec-size")
       expect(sizeSpec?.values[0].skuFragment).toBe("R")
     })
 
@@ -721,7 +740,7 @@ describe("SpecificationList", () => {
           { id: "v2", displayValue: "Blue", skuFragment: "B" },
         ],
       }
-      useSpecificationsStore.setState({ specifications: [spec] })
+      createSheetWithSpecs("Test Sheet", [], [spec])
 
       render(<SpecificationList />)
 

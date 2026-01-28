@@ -206,5 +206,122 @@
       "Selecting values in new row generates SKU"
     ],
     "passes": true
+  },
+  {
+    "id": "sheet-local-specifications",
+    "category": "Sheet Enhancements",
+    "description": "Make specifications local to each sheet instead of global. Each sheet should have its own independent set of specifications. Add ColumnDef interface with id, type ('sku'|'spec'|'free'), specId (optional), and header fields. Update SheetConfig to include columns: ColumnDef[] and specifications: Specification[] arrays. Migrate existing sheets to include copies of global specs.",
+    "stepsToVerify": [
+      "src/types/index.ts exports ColumnDef interface with id, type, specId?, header fields",
+      "SheetConfig interface includes columns: ColumnDef[] and specifications: Specification[]",
+      "Creating a new sheet initializes with empty specifications array",
+      "Adding a spec to Sheet1 does NOT add it to Sheet2",
+      "Switching sheets shows different specifications in sidebar",
+      "Existing user data migrates correctly with specs copied to each sheet",
+      "npm run typecheck passes"
+    ],
+    "passes": true
+  },
+  {
+    "id": "sheet-default-rows",
+    "category": "Sheet Enhancements",
+    "description": "New sheets should be created with 50 empty rows by default and only the SKU column. Modify createEmptySheet() to generate header row plus 50 empty data rows with just the SKU column.",
+    "stepsToVerify": [
+      "Create a new sheet via + button",
+      "New sheet has exactly 51 rows (1 header + 50 data rows)",
+      "New sheet has only SKU column initially",
+      "Each empty row has an empty cell for the SKU column",
+      "User can add spec columns to populate the sheet"
+    ],
+    "passes": false
+  },
+  {
+    "id": "column-drag-reorder",
+    "category": "Column Management",
+    "description": "Implement column reordering by dragging column headers in the spreadsheet. Add drag handles or make entire header cell draggable. On drop, reorder the columns array and update all row data accordingly. SKU column (index 0) should not be movable.",
+    "stepsToVerify": [
+      "Column headers show drag affordance on hover (cursor change or grip icon)",
+      "Dragging a column header shows visual feedback (highlight drop zones)",
+      "Dropping column at new position reorders columns array in store",
+      "All row data shifts to match new column order",
+      "SKU column cannot be dragged (stays at position 0)",
+      "Undo/redo works for column reorder operations"
+    ],
+    "passes": false
+  },
+  {
+    "id": "column-types-spec-free",
+    "category": "Column Management",
+    "description": "Support two column types: spec columns (linked to a specification with dropdown validation) and free columns (plain text input, no SKU contribution). Spec columns reference a specId and render dropdowns. Free columns render as regular text input. Only spec column values contribute to SKU generation.",
+    "stepsToVerify": [
+      "Can add a 'spec column' that shows dropdown with spec values",
+      "Can add a 'free column' that shows plain text input",
+      "Free columns have no dropdown options",
+      "SKU generation only includes values from spec columns",
+      "Free column values do not affect generated SKU",
+      "spreadsheet-adapter correctly identifies column types from columns array"
+    ],
+    "passes": false
+  },
+  {
+    "id": "add-column-dialog",
+    "category": "Column Management",
+    "description": "Create AddColumnDialog component for inserting columns at any position. Dialog should include: column type selector (Spec/Free), spec selector dropdown (if spec type, with option to create new), column name input (for free columns), and position selector showing 'At end' or 'Before [ColumnName]' options.",
+    "stepsToVerify": [
+      "src/components/AddColumnDialog.tsx exports AddColumnDialog component",
+      "Dialog has column type toggle: 'Specification' vs 'Free'",
+      "When Specification selected, shows dropdown of existing specs + 'Create new' option",
+      "When Free selected, shows text input for column name",
+      "Position dropdown shows all current columns as 'Before X' options plus 'At end'",
+      "Submitting adds column at selected position and updates all row data"
+    ],
+    "passes": false
+  },
+  {
+    "id": "column-context-menu",
+    "category": "Column Management",
+    "description": "Add right-click context menu on column headers with options: 'Insert column before', 'Insert column after', 'Delete column'. Insert options open AddColumnDialog with position pre-set. Delete shows confirmation for spec columns (warns about data loss).",
+    "stepsToVerify": [
+      "Right-click on column header shows context menu",
+      "Menu has 'Insert column before' option",
+      "Menu has 'Insert column after' option",
+      "Menu has 'Delete column' option",
+      "Insert options open AddColumnDialog with correct position pre-selected",
+      "Delete column removes column from columns array and all row data",
+      "SKU column context menu does not show delete option"
+    ],
+    "passes": false
+  },
+  {
+    "id": "delete-spec-confirmation",
+    "category": "Specification Management",
+    "description": "Create DeleteSpecConfirmDialog component for confirming specification deletion. Show spec name and warn that associated columns will be removed. Add delete button to SpecificationList items. On confirm, remove spec from sheet.specifications and remove all columns that reference that specId.",
+    "stepsToVerify": [
+      "src/components/DeleteSpecConfirmDialog.tsx exports DeleteSpecConfirmDialog component",
+      "Dialog shows spec name being deleted",
+      "Dialog warns about associated column removal",
+      "Dialog has Cancel and Delete buttons (Delete is destructive styled)",
+      "SpecificationList shows delete button/icon for each spec",
+      "Clicking delete opens confirmation dialog",
+      "Confirming removes spec and all columns with matching specId",
+      "Row data updates to remove deleted column cells"
+    ],
+    "passes": false
+  },
+  {
+    "id": "spec-store-migration",
+    "category": "Specification Management",
+    "description": "Migrate specification management methods from global useSpecificationsStore to sheet-scoped methods in useSheetsStore. All spec operations (add, update, remove, addValue, updateValue, removeValue) should take sheetId as first parameter. Update SpecificationList and AddSpecDialog to use sheet-scoped methods.",
+    "stepsToVerify": [
+      "useSheetsStore has addSpecification(sheetId, name) method",
+      "useSheetsStore has removeSpecification(sheetId, specId) method",
+      "useSheetsStore has addSpecValue(sheetId, specId, displayValue, skuFragment) method",
+      "useSheetsStore has updateSpecValue(sheetId, specId, valueId, updates) method",
+      "useSheetsStore has removeSpecValue(sheetId, specId, valueId) method",
+      "SpecificationList reads specs from activeSheet.specifications",
+      "AddSpecDialog uses sheet-scoped addSpecification method",
+      "npm run typecheck passes"
+    ],
+    "passes": false
   }
 ]

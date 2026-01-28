@@ -1,3 +1,28 @@
+## sheet-local-specifications - COMPLETED
+Make specifications local to each sheet instead of global
+
+### Key decisions
+- Added ColumnDef interface to src/types/index.ts with id, type ('sku'|'spec'|'free'), specId?, and header fields
+- Updated SheetConfig to include columns: ColumnDef[] and specifications: Specification[] arrays
+- New sheets initialize with empty specifications array and a default SKU column
+- SpecificationList and SpreadsheetContainer now read from activeSheet.specifications
+- Migration logic in sheets store copies global specs to existing sheets on rehydrate
+
+### Files changed
+- src/types/index.ts (added ColumnType, ColumnDef interface, updated SheetConfig)
+- src/store/sheets.ts (createDefaultColumns, createHeaderRowFromColumns, migration in onRehydrateStorage)
+- src/lib/sample-data.ts (added createColumnsFromSpecs function)
+- src/components/SpecificationList.tsx (reads from activeSheet.specifications)
+- src/components/SpreadsheetContainer.tsx (reads from activeSheet.specifications)
+- src/lib/import-export.ts (adds columns/specifications to imported sheets)
+- Multiple test files updated to use new SheetConfig structure
+
+### Notes
+- All 7 stepsToVerify criteria implemented
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (565 tests)
+
 ## migration-import-export - COMPLETED
 Verify import/export functionality works with new spreadsheet
 

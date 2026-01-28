@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { SheetConfig, CellData } from '../types';
-import { createSampleProductSheet, getSampleSpecifications, isFirstLaunch, markAsInitialized } from '../lib/sample-data';
+import type { SheetConfig, CellData, ColumnDef } from '../types';
+import { createSampleProductSheet, getSampleSpecifications, createColumnsFromSpecs, isFirstLaunch, markAsInitialized } from '../lib/sample-data';
 import { useSpecificationsStore } from './specifications';
 import { migrateConfigSheetData } from '../lib/migration';
 import { needsHeaderRepair, repairAllSheetHeaders } from '../lib/header-repair';
@@ -42,30 +42,36 @@ const CONFIG_SHEET_HEADERS: CellData[] = [
   { v: 'SKU Code', m: 'SKU Code' },
 ];
 
-/**
- * Creates the header row for a new data sheet.
- * Includes 'SKU' in column 0 and existing specification names in columns 1+ sorted by order.
- */
-const createHeaderRow = (): CellData[] => {
-  const { specifications } = useSpecificationsStore.getState();
-  // Sort specs by order field
-  const sortedSpecs = [...specifications].sort((a, b) => a.order - b.order);
+const generateColumnId = () => crypto.randomUUID();
 
-  // Build header row: SKU + sorted spec names
-  const headers: CellData[] = [{ v: 'SKU', m: 'SKU' }];
-  for (const spec of sortedSpecs) {
-    headers.push({ v: spec.name, m: spec.name });
-  }
-  return headers;
+/**
+ * Creates the header row from columns definitions
+ */
+const createHeaderRowFromColumns = (columns: ColumnDef[]): CellData[] => {
+  return columns.map(col => ({ v: col.header, m: col.header }));
 };
 
+/**
+ * Creates the default column (just SKU) for a new empty sheet
+ */
+const createDefaultColumns = (): ColumnDef[] => {
+  return [{ id: generateColumnId(), type: 'sku', header: 'SKU' }];
+};
+
+/**
+ * Creates an empty sheet with default SKU column and empty specifications.
+ * New sheets start with just the SKU column; users add spec columns as needed.
+ */
 const createEmptySheet = (name: string, type: SheetConfig['type'] = 'data'): SheetConfig => {
-  const headerRow = type === 'data' ? createHeaderRow() : [];
+  const columns = type === 'data' ? createDefaultColumns() : [];
+  const headerRow = type === 'data' ? createHeaderRowFromColumns(columns) : [];
   return {
     id: generateId(),
     name,
     type,
     data: headerRow.length > 0 ? [headerRow] : [],
+    columns,
+    specifications: [],
   };
 };
 
@@ -78,6 +84,8 @@ const createConfigSheet = (): SheetConfig => ({
   name: 'Config',
   type: 'config',
   data: [CONFIG_SHEET_HEADERS],
+  columns: [],
+  specifications: [],
 });
 
 export const useSheetsStore = create<SheetsState>()(
@@ -144,12 +152,15 @@ export const useSheetsStore = create<SheetsState>()(
         // Check if sheet with this ID already exists
         if (sheets.some((s) => s.id === id)) return;
 
-        const headerRow = createHeaderRow();
+        const columns = createDefaultColumns();
+        const headerRow = createHeaderRowFromColumns(columns);
         const newSheet: SheetConfig = {
           id,
           name,
           type: 'data',
           data: headerRow.length > 0 ? [headerRow] : [],
+          columns,
+          specifications: [],
         };
 
         set({
@@ -242,7 +253,7 @@ export const useSheetsStore = create<SheetsState>()(
         // Called AFTER hydration completes - this is the right time to init sample data
         if (state && isFirstLaunch()) {
           const productSheet = createSampleProductSheet();
-          // Add sample specifications to the specifications store
+          // Also keep specs in global store for backward compatibility during transition
           const sampleSpecs = getSampleSpecifications();
           useSpecificationsStore.setState({ specifications: sampleSpecs });
           state.sheets = [productSheet];
@@ -275,6 +286,43 @@ export const useSheetsStore = create<SheetsState>()(
           if (needsHeaderRepair(state.sheets)) {
             state.sheets = repairAllSheetHeaders(state.sheets, specifications);
           }
+
+          // Migrate sheets to have local specifications and columns if not present
+          const globalSpecs = useSpecificationsStore.getState().specifications;
+          state.sheets = state.sheets.map((sheet) => {
+            // Skip if sheet already has local specs (already migrated)
+            if (sheet.specifications && sheet.specifications.length > 0) {
+              return sheet;
+            }
+
+            // Skip config sheets
+            if (sheet.type === 'config') {
+              return {
+                ...sheet,
+                columns: sheet.columns ?? [],
+                specifications: sheet.specifications ?? [],
+              };
+            }
+
+            // Copy global specs to this sheet
+            const localSpecs = globalSpecs.map(spec => ({
+              ...spec,
+              id: crypto.randomUUID(), // New ID for local copy
+              values: spec.values.map(v => ({
+                ...v,
+                id: crypto.randomUUID(), // New ID for local copy
+              })),
+            }));
+
+            // Create columns from specs
+            const columns = createColumnsFromSpecs(localSpecs);
+
+            return {
+              ...sheet,
+              columns,
+              specifications: localSpecs,
+            };
+          });
 
           markAsInitialized();
         }

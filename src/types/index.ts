@@ -42,12 +42,15 @@ export type SheetType = 'config' | 'data';
 
 /**
  * Configuration for a single spreadsheet tab
+ * Each sheet has its own local specifications and columns
  */
 export interface SheetConfig {
   id: string;
   name: string;
   type: SheetType;
   data: CellData[][];
+  columns: ColumnDef[];          // Column definitions for this sheet
+  specifications: Specification[]; // Specifications local to this sheet
 }
 
 /**
@@ -83,4 +86,23 @@ export interface Specification {
   name: string;
   order: number;
   values: SpecValue[];
+}
+
+/**
+ * Column type discriminator
+ * - 'sku': The auto-generated SKU column (always first)
+ * - 'spec': A specification column linked to a Specification via specId
+ * - 'free': A free-text column (no dropdown, no SKU contribution)
+ */
+export type ColumnType = 'sku' | 'spec' | 'free';
+
+/**
+ * Definition of a column in the spreadsheet
+ * Each sheet has its own columns array defining the column structure
+ */
+export interface ColumnDef {
+  id: string;
+  type: ColumnType;
+  specId?: string;  // Required when type is 'spec', references a Specification.id
+  header: string;   // Column header text
 }

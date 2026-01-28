@@ -200,8 +200,8 @@ describe('useSheetsStore', () => {
       expect(activeSheetId).toBe(id);
     });
 
-    it('should initialize sheet with SKU and existing spec headers sorted by order', () => {
-      // Set up specs in store
+    it('should create new sheet with only SKU column (not using global specs)', () => {
+      // Set up specs in global store (these should NOT be used for new sheets)
       useSpecificationsStore.setState({
         specifications: [
           { id: 's2', name: 'Size', order: 1, values: [] },
@@ -214,13 +214,12 @@ describe('useSheetsStore', () => {
       addSheet();
 
       const { sheets } = useSheetsStore.getState();
+      // New sheets only have SKU column - specs are now per-sheet and start empty
       expect(sheets[0].data).toHaveLength(1);
-      expect(sheets[0].data[0]).toEqual([
-        { v: 'SKU', m: 'SKU' },
-        { v: 'Color', m: 'Color' },
-        { v: 'Size', m: 'Size' },
-        { v: 'Material', m: 'Material' },
-      ]);
+      expect(sheets[0].data[0]).toEqual([{ v: 'SKU', m: 'SKU' }]);
+      expect(sheets[0].specifications).toEqual([]);
+      expect(sheets[0].columns).toHaveLength(1);
+      expect(sheets[0].columns[0].type).toBe('sku');
     });
 
     it('should add a sheet with custom name', () => {
@@ -257,7 +256,8 @@ describe('useSheetsStore', () => {
       expect(activeSheetId).toBe('custom-id-123');
     });
 
-    it('should initialize sheet with SKU and existing spec headers sorted by order', () => {
+    it('should create new sheet with only SKU column (not using global specs)', () => {
+      // Set up specs in global store (these should NOT be used for new sheets)
       useSpecificationsStore.setState({
         specifications: [
           { id: 's2', name: 'Size', order: 1, values: [] },
@@ -269,12 +269,12 @@ describe('useSheetsStore', () => {
       addSheetWithId('test-id', 'Products');
 
       const { sheets } = useSheetsStore.getState();
+      // New sheets only have SKU column - specs are now per-sheet and start empty
       expect(sheets[0].data).toHaveLength(1);
-      expect(sheets[0].data[0]).toEqual([
-        { v: 'SKU', m: 'SKU' },
-        { v: 'Color', m: 'Color' },
-        { v: 'Size', m: 'Size' },
-      ]);
+      expect(sheets[0].data[0]).toEqual([{ v: 'SKU', m: 'SKU' }]);
+      expect(sheets[0].specifications).toEqual([]);
+      expect(sheets[0].columns).toHaveLength(1);
+      expect(sheets[0].columns[0].type).toBe('sku');
     });
 
     it('should not add duplicate sheet if ID already exists', () => {
@@ -436,6 +436,8 @@ describe('useSheetsStore', () => {
         name: 'Config',
         type: 'config',
         data: configData,
+        columns: [],
+        specifications: [],
       };
     }
 
@@ -451,6 +453,8 @@ describe('useSheetsStore', () => {
           [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
           [{ v: 'R-S' }, { v: 'Red' }, { v: 'Small' }],
         ],
+        columns: [],
+        specifications: [],
       };
     }
 
@@ -579,12 +583,16 @@ describe('useSheetsStore', () => {
         name: 'Products',
         type: 'data',
         data: [[{ v: 'A' }]],
+        columns: [],
+        specifications: [],
       };
       const dataSheet2: SheetConfig = {
         id: 'data-2',
         name: 'Inventory',
         type: 'data',
         data: [[{ v: 'B' }]],
+        columns: [],
+        specifications: [],
       };
 
       useSheetsStore.setState({
@@ -626,6 +634,8 @@ describe('useSheetsStore', () => {
             { v: 'SKU Code', m: 'SKU Code' },
           ],
         ],
+        columns: [],
+        specifications: [],
       };
       const dataSheet = createLegacyDataSheet();
 
@@ -672,6 +682,8 @@ describe('useSheetsStore', () => {
           [{ v: 'Red' }, { v: 'Small' }],
           [{ v: 'Blue' }, { v: 'Large' }],
         ],
+        columns: [],
+        specifications: [],
       };
 
       useSheetsStore.setState({
@@ -719,6 +731,8 @@ describe('useSheetsStore', () => {
           [{ v: 'SKU' }, { v: 'Color' }],
           [{ v: 'R' }, { v: 'Red' }],
         ],
+        columns: [],
+        specifications: [],
       };
 
       useSheetsStore.setState({
@@ -754,6 +768,8 @@ describe('useSheetsStore', () => {
         name: 'NeedsRepair',
         type: 'data',
         data: [[{ v: 'Red' }]],
+        columns: [],
+        specifications: [],
       };
 
       const sheetValid: SheetConfig = {
@@ -761,6 +777,8 @@ describe('useSheetsStore', () => {
         name: 'Valid',
         type: 'data',
         data: [[{ v: 'SKU' }, { v: 'Color' }]],
+        columns: [],
+        specifications: [],
       };
 
       useSheetsStore.setState({
@@ -800,6 +818,8 @@ describe('useSheetsStore', () => {
         name: 'Empty',
         type: 'data',
         data: [],
+        columns: [],
+        specifications: [],
       };
 
       useSheetsStore.setState({
@@ -834,6 +854,8 @@ describe('useSheetsStore', () => {
         name: 'Products',
         type: 'data',
         data: [[{ v: 'SomeData' }]],
+        columns: [],
+        specifications: [],
       };
 
       useSheetsStore.setState({

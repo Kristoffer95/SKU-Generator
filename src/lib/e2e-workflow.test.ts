@@ -198,6 +198,8 @@ describe('PRD-012: End-to-End Verification', () => {
       name: 'Config',
       type: 'config',
       data: configSheetData,
+      columns: [],
+      specifications: [],
     };
 
     // SKU is now at index 0 (Column A)
@@ -209,6 +211,8 @@ describe('PRD-012: End-to-End Verification', () => {
         [{ v: 'SKU' }, { v: 'Temperature' }, { v: 'Color' }, { v: 'Type' }],
         [{ v: '29C-R-STD' }, { v: '29deg C' }, { v: 'Red' }, { v: 'Standard' }],
       ],
+      columns: [],
+      specifications: [],
     };
 
     it('exports to Excel blob with Config and data sheets', () => {

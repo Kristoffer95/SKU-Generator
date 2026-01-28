@@ -6,10 +6,29 @@ import {
   importFromExcel,
   importFromCSV,
 } from './import-export';
-import type { SheetConfig } from '../types';
+import type { SheetConfig, CellData, SheetType } from '../types';
+
+/**
+ * Helper to create a test sheet with required columns and specifications fields
+ */
+function createTestSheet(overrides: {
+  id?: string;
+  name?: string;
+  type?: SheetType;
+  data?: CellData[][];
+} = {}): SheetConfig {
+  return {
+    id: overrides.id ?? 'test-sheet-id',
+    name: overrides.name ?? 'Test',
+    type: overrides.type ?? 'data',
+    data: overrides.data ?? [],
+    columns: [],
+    specifications: [],
+  };
+}
 
 describe('import-export', () => {
-  const mockConfigSheet: SheetConfig = {
+  const mockConfigSheet: SheetConfig = createTestSheet({
     id: 'config-1',
     name: 'Config',
     type: 'config',
@@ -19,9 +38,9 @@ describe('import-export', () => {
       [{ v: 'Color', m: 'Color' }, { v: 'Blue', m: 'Blue' }, { v: 'B', m: 'B' }],
       [{ v: 'Size', m: 'Size' }, { v: 'Small', m: 'Small' }, { v: 'S', m: 'S' }],
     ],
-  };
+  });
 
-  const mockDataSheet: SheetConfig = {
+  const mockDataSheet: SheetConfig = createTestSheet({
     id: 'data-1',
     name: 'Sheet 1',
     type: 'data',
@@ -29,7 +48,7 @@ describe('import-export', () => {
       [{ v: 'Color', m: 'Color' }, { v: 'Size', m: 'Size' }, { v: 'SKU', m: 'SKU' }],
       [{ v: 'Red', m: 'Red' }, { v: 'Small', m: 'Small' }, { v: 'R-S', m: 'R-S' }],
     ],
-  };
+  });
 
   describe('exportToExcelBlob', () => {
     it('exports sheets to Excel blob', () => {
@@ -83,12 +102,7 @@ describe('import-export', () => {
     });
 
     it('handles empty sheets', () => {
-      const emptySheet: SheetConfig = {
-        id: 'empty-1',
-        name: 'Empty',
-        type: 'data',
-        data: [],
-      };
+      const emptySheet = createTestSheet({ id: 'empty-1', name: 'Empty', data: [] });
 
       const blob = exportToExcelBlob([emptySheet]);
       expect(blob).toBeInstanceOf(Blob);
@@ -104,26 +118,17 @@ describe('import-export', () => {
     });
 
     it('handles empty cells in CSV', () => {
-      const sheetWithEmpty: SheetConfig = {
+      const sheetWithEmpty = createTestSheet({
         id: 'test-1',
-        name: 'Test',
-        type: 'data',
-        data: [
-          [{ v: 'A', m: 'A' }, {}, { v: 'C', m: 'C' }],
-        ],
-      };
+        data: [[{ v: 'A', m: 'A' }, {}, { v: 'C', m: 'C' }]],
+      });
 
       const csv = sheetToCSVString(sheetWithEmpty);
       expect(csv).toContain('A,,C');
     });
 
     it('returns empty for empty sheet', () => {
-      const emptySheet: SheetConfig = {
-        id: 'empty-1',
-        name: 'Empty',
-        type: 'data',
-        data: [],
-      };
+      const emptySheet = createTestSheet({ id: 'empty-1', name: 'Empty', data: [] });
 
       const csv = sheetToCSVString(emptySheet);
       expect(csv).toBe('');

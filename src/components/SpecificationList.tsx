@@ -234,12 +234,20 @@ function SpecItem({ spec, isFirst }: SpecItemProps) {
   )
 }
 
+const EMPTY_SPECIFICATIONS: never[] = []
+
 export function SpecificationList() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const specifications = useSpecificationsStore((state) => state.specifications)
+  // Get active sheet and its local specifications
+  const { sheets, activeSheetId, setSheetData } = useSheetsStore()
+  const activeSheet = sheets.find(s => s.id === activeSheetId)
+  // Use sheet-local specifications (fallback to empty array for backward compat)
+  const specifications = useMemo(
+    () => activeSheet?.specifications ?? EMPTY_SPECIFICATIONS,
+    [activeSheet?.specifications]
+  )
+  // Keep reference to global store methods for backward compatibility during transition
   const reorderSpec = useSpecificationsStore((state) => state.reorderSpec)
-  const sheets = useSheetsStore((state) => state.sheets)
-  const setSheetData = useSheetsStore((state) => state.setSheetData)
   const delimiter = useSettingsStore((state) => state.delimiter)
   const prefix = useSettingsStore((state) => state.prefix)
   const suffix = useSettingsStore((state) => state.suffix)
@@ -257,27 +265,24 @@ export function SpecificationList() {
     setLocalOrder(sortedSpecifications)
   }, [sortedSpecifications])
 
-  // Regenerate all SKUs in all data sheets
+  // Regenerate all SKUs in active sheet only (specs are now per-sheet)
   const regenerateAllSKUs = useCallback((updatedSpecs: Specification[]) => {
-    if (updatedSpecs.length === 0) return
+    if (!activeSheet || updatedSpecs.length === 0) return
+    if (activeSheet.type !== "data" || activeSheet.data.length <= 1) return
 
     const settings = { delimiter, prefix, suffix }
 
-    sheets.forEach((sheet) => {
-      if (sheet.type !== "data" || sheet.data.length <= 1) return
+    // Create a copy of the data to modify
+    const newData = activeSheet.data.map((row) => [...row])
 
-      // Create a copy of the data to modify
-      const newData = sheet.data.map((row) => [...row])
+    // Update SKU for each data row (skip header row 0)
+    for (let rowIndex = 1; rowIndex < newData.length; rowIndex++) {
+      updateRowSKU(newData, rowIndex, updatedSpecs, settings)
+    }
 
-      // Update SKU for each data row (skip header row 0)
-      for (let rowIndex = 1; rowIndex < newData.length; rowIndex++) {
-        updateRowSKU(newData, rowIndex, updatedSpecs, settings)
-      }
-
-      // Update the sheet in the store
-      setSheetData(sheet.id, newData)
-    })
-  }, [sheets, setSheetData, delimiter, prefix, suffix])
+    // Update the sheet in the store
+    setSheetData(activeSheet.id, newData)
+  }, [activeSheet, setSheetData, delimiter, prefix, suffix])
 
   // Handle reorder during drag (updates local state only)
   const handleReorder = useCallback((reorderedSpecs: Specification[]) => {

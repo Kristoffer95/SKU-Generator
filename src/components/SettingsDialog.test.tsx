@@ -130,6 +130,8 @@ describe('SettingsDialog', () => {
             [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
             [{ v: 'R-S' }, { v: 'Red' }, { v: 'Small' }], // Old SKU with hyphen at index 0
           ],
+          columns: [],
+          specifications: [],
         },
       ],
       activeSheetId: 'data-1',
@@ -169,6 +171,8 @@ describe('SettingsDialog', () => {
             [{ v: 'SKU' }, { v: 'Color' }],
             [{ v: 'R' }, { v: 'Red' }],
           ],
+          columns: [],
+          specifications: [],
         },
       ],
       activeSheetId: 'data-1',

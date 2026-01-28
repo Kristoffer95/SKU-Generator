@@ -2,7 +2,6 @@ import { useMemo, useCallback, useRef, useEffect, useState } from "react"
 import Spreadsheet, { Matrix, CellBase, Selection, RangeSelection, PointRange } from "react-spreadsheet"
 import { useSheetsStore } from "@/store/sheets"
 import { useSettingsStore } from "@/store/settings"
-import { useSpecificationsStore } from "@/store/specifications"
 import { processAutoSKU } from "@/lib/auto-sku"
 import { validateDataSheet, findDuplicateSKUs, ValidationError } from "@/lib/validation"
 import { ValidationPanel } from "@/components/ValidationPanel"
@@ -69,9 +68,16 @@ function applyDuplicateHighlighting(matrix: SKUMatrix, duplicateRows: Set<number
   })
 }
 
+const EMPTY_SPECIFICATIONS: never[] = []
+
 export function SpreadsheetContainer() {
   const { sheets, activeSheetId, setActiveSheet, setSheetData, addSheetWithId, removeSheet, updateSheet } = useSheetsStore()
-  const specifications = useSpecificationsStore((state) => state.specifications)
+  // Get active sheet and use its local specifications
+  const activeSheet = sheets.find((s) => s.id === activeSheetId)
+  const specifications = useMemo(
+    () => activeSheet?.specifications ?? EMPTY_SPECIFICATIONS,
+    [activeSheet?.specifications]
+  )
   const delimiter = useSettingsStore((state) => state.delimiter)
   const prefix = useSettingsStore((state) => state.prefix)
   const suffix = useSettingsStore((state) => state.suffix)
@@ -106,9 +112,6 @@ export function SpreadsheetContainer() {
     })
     previousDataRef.current = map
   }, [sheets])
-
-  // Get active sheet
-  const activeSheet = sheets.find((s) => s.id === activeSheetId)
 
   // Handle sheet tab switching
   const handleSheetActivate = useCallback((sheetId: string) => {

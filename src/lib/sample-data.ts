@@ -1,4 +1,4 @@
-import type { CellData, SheetConfig, Specification } from '../types';
+import type { CellData, SheetConfig, Specification, ColumnDef } from '../types';
 
 const generateId = () => crypto.randomUUID();
 
@@ -130,28 +130,57 @@ export function getSampleProductData(): CellData[][] {
 }
 
 /**
+ * Creates column definitions from specifications
+ * Returns SKU column + one spec column per specification
+ */
+export function createColumnsFromSpecs(specifications: Specification[]): ColumnDef[] {
+  const sortedSpecs = [...specifications].sort((a, b) => a.order - b.order);
+  const columns: ColumnDef[] = [
+    { id: generateId(), type: 'sku', header: 'SKU' },
+  ];
+  for (const spec of sortedSpecs) {
+    columns.push({
+      id: generateId(),
+      type: 'spec',
+      specId: spec.id,
+      header: spec.name,
+    });
+  }
+  return columns;
+}
+
+/**
  * Creates sample product sheet for first-time users.
- * Returns only a data sheet - specifications are stored in useSpecificationsStore.
+ * Includes local specifications and columns definitions.
  */
 export function createSampleProductSheet(): SheetConfig {
+  const specifications = getSampleSpecifications();
+  const columns = createColumnsFromSpecs(specifications);
   return {
     id: generateId(),
     name: 'Sample Products',
     type: 'data',
     data: getSampleProductData(),
+    columns,
+    specifications,
   };
 }
 
 /**
  * Creates sample sheets for first-time users.
- * @deprecated Use createSampleProductSheet() + getSampleSpecifications() instead
+ * @deprecated Use createSampleProductSheet() instead - includes local specs and columns
  */
 export function createSampleSheets(): { configSheet: SheetConfig; productSheet: SheetConfig } {
+  const specifications = getSampleSpecifications();
+  const columns = createColumnsFromSpecs(specifications);
+
   const configSheet: SheetConfig = {
     id: generateId(),
     name: 'Config',
     type: 'config',
     data: getSampleConfigData(),
+    columns: [],
+    specifications: [],
   };
 
   const productSheet: SheetConfig = {
@@ -159,6 +188,8 @@ export function createSampleSheets(): { configSheet: SheetConfig; productSheet: 
     name: 'Sample Products',
     type: 'data',
     data: getSampleProductData(),
+    columns,
+    specifications,
   };
 
   return { configSheet, productSheet };

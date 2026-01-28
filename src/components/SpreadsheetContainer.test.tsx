@@ -2,6 +2,35 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, within, act } from '@testing-library/react'
 import { useSheetsStore } from '@/store/sheets'
 import { useSpecificationsStore } from '@/store/specifications'
+import type { Specification, CellData, SheetConfig } from '@/types'
+import { createColumnsFromSpecs } from '@/lib/sample-data'
+
+/**
+ * Helper to create a sheet with local specifications
+ * Use this instead of addSheet() when the test needs specs in the sheet
+ */
+function createSheetWithSpecs(
+  name: string,
+  data: CellData[][],
+  specifications: Specification[]
+): string {
+  const sheetId = crypto.randomUUID()
+  const columns = createColumnsFromSpecs(specifications)
+  const sheet: SheetConfig = {
+    id: sheetId,
+    name,
+    type: 'data',
+    data,
+    columns,
+    specifications,
+  }
+  const { sheets } = useSheetsStore.getState()
+  useSheetsStore.setState({
+    sheets: [...sheets, sheet],
+    activeSheetId: sheetId,
+  })
+  return sheetId
+}
 
 // Mock scrollIntoView which is not available in jsdom
 Element.prototype.scrollIntoView = vi.fn()
@@ -176,27 +205,23 @@ describe('SpreadsheetContainer dropdown building', () => {
   })
 
   it('builds dropdownOptions from specifications store for spec columns', () => {
-    // Set up specifications in store
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-1',
-          name: 'Color',
-          order: 0,
-          values: [
-            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
-            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
-          ],
-        },
-      ],
-    })
+    // Set up specifications in sheet
+    const specs: Specification[] = [
+      {
+        id: 'spec-1',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+        ],
+      },
+    ]
 
-    // Set up sheet with Color column header
-    const sheetId = useSheetsStore.getState().addSheet('Products')
-    useSheetsStore.getState().setSheetData(sheetId, [
+    createSheetWithSpecs('Products', [
       [{ v: 'SKU' }, { v: 'Color' }],
       [{ v: '' }, { v: '' }],
-    ])
+    ], specs)
 
     render(<SpreadsheetContainer />)
 
@@ -210,24 +235,21 @@ describe('SpreadsheetContainer dropdown building', () => {
   it('adds dropdownOptions based on column position, not header names', () => {
     // The adapter assigns dropdowns by column position (col 1 = spec[0], col 2 = spec[1])
     // regardless of header names
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-1',
-          name: 'Color',
-          order: 0,
-          values: [
-            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
-          ],
-        },
-      ],
-    })
+    const specs: Specification[] = [
+      {
+        id: 'spec-1',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+        ],
+      },
+    ]
 
-    const sheetId = useSheetsStore.getState().addSheet('Products')
-    useSheetsStore.getState().setSheetData(sheetId, [
+    createSheetWithSpecs('Products', [
       [{ v: 'SKU' }, { v: 'Description' }], // Header name doesn't affect dropdown assignment
       [{ v: '' }, { v: '' }],
-    ])
+    ], specs)
 
     render(<SpreadsheetContainer />)
 
@@ -239,34 +261,31 @@ describe('SpreadsheetContainer dropdown building', () => {
   })
 
   it('applies dropdownOptions to multiple columns matching different specs', () => {
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-1',
-          name: 'Color',
-          order: 0,
-          values: [
-            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
-            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
-          ],
-        },
-        {
-          id: 'spec-2',
-          name: 'Size',
-          order: 1,
-          values: [
-            { id: 'v3', displayValue: 'Small', skuFragment: 'S' },
-            { id: 'v4', displayValue: 'Large', skuFragment: 'L' },
-          ],
-        },
-      ],
-    })
+    const specs: Specification[] = [
+      {
+        id: 'spec-1',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+        ],
+      },
+      {
+        id: 'spec-2',
+        name: 'Size',
+        order: 1,
+        values: [
+          { id: 'v3', displayValue: 'Small', skuFragment: 'S' },
+          { id: 'v4', displayValue: 'Large', skuFragment: 'L' },
+        ],
+      },
+    ]
 
-    const sheetId = useSheetsStore.getState().addSheet('Products')
-    useSheetsStore.getState().setSheetData(sheetId, [
+    createSheetWithSpecs('Products', [
       [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
       [{ v: '' }, { v: '' }, { v: '' }],
-    ])
+    ], specs)
 
     render(<SpreadsheetContainer />)
 
@@ -278,13 +297,11 @@ describe('SpreadsheetContainer dropdown building', () => {
   })
 
   it('handles empty specifications gracefully', () => {
-    useSpecificationsStore.setState({ specifications: [] })
-
-    const sheetId = useSheetsStore.getState().addSheet('Products')
-    useSheetsStore.getState().setSheetData(sheetId, [
+    // Create a sheet with empty specifications
+    createSheetWithSpecs('Products', [
       [{ v: 'SKU' }, { v: 'Color' }],
       [{ v: '' }, { v: '' }],
-    ])
+    ], [])
 
     render(<SpreadsheetContainer />)
 
@@ -294,22 +311,19 @@ describe('SpreadsheetContainer dropdown building', () => {
   })
 
   it('handles specifications with no values gracefully', () => {
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-1',
-          name: 'Color',
-          order: 0,
-          values: [], // Empty values array
-        },
-      ],
-    })
+    const specs: Specification[] = [
+      {
+        id: 'spec-1',
+        name: 'Color',
+        order: 0,
+        values: [], // Empty values array
+      },
+    ]
 
-    const sheetId = useSheetsStore.getState().addSheet('Products')
-    useSheetsStore.getState().setSheetData(sheetId, [
+    createSheetWithSpecs('Products', [
       [{ v: 'SKU' }, { v: 'Color' }],
       [{ v: '' }, { v: '' }],
-    ])
+    ], specs)
 
     render(<SpreadsheetContainer />)
 
@@ -354,36 +368,33 @@ describe('SpreadsheetContainer onChange handler', () => {
   })
 
   it('generates SKU using specifications from store when cell value changes', () => {
-    // Set up specifications in store
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-1',
-          name: 'Color',
-          order: 0,
-          values: [
-            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
-            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
-          ],
-        },
-        {
-          id: 'spec-2',
-          name: 'Size',
-          order: 1,
-          values: [
-            { id: 'v3', displayValue: 'Small', skuFragment: 'S' },
-            { id: 'v4', displayValue: 'Large', skuFragment: 'L' },
-          ],
-        },
-      ],
-    })
+    // Set up specifications in sheet
+    const specs: Specification[] = [
+      {
+        id: 'spec-1',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+        ],
+      },
+      {
+        id: 'spec-2',
+        name: 'Size',
+        order: 1,
+        values: [
+          { id: 'v3', displayValue: 'Small', skuFragment: 'S' },
+          { id: 'v4', displayValue: 'Large', skuFragment: 'L' },
+        ],
+      },
+    ]
 
     // Set up sheet with Color and Size columns
-    const sheetId = useSheetsStore.getState().addSheet('Products')
-    useSheetsStore.getState().setSheetData(sheetId, [
+    const sheetId = createSheetWithSpecs('Products', [
       [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
       [{ v: '' }, { v: '' }, { v: '' }],
-    ])
+    ], specs)
 
     render(<SpreadsheetContainer />)
 
@@ -401,33 +412,34 @@ describe('SpreadsheetContainer onChange handler', () => {
 
   it('generates SKU based on spec order field, not column order', () => {
     // Set up specifications with Size having lower order than Color
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-1',
-          name: 'Color',
-          order: 1, // Color has higher order
-          values: [
-            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
-          ],
-        },
-        {
-          id: 'spec-2',
-          name: 'Size',
-          order: 0, // Size has lower order (comes first in SKU)
-          values: [
-            { id: 'v2', displayValue: 'Small', skuFragment: 'S' },
-          ],
-        },
-      ],
-    })
+    const specs: Specification[] = [
+      {
+        id: 'spec-1',
+        name: 'Color',
+        order: 1, // Color has higher order
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+        ],
+      },
+      {
+        id: 'spec-2',
+        name: 'Size',
+        order: 0, // Size has lower order (comes first in SKU)
+        values: [
+          { id: 'v2', displayValue: 'Small', skuFragment: 'S' },
+        ],
+      },
+    ]
 
     // Set up sheet with Color column before Size column (opposite of spec order)
-    const sheetId = useSheetsStore.getState().addSheet('Products')
-    useSheetsStore.getState().setSheetData(sheetId, [
-      [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
-      [{ v: '' }, { v: '' }, { v: '' }],
-    ])
+    const sheetId = createSheetWithSpecs(
+      'Products',
+      [
+        [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+        [{ v: '' }, { v: '' }, { v: '' }],
+      ],
+      specs
+    )
 
     render(<SpreadsheetContainer />)
 
@@ -551,24 +563,25 @@ describe('SpreadsheetContainer read-only SKU column', () => {
 
   it('auto-generated SKU values still update via processAutoSKU', () => {
     // Set up specifications
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-1',
-          name: 'Color',
-          order: 0,
-          values: [
-            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
-          ],
-        },
-      ],
-    })
+    const specs: Specification[] = [
+      {
+        id: 'spec-1',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+        ],
+      },
+    ]
 
-    const sheetId = useSheetsStore.getState().addSheet('Products')
-    useSheetsStore.getState().setSheetData(sheetId, [
-      [{ v: 'SKU' }, { v: 'Color' }],
-      [{ v: '' }, { v: '' }],
-    ])
+    const sheetId = createSheetWithSpecs(
+      'Products',
+      [
+        [{ v: 'SKU' }, { v: 'Color' }],
+        [{ v: '' }, { v: '' }],
+      ],
+      specs
+    )
 
     render(<SpreadsheetContainer />)
 
@@ -782,25 +795,25 @@ describe('SpreadsheetContainer ValidationPanel integration', () => {
   })
 
   it('renders ValidationPanel when there are missing value errors', () => {
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-1',
-          name: 'Color',
-          order: 0,
-          values: [
-            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
-          ],
-        },
-      ],
-    })
+    const specs: Specification[] = [
+      {
+        id: 'spec-1',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+        ],
+      },
+    ]
 
-    const sheetId = useSheetsStore.getState().addSheet('Products')
-    useSheetsStore.getState().setSheetData(sheetId, [
-      [{ v: 'SKU' }, { v: 'Color' }],
-      [{ v: 'Y' }, { v: 'Yellow' }], // Invalid value (Yellow not in Color spec)
-    ])
-    useSheetsStore.getState().setActiveSheet(sheetId)
+    createSheetWithSpecs(
+      'Products',
+      [
+        [{ v: 'SKU' }, { v: 'Color' }],
+        [{ v: 'Y' }, { v: 'Yellow' }], // Invalid value (Yellow not in Color spec)
+      ],
+      specs
+    )
 
     render(<SpreadsheetContainer />)
 
@@ -828,27 +841,27 @@ describe('SpreadsheetContainer ValidationPanel integration', () => {
   })
 
   it('displays both missing value and duplicate SKU errors', () => {
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-1',
-          name: 'Color',
-          order: 0,
-          values: [
-            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
-          ],
-        },
-      ],
-    })
+    const specs: Specification[] = [
+      {
+        id: 'spec-1',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+        ],
+      },
+    ]
 
-    const sheetId = useSheetsStore.getState().addSheet('Products')
-    useSheetsStore.getState().setSheetData(sheetId, [
-      [{ v: 'SKU' }, { v: 'Color' }],
-      [{ v: 'R' }, { v: 'Red' }],
-      [{ v: 'R' }, { v: 'Red' }], // Duplicate SKU
-      [{ v: 'Y' }, { v: 'Yellow' }], // Invalid value
-    ])
-    useSheetsStore.getState().setActiveSheet(sheetId)
+    createSheetWithSpecs(
+      'Products',
+      [
+        [{ v: 'SKU' }, { v: 'Color' }],
+        [{ v: 'R' }, { v: 'Red' }],
+        [{ v: 'R' }, { v: 'Red' }], // Duplicate SKU
+        [{ v: 'Y' }, { v: 'Yellow' }], // Invalid value
+      ],
+      specs
+    )
 
     render(<SpreadsheetContainer />)
 
@@ -860,31 +873,35 @@ describe('SpreadsheetContainer ValidationPanel integration', () => {
   })
 
   it('shows only errors for the active sheet', () => {
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-1',
-          name: 'Color',
-          order: 0,
-          values: [
-            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
-          ],
-        },
-      ],
-    })
+    const specs: Specification[] = [
+      {
+        id: 'spec-1',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+        ],
+      },
+    ]
 
     // Create two sheets - one with errors, one without
-    const sheet1Id = useSheetsStore.getState().addSheet('Sheet 1')
-    useSheetsStore.getState().setSheetData(sheet1Id, [
-      [{ v: 'SKU' }, { v: 'Color' }],
-      [{ v: 'R' }, { v: 'Red' }], // Valid
-    ])
+    const sheet1Id = createSheetWithSpecs(
+      'Sheet 1',
+      [
+        [{ v: 'SKU' }, { v: 'Color' }],
+        [{ v: 'R' }, { v: 'Red' }], // Valid
+      ],
+      specs
+    )
 
-    const sheet2Id = useSheetsStore.getState().addSheet('Sheet 2')
-    useSheetsStore.getState().setSheetData(sheet2Id, [
-      [{ v: 'SKU' }, { v: 'Color' }],
-      [{ v: 'Y' }, { v: 'Yellow' }], // Invalid
-    ])
+    createSheetWithSpecs(
+      'Sheet 2',
+      [
+        [{ v: 'SKU' }, { v: 'Color' }],
+        [{ v: 'Y' }, { v: 'Yellow' }], // Invalid
+      ],
+      specs
+    )
 
     // Set Sheet 1 (no errors) as active
     useSheetsStore.getState().setActiveSheet(sheet1Id)
@@ -896,30 +913,34 @@ describe('SpreadsheetContainer ValidationPanel integration', () => {
   })
 
   it('updates validation errors when active sheet changes', () => {
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-1',
-          name: 'Color',
-          order: 0,
-          values: [
-            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
-          ],
-        },
+    const specs: Specification[] = [
+      {
+        id: 'spec-1',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+        ],
+      },
+    ]
+
+    const sheet1Id = createSheetWithSpecs(
+      'Sheet 1',
+      [
+        [{ v: 'SKU' }, { v: 'Color' }],
+        [{ v: 'R' }, { v: 'Red' }],
       ],
-    })
+      specs
+    )
 
-    const sheet1Id = useSheetsStore.getState().addSheet('Sheet 1')
-    useSheetsStore.getState().setSheetData(sheet1Id, [
-      [{ v: 'SKU' }, { v: 'Color' }],
-      [{ v: 'R' }, { v: 'Red' }],
-    ])
-
-    const sheet2Id = useSheetsStore.getState().addSheet('Sheet 2')
-    useSheetsStore.getState().setSheetData(sheet2Id, [
-      [{ v: 'SKU' }, { v: 'Color' }],
-      [{ v: 'Y' }, { v: 'Yellow' }],
-    ])
+    const sheet2Id = createSheetWithSpecs(
+      'Sheet 2',
+      [
+        [{ v: 'SKU' }, { v: 'Color' }],
+        [{ v: 'Y' }, { v: 'Yellow' }],
+      ],
+      specs
+    )
 
     // Start with sheet 1 (no errors)
     useSheetsStore.getState().setActiveSheet(sheet1Id)
@@ -958,25 +979,25 @@ describe('SpreadsheetContainer click-to-navigate (migration-click-navigate)', ()
 
   it('clicking validation error sets spreadsheet selection to affected cell', async () => {
     // stepsToVerify 1 & 3: Click on validation error, affected cell is selected/highlighted
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-1',
-          name: 'Color',
-          order: 0,
-          values: [
-            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
-          ],
-        },
-      ],
-    })
+    const specs: Specification[] = [
+      {
+        id: 'spec-1',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+        ],
+      },
+    ]
 
-    const sheetId = useSheetsStore.getState().addSheet('Products')
-    useSheetsStore.getState().setSheetData(sheetId, [
-      [{ v: 'SKU' }, { v: 'Color' }],
-      [{ v: 'Y' }, { v: 'Yellow' }], // Invalid value at row 1, col 1
-    ])
-    useSheetsStore.getState().setActiveSheet(sheetId)
+    createSheetWithSpecs(
+      'Products',
+      [
+        [{ v: 'SKU' }, { v: 'Color' }],
+        [{ v: 'Y' }, { v: 'Yellow' }], // Invalid value at row 1, col 1
+      ],
+      specs
+    )
 
     render(<SpreadsheetContainer />)
 
@@ -1040,33 +1061,33 @@ describe('SpreadsheetContainer click-to-navigate (migration-click-navigate)', ()
 
   it('clicking missing-value error selects the affected spec column cell', async () => {
     // stepsToVerify 4: Works for missing-value error types
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-1',
-          name: 'Color',
-          order: 0,
-          values: [
-            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
-          ],
-        },
-        {
-          id: 'spec-2',
-          name: 'Size',
-          order: 1,
-          values: [
-            { id: 'v2', displayValue: 'Small', skuFragment: 'S' },
-          ],
-        },
-      ],
-    })
+    const specs: Specification[] = [
+      {
+        id: 'spec-1',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+        ],
+      },
+      {
+        id: 'spec-2',
+        name: 'Size',
+        order: 1,
+        values: [
+          { id: 'v2', displayValue: 'Small', skuFragment: 'S' },
+        ],
+      },
+    ]
 
-    const sheetId = useSheetsStore.getState().addSheet('Products')
-    useSheetsStore.getState().setSheetData(sheetId, [
-      [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
-      [{ v: 'R' }, { v: 'Red' }, { v: 'Invalid' }], // Invalid value at row 1, col 2
-    ])
-    useSheetsStore.getState().setActiveSheet(sheetId)
+    createSheetWithSpecs(
+      'Products',
+      [
+        [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+        [{ v: 'R' }, { v: 'Red' }, { v: 'Invalid' }], // Invalid value at row 1, col 2
+      ],
+      specs
+    )
 
     render(<SpreadsheetContainer />)
 
@@ -1134,23 +1155,25 @@ describe('SpreadsheetContainer SKU auto-generation from dropdown selection', () 
   })
 
   it('generates SKU when selecting a single value from dropdown', () => {
-    // Set up specifications
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-color',
-          name: 'Color',
-          order: 0,
-          values: [
-            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
-            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
-          ],
-        },
-      ],
-    })
+    // Set up specifications in sheet
+    const specs: Specification[] = [
+      {
+        id: 'spec-color',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+        ],
+      },
+    ]
 
-    // Create new sheet (has proper headers via sheet-headers-1)
-    const sheetId = useSheetsStore.getState().addSheet('Test Products')
+    // Create sheet with specs
+    const sheetId = createSheetWithSpecs('Test Products', [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: '' }],
+    ], specs)
+
     // Sheet should be initialized with SKU and Color headers
     const initialSheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
     expect(initialSheet.data[0][0]?.v).toBe('SKU')
@@ -1171,30 +1194,32 @@ describe('SpreadsheetContainer SKU auto-generation from dropdown selection', () 
 
   it('generates SKU with all fragments joined by delimiter when selecting multiple values', () => {
     // Set up specifications for Color and Size
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-color',
-          name: 'Color',
-          order: 0,
-          values: [
-            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
-            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
-          ],
-        },
-        {
-          id: 'spec-size',
-          name: 'Size',
-          order: 1,
-          values: [
-            { id: 'v3', displayValue: 'Small', skuFragment: 'S' },
-            { id: 'v4', displayValue: 'Large', skuFragment: 'L' },
-          ],
-        },
-      ],
-    })
+    const specs: Specification[] = [
+      {
+        id: 'spec-color',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+        ],
+      },
+      {
+        id: 'spec-size',
+        name: 'Size',
+        order: 1,
+        values: [
+          { id: 'v3', displayValue: 'Small', skuFragment: 'S' },
+          { id: 'v4', displayValue: 'Large', skuFragment: 'L' },
+        ],
+      },
+    ]
 
-    const sheetId = useSheetsStore.getState().addSheet('Products')
+    const sheetId = createSheetWithSpecs('Products', [
+      [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+      [{ v: '' }, { v: '' }, { v: '' }],
+    ], specs)
+
     // Verify headers are correct
     const initialSheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
     expect(initialSheet.data[0][0]?.v).toBe('SKU')
@@ -1216,24 +1241,25 @@ describe('SpreadsheetContainer SKU auto-generation from dropdown selection', () 
 
   it('generates example SKU: Red (R) and Small (S) produces R-S', () => {
     // This test exactly matches the PRD example
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-color',
-          name: 'Color',
-          order: 0,
-          values: [{ id: 'v1', displayValue: 'Red', skuFragment: 'R' }],
-        },
-        {
-          id: 'spec-size',
-          name: 'Size',
-          order: 1,
-          values: [{ id: 'v2', displayValue: 'Small', skuFragment: 'S' }],
-        },
-      ],
-    })
+    const specs: Specification[] = [
+      {
+        id: 'spec-color',
+        name: 'Color',
+        order: 0,
+        values: [{ id: 'v1', displayValue: 'Red', skuFragment: 'R' }],
+      },
+      {
+        id: 'spec-size',
+        name: 'Size',
+        order: 1,
+        values: [{ id: 'v2', displayValue: 'Small', skuFragment: 'S' }],
+      },
+    ]
 
-    const sheetId = useSheetsStore.getState().addSheet('Products')
+    const sheetId = createSheetWithSpecs('Products', [
+      [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+      [{ v: '' }, { v: '' }, { v: '' }],
+    ], specs)
 
     render(<SpreadsheetContainer />)
 
@@ -1248,23 +1274,20 @@ describe('SpreadsheetContainer SKU auto-generation from dropdown selection', () 
   })
 
   it('does not generate SKU when headers are missing', () => {
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-color',
-          name: 'Color',
-          order: 0,
-          values: [{ id: 'v1', displayValue: 'Red', skuFragment: 'R' }],
-        },
-      ],
-    })
+    const specs: Specification[] = [
+      {
+        id: 'spec-color',
+        name: 'Color',
+        order: 0,
+        values: [{ id: 'v1', displayValue: 'Red', skuFragment: 'R' }],
+      },
+    ]
 
-    const sheetId = useSheetsStore.getState().addSheet('Products')
-    // Manually set sheet with missing/wrong headers
-    useSheetsStore.getState().setSheetData(sheetId, [
+    // Create sheet with wrong headers
+    const sheetId = createSheetWithSpecs('Products', [
       [{ v: 'SKU' }, { v: 'WrongHeader' }], // Header doesn't match spec name
       [{ v: '' }, { v: '' }],
-    ])
+    ], specs)
 
     render(<SpreadsheetContainer />)
 
@@ -1280,21 +1303,22 @@ describe('SpreadsheetContainer SKU auto-generation from dropdown selection', () 
   })
 
   it('updates SKU in column A when dropdown value changes', () => {
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-color',
-          name: 'Color',
-          order: 0,
-          values: [
-            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
-            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
-          ],
-        },
-      ],
-    })
+    const specs: Specification[] = [
+      {
+        id: 'spec-color',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+        ],
+      },
+    ]
 
-    const sheetId = useSheetsStore.getState().addSheet('Products')
+    const sheetId = createSheetWithSpecs('Products', [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: '' }],
+    ], specs)
 
     render(<SpreadsheetContainer />)
 
@@ -1373,25 +1397,22 @@ describe('SpreadsheetContainer toolbar interactions', () => {
   })
 
   it('new row cells get dropdownOptions from specifications', () => {
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'color',
-          name: 'Color',
-          order: 0,
-          values: [
-            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
-            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
-          ],
-        },
-      ],
-    })
+    const specs: Specification[] = [
+      {
+        id: 'color',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+        ],
+      },
+    ]
 
-    const sheetId = useSheetsStore.getState().addSheet('Products')
-    useSheetsStore.getState().setSheetData(sheetId, [
+    createSheetWithSpecs('Products', [
       [{ v: 'SKU' }, { v: 'Color' }],
       [{ v: 'R' }, { v: 'Red' }],
-    ])
+    ], specs)
 
     const { rerender } = render(<SpreadsheetContainer />)
 
@@ -1412,24 +1433,21 @@ describe('SpreadsheetContainer toolbar interactions', () => {
   })
 
   it('selecting values in new row generates SKU via onChange', () => {
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'color',
-          name: 'Color',
-          order: 0,
-          values: [
-            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
-            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
-          ],
-        },
-      ],
-    })
+    const specs: Specification[] = [
+      {
+        id: 'color',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+        ],
+      },
+    ]
 
-    const sheetId = useSheetsStore.getState().addSheet('Products')
-    useSheetsStore.getState().setSheetData(sheetId, [
+    const sheetId = createSheetWithSpecs('Products', [
       [{ v: 'SKU' }, { v: 'Color' }],
-    ])
+    ], specs)
 
     render(<SpreadsheetContainer />)
 
@@ -1491,36 +1509,33 @@ describe('SpreadsheetContainer dropdown selection (migration-dropdowns)', () => 
 
   it('spec column cells have dropdownOptions with displayValues from specifications', () => {
     // stepsToVerify 1 & 2: Click/Enter on spec column cell shows dropdown with spec values
-    // and dropdown options match displayValues from specification store
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-color',
-          name: 'Color',
-          order: 0,
-          values: [
-            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
-            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
-            { id: 'v3', displayValue: 'Green', skuFragment: 'G' },
-          ],
-        },
-        {
-          id: 'spec-size',
-          name: 'Size',
-          order: 1,
-          values: [
-            { id: 'v4', displayValue: 'Small', skuFragment: 'S' },
-            { id: 'v5', displayValue: 'Large', skuFragment: 'L' },
-          ],
-        },
-      ],
-    })
+    // and dropdown options match displayValues from sheet-local specifications
+    const specs: Specification[] = [
+      {
+        id: 'spec-color',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+          { id: 'v3', displayValue: 'Green', skuFragment: 'G' },
+        ],
+      },
+      {
+        id: 'spec-size',
+        name: 'Size',
+        order: 1,
+        values: [
+          { id: 'v4', displayValue: 'Small', skuFragment: 'S' },
+          { id: 'v5', displayValue: 'Large', skuFragment: 'L' },
+        ],
+      },
+    ]
 
-    const sheetId = useSheetsStore.getState().addSheet('Products')
-    useSheetsStore.getState().setSheetData(sheetId, [
+    createSheetWithSpecs('Products', [
       [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
       [{ v: '' }, { v: '' }, { v: '' }],
-    ])
+    ], specs)
 
     render(<SpreadsheetContainer />)
 
@@ -1539,21 +1554,22 @@ describe('SpreadsheetContainer dropdown selection (migration-dropdowns)', () => 
 
   it('selecting a value from dropdown updates cell content', () => {
     // stepsToVerify 3: Selecting a value updates cell content
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-color',
-          name: 'Color',
-          order: 0,
-          values: [
-            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
-            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
-          ],
-        },
-      ],
-    })
+    const specs: Specification[] = [
+      {
+        id: 'spec-color',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+        ],
+      },
+    ]
 
-    const sheetId = useSheetsStore.getState().addSheet('Products')
+    const sheetId = createSheetWithSpecs('Products', [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: '' }],
+    ], specs)
 
     render(<SpreadsheetContainer />)
 
@@ -1570,30 +1586,31 @@ describe('SpreadsheetContainer dropdown selection (migration-dropdowns)', () => 
 
   it('SKU in column A regenerates when dropdown value is selected', () => {
     // stepsToVerify 4: SKU in column A regenerates with new skuFragment
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-color',
-          name: 'Color',
-          order: 0,
-          values: [
-            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
-            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
-          ],
-        },
-        {
-          id: 'spec-size',
-          name: 'Size',
-          order: 1,
-          values: [
-            { id: 'v3', displayValue: 'Small', skuFragment: 'S' },
-            { id: 'v4', displayValue: 'Large', skuFragment: 'L' },
-          ],
-        },
-      ],
-    })
+    const specs: Specification[] = [
+      {
+        id: 'spec-color',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+        ],
+      },
+      {
+        id: 'spec-size',
+        name: 'Size',
+        order: 1,
+        values: [
+          { id: 'v3', displayValue: 'Small', skuFragment: 'S' },
+          { id: 'v4', displayValue: 'Large', skuFragment: 'L' },
+        ],
+      },
+    ]
 
-    const sheetId = useSheetsStore.getState().addSheet('Products')
+    const sheetId = createSheetWithSpecs('Products', [
+      [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+      [{ v: '' }, { v: '' }, { v: '' }],
+    ], specs)
 
     render(<SpreadsheetContainer />)
 
@@ -1619,43 +1636,40 @@ describe('SpreadsheetContainer dropdown selection (migration-dropdowns)', () => 
 
   it('dropdown options are populated for each spec column independently', () => {
     // Verify dropdown options match the correct specification for each column
-    useSpecificationsStore.setState({
-      specifications: [
-        {
-          id: 'spec-material',
-          name: 'Material',
-          order: 2,  // Different order to test sorting
-          values: [
-            { id: 'v1', displayValue: 'Cotton', skuFragment: 'CT' },
-            { id: 'v2', displayValue: 'Polyester', skuFragment: 'PO' },
-          ],
-        },
-        {
-          id: 'spec-color',
-          name: 'Color',
-          order: 0,  // First in order
-          values: [
-            { id: 'v3', displayValue: 'Red', skuFragment: 'R' },
-          ],
-        },
-        {
-          id: 'spec-size',
-          name: 'Size',
-          order: 1,  // Second in order
-          values: [
-            { id: 'v4', displayValue: 'Small', skuFragment: 'S' },
-            { id: 'v5', displayValue: 'Medium', skuFragment: 'M' },
-            { id: 'v6', displayValue: 'Large', skuFragment: 'L' },
-          ],
-        },
-      ],
-    })
+    const specs: Specification[] = [
+      {
+        id: 'spec-material',
+        name: 'Material',
+        order: 2,  // Different order to test sorting
+        values: [
+          { id: 'v1', displayValue: 'Cotton', skuFragment: 'CT' },
+          { id: 'v2', displayValue: 'Polyester', skuFragment: 'PO' },
+        ],
+      },
+      {
+        id: 'spec-color',
+        name: 'Color',
+        order: 0,  // First in order
+        values: [
+          { id: 'v3', displayValue: 'Red', skuFragment: 'R' },
+        ],
+      },
+      {
+        id: 'spec-size',
+        name: 'Size',
+        order: 1,  // Second in order
+        values: [
+          { id: 'v4', displayValue: 'Small', skuFragment: 'S' },
+          { id: 'v5', displayValue: 'Medium', skuFragment: 'M' },
+          { id: 'v6', displayValue: 'Large', skuFragment: 'L' },
+        ],
+      },
+    ]
 
-    const sheetId = useSheetsStore.getState().addSheet('Products')
-    useSheetsStore.getState().setSheetData(sheetId, [
+    createSheetWithSpecs('Products', [
       [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }, { v: 'Material' }],
       [{ v: '' }, { v: '' }, { v: '' }, { v: '' }],
-    ])
+    ], specs)
 
     render(<SpreadsheetContainer />)
 

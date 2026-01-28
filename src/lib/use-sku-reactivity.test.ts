@@ -56,7 +56,7 @@ describe('useSkuReactivity', () => {
     });
 
     useSheetsStore.setState({
-      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData }],
+      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData, columns: [], specifications: [] }],
       activeSheetId: 'sheet-1',
     });
 
@@ -85,7 +85,7 @@ describe('useSkuReactivity', () => {
     });
 
     useSheetsStore.setState({
-      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData }],
+      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData, columns: [], specifications: [] }],
       activeSheetId: 'sheet-1',
     });
 
@@ -129,7 +129,7 @@ describe('useSkuReactivity', () => {
     });
 
     useSheetsStore.setState({
-      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData }],
+      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData, columns: [], specifications: [] }],
       activeSheetId: 'sheet-1',
     });
 
@@ -173,8 +173,8 @@ describe('useSkuReactivity', () => {
 
     useSheetsStore.setState({
       sheets: [
-        { id: 'sheet-1', name: 'Products 1', type: 'data', data: sheet1Data },
-        { id: 'sheet-2', name: 'Products 2', type: 'data', data: sheet2Data },
+        { id: 'sheet-1', name: 'Products 1', type: 'data', data: sheet1Data, columns: [], specifications: [] },
+        { id: 'sheet-2', name: 'Products 2', type: 'data', data: sheet2Data, columns: [], specifications: [] },
       ],
       activeSheetId: 'sheet-1',
     });
@@ -212,7 +212,7 @@ describe('useSkuReactivity', () => {
     });
 
     useSheetsStore.setState({
-      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData }],
+      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData, columns: [], specifications: [] }],
       activeSheetId: 'sheet-1',
     });
 
@@ -257,8 +257,8 @@ describe('useSkuReactivity', () => {
 
     useSheetsStore.setState({
       sheets: [
-        { id: 'sheet-1', name: 'Products 1', type: 'data', data: sheet1Data },
-        { id: 'sheet-2', name: 'Products 2', type: 'data', data: sheet2Data },
+        { id: 'sheet-1', name: 'Products 1', type: 'data', data: sheet1Data, columns: [], specifications: [] },
+        { id: 'sheet-2', name: 'Products 2', type: 'data', data: sheet2Data, columns: [], specifications: [] },
       ],
       activeSheetId: 'sheet-1',
     });
@@ -302,7 +302,7 @@ describe('useSkuReactivity', () => {
     });
 
     useSheetsStore.setState({
-      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData }],
+      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData, columns: [], specifications: [] }],
       activeSheetId: 'sheet-1',
     });
 
@@ -342,7 +342,7 @@ describe('useSkuReactivity', () => {
     });
 
     useSheetsStore.setState({
-      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData }],
+      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData, columns: [], specifications: [] }],
       activeSheetId: 'sheet-1',
     });
 
@@ -380,7 +380,7 @@ describe('useSkuReactivity', () => {
     });
 
     useSheetsStore.setState({
-      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData }],
+      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData, columns: [], specifications: [] }],
       activeSheetId: 'sheet-1',
     });
 
@@ -421,7 +421,7 @@ describe('useSkuReactivity', () => {
     });
 
     useSheetsStore.setState({
-      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData }],
+      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData, columns: [], specifications: [] }],
       activeSheetId: 'sheet-1',
     });
 
@@ -463,7 +463,7 @@ describe('useSkuReactivity', () => {
     });
 
     useSheetsStore.setState({
-      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData }],
+      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData, columns: [], specifications: [] }],
       activeSheetId: 'sheet-1',
     });
 
@@ -492,7 +492,7 @@ describe('useSkuReactivity', () => {
     ]);
 
     useSheetsStore.setState({
-      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData }],
+      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData, columns: [], specifications: [] }],
       activeSheetId: 'sheet-1',
     });
 
@@ -516,7 +516,7 @@ describe('useSkuReactivity', () => {
     });
 
     useSheetsStore.setState({
-      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData }],
+      sheets: [{ id: 'sheet-1', name: 'Products', type: 'data', data: sheetData, columns: [], specifications: [] }],
       activeSheetId: 'sheet-1',
     });
 

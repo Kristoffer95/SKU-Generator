@@ -7,7 +7,26 @@ import {
   repairAllSheetHeaders,
   needsHeaderRepair,
 } from './header-repair';
-import type { SheetConfig, Specification, CellData } from '../types';
+import type { SheetConfig, Specification, CellData, SheetType } from '../types';
+
+/**
+ * Helper to create a test sheet with required columns and specifications fields
+ */
+function createTestSheet(overrides: {
+  id?: string;
+  name?: string;
+  type?: SheetType;
+  data?: CellData[][];
+} = {}): SheetConfig {
+  return {
+    id: overrides.id ?? '1',
+    name: overrides.name ?? 'Test',
+    type: overrides.type ?? 'data',
+    data: overrides.data ?? [],
+    columns: [],
+    specifications: [],
+  };
+}
 
 describe('header-repair', () => {
   const mockSpecs: Specification[] = [
@@ -50,173 +69,95 @@ describe('header-repair', () => {
 
   describe('hasValidHeader', () => {
     it('should return true when first cell is SKU', () => {
-      const sheet: SheetConfig = {
-        id: '1',
-        name: 'Test',
-        type: 'data',
-        data: [[{ v: 'SKU', m: 'SKU' }, { v: 'Color' }]],
-      };
+      const sheet = createTestSheet({ data: [[{ v: 'SKU', m: 'SKU' }, { v: 'Color' }]] });
       expect(hasValidHeader(sheet)).toBe(true);
     });
 
     it('should return true for case-insensitive SKU match', () => {
-      const sheet: SheetConfig = {
-        id: '1',
-        name: 'Test',
-        type: 'data',
-        data: [[{ v: 'sku' }]],
-      };
+      const sheet = createTestSheet({ data: [[{ v: 'sku' }]] });
       expect(hasValidHeader(sheet)).toBe(true);
     });
 
     it('should return true for SKU with whitespace', () => {
-      const sheet: SheetConfig = {
-        id: '1',
-        name: 'Test',
-        type: 'data',
-        data: [[{ v: ' SKU ' }]],
-      };
+      const sheet = createTestSheet({ data: [[{ v: ' SKU ' }]] });
       expect(hasValidHeader(sheet)).toBe(true);
     });
 
     it('should return false when first cell is not SKU', () => {
-      const sheet: SheetConfig = {
-        id: '1',
-        name: 'Test',
-        type: 'data',
-        data: [[{ v: 'Color' }, { v: 'Size' }]],
-      };
+      const sheet = createTestSheet({ data: [[{ v: 'Color' }, { v: 'Size' }]] });
       expect(hasValidHeader(sheet)).toBe(false);
     });
 
     it('should return false for empty sheet', () => {
-      const sheet: SheetConfig = {
-        id: '1',
-        name: 'Test',
-        type: 'data',
-        data: [],
-      };
+      const sheet = createTestSheet({ data: [] });
       expect(hasValidHeader(sheet)).toBe(false);
     });
 
     it('should return false for empty first row', () => {
-      const sheet: SheetConfig = {
-        id: '1',
-        name: 'Test',
-        type: 'data',
-        data: [[]],
-      };
+      const sheet = createTestSheet({ data: [[]] });
       expect(hasValidHeader(sheet)).toBe(false);
     });
 
     it('should return false when first cell is empty', () => {
-      const sheet: SheetConfig = {
-        id: '1',
-        name: 'Test',
-        type: 'data',
-        data: [[{ v: '' }, { v: 'Color' }]],
-      };
+      const sheet = createTestSheet({ data: [[{ v: '' }, { v: 'Color' }]] });
       expect(hasValidHeader(sheet)).toBe(false);
     });
 
     it('should return true for non-data sheet types', () => {
-      const sheet: SheetConfig = {
-        id: '1',
-        name: 'Config',
-        type: 'config',
-        data: [[{ v: 'Specification' }]],
-      };
+      const sheet = createTestSheet({ name: 'Config', type: 'config', data: [[{ v: 'Specification' }]] });
       expect(hasValidHeader(sheet)).toBe(true);
     });
 
     it('should use m property if v is undefined', () => {
-      const sheet: SheetConfig = {
-        id: '1',
-        name: 'Test',
-        type: 'data',
-        data: [[{ m: 'SKU' }]],
-      };
+      const sheet = createTestSheet({ data: [[{ m: 'SKU' }]] });
       expect(hasValidHeader(sheet)).toBe(true);
     });
   });
 
   describe('headerMatchesSpecs', () => {
     it('should return true when header matches specs', () => {
-      const sheet: SheetConfig = {
-        id: '1',
-        name: 'Test',
-        type: 'data',
-        data: [
-          [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }, { v: 'Material' }],
-        ],
-      };
+      const sheet = createTestSheet({
+        data: [[{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }, { v: 'Material' }]],
+      });
       expect(headerMatchesSpecs(sheet, mockSpecs)).toBe(true);
     });
 
     it('should return false when header missing specs', () => {
-      const sheet: SheetConfig = {
-        id: '1',
-        name: 'Test',
-        type: 'data',
-        data: [[{ v: 'SKU' }, { v: 'Color' }]],
-      };
+      const sheet = createTestSheet({ data: [[{ v: 'SKU' }, { v: 'Color' }]] });
       expect(headerMatchesSpecs(sheet, mockSpecs)).toBe(false);
     });
 
     it('should return false when spec names in wrong order', () => {
-      const sheet: SheetConfig = {
-        id: '1',
-        name: 'Test',
-        type: 'data',
-        data: [
-          [{ v: 'SKU' }, { v: 'Size' }, { v: 'Color' }, { v: 'Material' }],
-        ],
-      };
+      const sheet = createTestSheet({
+        data: [[{ v: 'SKU' }, { v: 'Size' }, { v: 'Color' }, { v: 'Material' }]],
+      });
       expect(headerMatchesSpecs(sheet, mockSpecs)).toBe(false);
     });
 
     it('should return false when no valid header', () => {
-      const sheet: SheetConfig = {
-        id: '1',
-        name: 'Test',
-        type: 'data',
-        data: [[{ v: 'Color' }, { v: 'Size' }]],
-      };
+      const sheet = createTestSheet({ data: [[{ v: 'Color' }, { v: 'Size' }]] });
       expect(headerMatchesSpecs(sheet, mockSpecs)).toBe(false);
     });
 
     it('should return true for non-data sheets', () => {
-      const sheet: SheetConfig = {
-        id: '1',
-        name: 'Config',
-        type: 'config',
-        data: [[{ v: 'Something' }]],
-      };
+      const sheet = createTestSheet({ name: 'Config', type: 'config', data: [[{ v: 'Something' }]] });
       expect(headerMatchesSpecs(sheet, mockSpecs)).toBe(true);
     });
 
     it('should return true when no specs and header only has SKU', () => {
-      const sheet: SheetConfig = {
-        id: '1',
-        name: 'Test',
-        type: 'data',
-        data: [[{ v: 'SKU' }]],
-      };
+      const sheet = createTestSheet({ data: [[{ v: 'SKU' }]] });
       expect(headerMatchesSpecs(sheet, [])).toBe(true);
     });
   });
 
   describe('repairSheetHeaders', () => {
     it('should insert header row and shift data down', () => {
-      const sheet: SheetConfig = {
-        id: '1',
-        name: 'Test',
-        type: 'data',
+      const sheet = createTestSheet({
         data: [
           [{ v: 'Red' }, { v: 'Small' }],
           [{ v: 'Blue' }, { v: 'Large' }],
         ],
-      };
+      });
 
       const repaired = repairSheetHeaders(sheet, mockSpecs);
 
@@ -232,15 +173,12 @@ describe('header-repair', () => {
     });
 
     it('should not modify sheet that already has valid header', () => {
-      const sheet: SheetConfig = {
-        id: '1',
-        name: 'Test',
-        type: 'data',
+      const sheet = createTestSheet({
         data: [
           [{ v: 'SKU' }, { v: 'Color' }],
           [{ v: 'R-S' }, { v: 'Red' }],
         ],
-      };
+      });
 
       const repaired = repairSheetHeaders(sheet, mockSpecs);
 
@@ -249,12 +187,7 @@ describe('header-repair', () => {
     });
 
     it('should not modify non-data sheets', () => {
-      const sheet: SheetConfig = {
-        id: '1',
-        name: 'Config',
-        type: 'config',
-        data: [[{ v: 'Specification' }]],
-      };
+      const sheet = createTestSheet({ name: 'Config', type: 'config', data: [[{ v: 'Specification' }]] });
 
       const repaired = repairSheetHeaders(sheet, mockSpecs);
 
@@ -262,12 +195,7 @@ describe('header-repair', () => {
     });
 
     it('should handle empty sheet', () => {
-      const sheet: SheetConfig = {
-        id: '1',
-        name: 'Test',
-        type: 'data',
-        data: [],
-      };
+      const sheet = createTestSheet({ data: [] });
 
       const repaired = repairSheetHeaders(sheet, mockSpecs);
 
@@ -284,12 +212,7 @@ describe('header-repair', () => {
       const originalData: CellData[][] = [
         [{ v: 'Red' }, { v: 'Small' }],
       ];
-      const sheet: SheetConfig = {
-        id: '1',
-        name: 'Test',
-        type: 'data',
-        data: originalData,
-      };
+      const sheet = createTestSheet({ data: originalData });
 
       const repaired = repairSheetHeaders(sheet, mockSpecs);
 
@@ -302,24 +225,9 @@ describe('header-repair', () => {
   describe('repairAllSheetHeaders', () => {
     it('should repair all sheets needing repair', () => {
       const sheets: SheetConfig[] = [
-        {
-          id: '1',
-          name: 'Sheet1',
-          type: 'data',
-          data: [[{ v: 'Red' }]], // Needs repair
-        },
-        {
-          id: '2',
-          name: 'Sheet2',
-          type: 'data',
-          data: [[{ v: 'SKU' }, { v: 'Color' }]], // Already has header
-        },
-        {
-          id: '3',
-          name: 'Sheet3',
-          type: 'data',
-          data: [[{ v: 'Blue' }]], // Needs repair
-        },
+        createTestSheet({ id: '1', name: 'Sheet1', data: [[{ v: 'Red' }]] }), // Needs repair
+        createTestSheet({ id: '2', name: 'Sheet2', data: [[{ v: 'SKU' }, { v: 'Color' }]] }), // Already has header
+        createTestSheet({ id: '3', name: 'Sheet3', data: [[{ v: 'Blue' }]] }), // Needs repair
       ];
 
       const repaired = repairAllSheetHeaders(sheets, mockSpecs);
@@ -337,12 +245,7 @@ describe('header-repair', () => {
 
     it('should return same array if no repairs needed', () => {
       const sheets: SheetConfig[] = [
-        {
-          id: '1',
-          name: 'Sheet1',
-          type: 'data',
-          data: [[{ v: 'SKU' }]],
-        },
+        createTestSheet({ id: '1', name: 'Sheet1', data: [[{ v: 'SKU' }]] }),
       ];
 
       const repaired = repairAllSheetHeaders(sheets, mockSpecs);
@@ -354,18 +257,8 @@ describe('header-repair', () => {
   describe('needsHeaderRepair', () => {
     it('should return true when any data sheet needs repair', () => {
       const sheets: SheetConfig[] = [
-        {
-          id: '1',
-          name: 'Good',
-          type: 'data',
-          data: [[{ v: 'SKU' }]],
-        },
-        {
-          id: '2',
-          name: 'Bad',
-          type: 'data',
-          data: [[{ v: 'Color' }]],
-        },
+        createTestSheet({ id: '1', name: 'Good', data: [[{ v: 'SKU' }]] }),
+        createTestSheet({ id: '2', name: 'Bad', data: [[{ v: 'Color' }]] }),
       ];
 
       expect(needsHeaderRepair(sheets)).toBe(true);
@@ -373,18 +266,8 @@ describe('header-repair', () => {
 
     it('should return false when all data sheets have valid headers', () => {
       const sheets: SheetConfig[] = [
-        {
-          id: '1',
-          name: 'Good1',
-          type: 'data',
-          data: [[{ v: 'SKU' }]],
-        },
-        {
-          id: '2',
-          name: 'Good2',
-          type: 'data',
-          data: [[{ v: 'sku' }]],
-        },
+        createTestSheet({ id: '1', name: 'Good1', data: [[{ v: 'SKU' }]] }),
+        createTestSheet({ id: '2', name: 'Good2', data: [[{ v: 'sku' }]] }),
       ];
 
       expect(needsHeaderRepair(sheets)).toBe(false);
@@ -396,12 +279,7 @@ describe('header-repair', () => {
 
     it('should ignore non-data sheets', () => {
       const sheets: SheetConfig[] = [
-        {
-          id: '1',
-          name: 'Config',
-          type: 'config',
-          data: [[{ v: 'Specification' }]], // No SKU but it's not a data sheet
-        },
+        createTestSheet({ id: '1', name: 'Config', type: 'config', data: [[{ v: 'Specification' }]] }),
       ];
 
       expect(needsHeaderRepair(sheets)).toBe(false);
