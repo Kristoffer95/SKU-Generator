@@ -1,3 +1,32 @@
+## delete-spec-confirmation - COMPLETED
+Create DeleteSpecConfirmDialog component for confirming specification deletion
+
+### Key decisions
+- Created DeleteSpecConfirmDialog component with spec name, column warning, and Cancel/Delete buttons
+- Delete button styled as destructive variant
+- Dialog shows count of affected columns that reference the specId
+- When no columns use the spec, shows "not currently used by any columns" message
+- Added Trash2 icon delete button to SpecItem in SpecificationList header
+- Delete button click stops propagation to prevent expand/collapse
+- handleDeleteConfirm removes spec via removeSpecification and removes all columns with matching specId
+- Columns removed by index in descending order to preserve indices during removal
+- Row data updated atomically alongside column removal
+- SKUs regenerated after column removal via regenerateAllSKUs
+
+### Files changed
+- src/components/DeleteSpecConfirmDialog.tsx (new, ~75 lines)
+- src/components/DeleteSpecConfirmDialog.test.tsx (new, 14 tests)
+- src/components/SpecificationList.tsx (added delete button, dialog state, handleDeleteConfirm)
+- src/components/SpecificationList.test.tsx (added 8 tests for delete functionality)
+
+### Notes
+- All 8 stepsToVerify criteria verified via unit tests
+- Tests cover: dialog rendering, column warnings, button callbacks, spec removal, column removal, data updates
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (735 tests, +22 new)
+- npm run build passes
+
 ## column-drag-reorder - COMPLETED
 Implement column reordering by dragging column headers in the spreadsheet
 

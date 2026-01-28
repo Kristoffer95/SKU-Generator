@@ -5,7 +5,7 @@ import { SpecificationList } from "./SpecificationList"
 import { useSheetsStore } from "@/store/sheets"
 import { useSettingsStore } from "@/store/settings"
 import { updateRowSKU } from "@/lib/auto-sku"
-import type { Specification, CellData, SheetConfig } from "@/types"
+import type { Specification, CellData, SheetConfig, ColumnDef } from "@/types"
 
 // Helper to create specifications
 const createSpecification = (
@@ -30,7 +30,8 @@ const createSpecification = (
 function createSheetWithSpecs(
   name: string,
   data: CellData[][],
-  specifications: Specification[]
+  specifications: Specification[],
+  columns: ColumnDef[] = []
 ): string {
   const sheetId = crypto.randomUUID()
   const sheet: SheetConfig = {
@@ -38,7 +39,7 @@ function createSheetWithSpecs(
     name,
     type: "data",
     data,
-    columns: [],
+    columns,
     specifications,
   }
   useSheetsStore.setState((state) => ({
@@ -768,6 +769,250 @@ describe("SpecificationList", () => {
       await waitFor(() => {
         expect(screen.queryByTestId("edit-error")).not.toBeInTheDocument()
       })
+    })
+  })
+
+  describe("delete specification", () => {
+    it("shows delete button on each specification", () => {
+      const specs = [
+        createSpecification("Color", 0, [
+          { displayValue: "Red", skuFragment: "R" },
+        ]),
+        createSpecification("Size", 1, [
+          { displayValue: "Small", skuFragment: "S" },
+        ]),
+      ]
+      createSheetWithSpecs("Test Sheet", [], specs)
+
+      render(<SpecificationList />)
+
+      const deleteButtons = screen.getAllByTestId("delete-spec-button")
+      expect(deleteButtons).toHaveLength(2)
+    })
+
+    it("opens delete confirmation dialog when delete button clicked", async () => {
+      const user = userEvent.setup()
+      const specs = [
+        createSpecification("Color", 0, [
+          { displayValue: "Red", skuFragment: "R" },
+        ]),
+      ]
+      createSheetWithSpecs("Test Sheet", [], specs)
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByTestId("delete-spec-button"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("delete-spec-dialog")).toBeInTheDocument()
+        expect(screen.getByRole("heading", { name: /delete specification/i })).toBeInTheDocument()
+      })
+    })
+
+    it("shows spec name in delete confirmation dialog", async () => {
+      const user = userEvent.setup()
+      const specs = [
+        createSpecification("Color", 0, [
+          { displayValue: "Red", skuFragment: "R" },
+        ]),
+      ]
+      createSheetWithSpecs("Test Sheet", [], specs)
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByTestId("delete-spec-button"))
+
+      await waitFor(() => {
+        expect(screen.getByText(/"Color"/)).toBeInTheDocument()
+      })
+    })
+
+    it("closes dialog when Cancel clicked", async () => {
+      const user = userEvent.setup()
+      const specs = [
+        createSpecification("Color", 0, [
+          { displayValue: "Red", skuFragment: "R" },
+        ]),
+      ]
+      createSheetWithSpecs("Test Sheet", [], specs)
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByTestId("delete-spec-button"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("delete-spec-dialog")).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId("delete-spec-cancel"))
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("delete-spec-dialog")).not.toBeInTheDocument()
+      })
+
+      // Spec should still exist
+      expect(screen.getByText("Color")).toBeInTheDocument()
+    })
+
+    it("removes spec from store when Delete confirmed", async () => {
+      const user = userEvent.setup()
+      const spec: Specification = {
+        id: "spec-color",
+        name: "Color",
+        order: 0,
+        values: [{ id: "v1", displayValue: "Red", skuFragment: "R" }],
+      }
+      createSheetWithSpecs("Test Sheet", [], [spec])
+
+      render(<SpecificationList />)
+
+      expect(screen.getByText("Color")).toBeInTheDocument()
+
+      await user.click(screen.getByTestId("delete-spec-button"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("delete-spec-dialog")).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId("delete-spec-confirm"))
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("delete-spec-dialog")).not.toBeInTheDocument()
+        expect(screen.queryByText("Color")).not.toBeInTheDocument()
+      })
+
+      // Verify spec removed from store
+      const specs = getActiveSheetSpecs()
+      expect(specs).toHaveLength(0)
+    })
+
+    it("removes associated columns when spec deleted", async () => {
+      const user = userEvent.setup()
+      const spec: Specification = {
+        id: "spec-color",
+        name: "Color",
+        order: 0,
+        values: [{ id: "v1", displayValue: "Red", skuFragment: "R" }],
+      }
+      const columns: ColumnDef[] = [
+        { id: "col-sku", type: "sku", header: "SKU" },
+        { id: "col-color", type: "spec", header: "Color", specId: "spec-color" },
+        { id: "col-notes", type: "free", header: "Notes" },
+      ]
+      const data: CellData[][] = [
+        [{ v: "SKU" }, { v: "Color" }, { v: "Notes" }],
+        [{ v: "R" }, { v: "Red" }, { v: "Note 1" }],
+      ]
+
+      createSheetWithSpecs("Test Sheet", data, [spec], columns)
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByTestId("delete-spec-button"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("delete-spec-dialog")).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId("delete-spec-confirm"))
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("delete-spec-dialog")).not.toBeInTheDocument()
+      })
+
+      // Verify columns updated
+      const { sheets, activeSheetId } = useSheetsStore.getState()
+      const sheet = sheets.find((s) => s.id === activeSheetId)
+
+      // Should have removed the Color column
+      expect(sheet?.columns).toHaveLength(2)
+      expect(sheet?.columns[0].header).toBe("SKU")
+      expect(sheet?.columns[1].header).toBe("Notes")
+
+      // Should have removed data for the Color column
+      expect(sheet?.data[0]).toHaveLength(2)
+      expect(sheet?.data[1]).toHaveLength(2)
+    })
+
+    it("shows column count warning in delete dialog", async () => {
+      const user = userEvent.setup()
+      const spec: Specification = {
+        id: "spec-color",
+        name: "Color",
+        order: 0,
+        values: [{ id: "v1", displayValue: "Red", skuFragment: "R" }],
+      }
+      const columns: ColumnDef[] = [
+        { id: "col-sku", type: "sku", header: "SKU" },
+        { id: "col-color", type: "spec", header: "Color", specId: "spec-color" },
+        { id: "col-color2", type: "spec", header: "Primary Color", specId: "spec-color" },
+      ]
+
+      createSheetWithSpecs("Test Sheet", [], [spec], columns)
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByTestId("delete-spec-button"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("delete-spec-dialog")).toBeInTheDocument()
+        // Should show warning about 2 columns
+        expect(screen.getByText(/2 columns use this specification/)).toBeInTheDocument()
+      })
+    })
+
+    it("does not affect other specs when deleting one", async () => {
+      const user = userEvent.setup()
+      const specs: Specification[] = [
+        {
+          id: "spec-color",
+          name: "Color",
+          order: 0,
+          values: [{ id: "v1", displayValue: "Red", skuFragment: "R" }],
+        },
+        {
+          id: "spec-size",
+          name: "Size",
+          order: 1,
+          values: [{ id: "v2", displayValue: "Small", skuFragment: "S" }],
+        },
+      ]
+      const columns: ColumnDef[] = [
+        { id: "col-sku", type: "sku", header: "SKU" },
+        { id: "col-color", type: "spec", header: "Color", specId: "spec-color" },
+        { id: "col-size", type: "spec", header: "Size", specId: "spec-size" },
+      ]
+
+      createSheetWithSpecs("Test Sheet", [], specs, columns)
+
+      render(<SpecificationList />)
+
+      // Delete first spec (Color)
+      const deleteButtons = screen.getAllByTestId("delete-spec-button")
+      await user.click(deleteButtons[0])
+
+      await waitFor(() => {
+        expect(screen.getByTestId("delete-spec-dialog")).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId("delete-spec-confirm"))
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("delete-spec-dialog")).not.toBeInTheDocument()
+      })
+
+      // Size spec should still exist
+      expect(screen.getByText("Size")).toBeInTheDocument()
+
+      // Verify store
+      const storeSpecs = getActiveSheetSpecs()
+      expect(storeSpecs).toHaveLength(1)
+      expect(storeSpecs[0].name).toBe("Size")
+
+      // Size column should still exist
+      const { sheets, activeSheetId } = useSheetsStore.getState()
+      const sheet = sheets.find((s) => s.id === activeSheetId)
+      expect(sheet?.columns.some((c) => c.specId === "spec-size")).toBe(true)
     })
   })
 })

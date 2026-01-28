@@ -1,14 +1,15 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react"
-import { Plus, ChevronDown, GripVertical, Check, X } from "lucide-react"
+import { Plus, ChevronDown, GripVertical, Check, X, Trash2 } from "lucide-react"
 import { AnimatePresence, motion, Reorder } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useSheetsStore } from "@/store/sheets"
 import { useSettingsStore } from "@/store/settings"
 import { AddSpecDialog } from "@/components/AddSpecDialog"
+import { DeleteSpecConfirmDialog } from "@/components/DeleteSpecConfirmDialog"
 import { registerTourDialogOpeners, unregisterTourDialogOpeners } from "@/lib/guided-tour"
 import { updateRowSKU } from "@/lib/auto-sku"
-import type { Specification, SpecValue } from "@/types"
+import type { Specification, SpecValue, ColumnDef } from "@/types"
 
 interface SpecValueItemProps {
   sheetId: string
@@ -162,10 +163,16 @@ interface SpecItemProps {
   sheetId: string
   spec: Specification
   isFirst?: boolean
+  onDelete: () => void
 }
 
-function SpecItem({ sheetId, spec, isFirst }: SpecItemProps) {
+function SpecItem({ sheetId, spec, isFirst, onDelete }: SpecItemProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent expanding/collapsing
+    onDelete()
+  }
 
   return (
     <div
@@ -197,6 +204,14 @@ function SpecItem({ sheetId, spec, isFirst }: SpecItemProps) {
             <span className="text-xs text-muted-foreground">
               {spec.values.length} value{spec.values.length !== 1 ? "s" : ""}
             </span>
+          </button>
+          <button
+            className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded"
+            onClick={handleDeleteClick}
+            title="Delete specification"
+            data-testid="delete-spec-button"
+          >
+            <Trash2 className="h-4 w-4" />
           </button>
         </div>
 
@@ -237,16 +252,24 @@ function SpecItem({ sheetId, spec, isFirst }: SpecItemProps) {
 }
 
 const EMPTY_SPECIFICATIONS: never[] = []
+const EMPTY_COLUMNS: ColumnDef[] = []
 
 export function SpecificationList() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [specToDelete, setSpecToDelete] = useState<Specification | null>(null)
   // Get active sheet and its local specifications
-  const { sheets, activeSheetId, setSheetData, reorderSpec } = useSheetsStore()
+  const { sheets, activeSheetId, setSheetData, reorderSpec, removeSpecification } = useSheetsStore()
   const activeSheet = sheets.find(s => s.id === activeSheetId)
   // Use sheet-local specifications (fallback to empty array for backward compat)
   const specifications = useMemo(
     () => activeSheet?.specifications ?? EMPTY_SPECIFICATIONS,
     [activeSheet?.specifications]
+  )
+  // Get columns for delete confirmation (to show affected columns)
+  const columns = useMemo(
+    () => activeSheet?.columns ?? EMPTY_COLUMNS,
+    [activeSheet?.columns]
   )
   const delimiter = useSettingsStore((state) => state.delimiter)
   const prefix = useSettingsStore((state) => state.prefix)
@@ -314,6 +337,63 @@ export function SpecificationList() {
     regenerateAllSKUs(latestSpecs)
   }, [activeSheetId, localOrder, sortedSpecifications, reorderSpec, regenerateAllSKUs])
 
+  // Handle delete spec button click (opens confirmation dialog)
+  const handleDeleteClick = useCallback((spec: Specification) => {
+    setSpecToDelete(spec)
+    setIsDeleteDialogOpen(true)
+  }, [])
+
+  // Confirm deletion: remove spec and all columns that reference it
+  const handleDeleteConfirm = useCallback(() => {
+    if (!activeSheetId || !specToDelete || !activeSheet) return
+
+    // Find all columns that reference this spec
+    const columnsToRemove = columns.filter(
+      (col) => col.type === "spec" && col.specId === specToDelete.id
+    )
+
+    // Get indices of columns to remove (in reverse order to preserve indices)
+    const columnIndices = columnsToRemove
+      .map((col) => columns.findIndex((c) => c.id === col.id))
+      .filter((idx) => idx !== -1)
+      .sort((a, b) => b - a) // Sort descending for safe removal
+
+    // Remove columns from columns array and data rows
+    const newColumns = [...columns]
+    const newData = activeSheet.data.map((row) => [...row])
+
+    // Remove columns by index (descending order preserves indices)
+    for (const idx of columnIndices) {
+      newColumns.splice(idx, 1)
+      for (const row of newData) {
+        if (row.length > idx) {
+          row.splice(idx, 1)
+        }
+      }
+    }
+
+    // Remove the specification
+    removeSpecification(activeSheetId, specToDelete.id)
+
+    // Update the sheet with new columns and data
+    useSheetsStore.setState((state) => ({
+      sheets: state.sheets.map((s) =>
+        s.id === activeSheetId
+          ? { ...s, columns: newColumns, data: newData }
+          : s
+      ),
+    }))
+
+    // Regenerate all SKUs after column removal
+    const latestSheet = useSheetsStore.getState().sheets.find((s) => s.id === activeSheetId)
+    const latestSpecs = latestSheet?.specifications ?? []
+    regenerateAllSKUs(latestSpecs)
+
+    // Close dialog and clear state
+    setIsDeleteDialogOpen(false)
+    setSpecToDelete(null)
+  }, [activeSheetId, specToDelete, activeSheet, columns, removeSpecification, regenerateAllSKUs])
+
   // Callbacks for tour dialog openers
   const openAddSpecDialog = useCallback(() => {
     setIsAddDialogOpen(true)
@@ -321,6 +401,8 @@ export function SpecificationList() {
 
   const closeAllDialogs = useCallback(() => {
     setIsAddDialogOpen(false)
+    setIsDeleteDialogOpen(false)
+    setSpecToDelete(null)
   }, [])
 
   // Register dialog openers for guided tour
@@ -366,6 +448,7 @@ export function SpecificationList() {
                   sheetId={activeSheetId!}
                   spec={spec}
                   isFirst={index === 0}
+                  onDelete={() => handleDeleteClick(spec)}
                 />
               </Reorder.Item>
             ))}
@@ -387,6 +470,13 @@ export function SpecificationList() {
       <AddSpecDialog
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
+      />
+      <DeleteSpecConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        spec={specToDelete}
+        columns={columns}
+        onConfirm={handleDeleteConfirm}
       />
     </div>
   )

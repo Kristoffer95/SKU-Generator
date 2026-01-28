@@ -306,7 +306,7 @@
       "Confirming removes spec and all columns with matching specId",
       "Row data updates to remove deleted column cells"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "spec-store-migration",
