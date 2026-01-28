@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { convertToSpreadsheetData, convertFromSpreadsheetData } from './spreadsheet-adapter';
-import type { CellData, Specification } from '../types';
+import type { CellData, Specification, ColumnDef } from '../types';
 import type { SKUMatrix } from '../types/spreadsheet';
 
 describe('spreadsheet-adapter', () => {
@@ -25,9 +25,16 @@ describe('spreadsheet-adapter', () => {
     },
   ];
 
+  // Standard columns: SKU + Color (spec) + Size (spec)
+  const mockColumns: ColumnDef[] = [
+    { id: 'col-sku', type: 'sku', header: 'SKU' },
+    { id: 'col-color', type: 'spec', specId: 'spec-1', header: 'Color' },
+    { id: 'col-size', type: 'spec', specId: 'spec-2', header: 'Size' },
+  ];
+
   describe('convertToSpreadsheetData', () => {
     it('converts empty data to empty matrix', () => {
-      const result = convertToSpreadsheetData([], mockSpecifications);
+      const result = convertToSpreadsheetData([], mockColumns, mockSpecifications);
       expect(result).toEqual([]);
     });
 
@@ -36,7 +43,7 @@ describe('spreadsheet-adapter', () => {
         [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }, { v: 'Size', m: 'Size' }],
       ];
 
-      const result = convertToSpreadsheetData(data, mockSpecifications);
+      const result = convertToSpreadsheetData(data, mockColumns, mockSpecifications);
 
       expect(result).toHaveLength(1);
       // Header row should not have readOnly or dropdownOptions
@@ -45,17 +52,17 @@ describe('spreadsheet-adapter', () => {
       expect(result[0][2]).toEqual({ value: 'Size' });
     });
 
-    it('sets readOnly: true on SKU column (col 0) for data rows', () => {
+    it('sets readOnly: true on SKU column for data rows', () => {
       const data: CellData[][] = [
         [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
         [{ v: 'SKU-001' }, { v: 'Red' }, { v: 'Small' }],
       ];
 
-      const result = convertToSpreadsheetData(data, mockSpecifications);
+      const result = convertToSpreadsheetData(data, mockColumns, mockSpecifications);
 
       // Row 0 (header) - no readOnly
       expect(result[0][0]?.readOnly).toBeUndefined();
-      // Row 1 (data) - readOnly on col 0
+      // Row 1 (data) - readOnly on SKU column
       expect(result[1][0]?.readOnly).toBe(true);
       expect(result[1][0]?.value).toBe('SKU-001');
     });
@@ -66,7 +73,7 @@ describe('spreadsheet-adapter', () => {
         [{ v: 'SKU-001' }, { v: 'Red' }, { v: 'Small' }],
       ];
 
-      const result = convertToSpreadsheetData(data, mockSpecifications);
+      const result = convertToSpreadsheetData(data, mockColumns, mockSpecifications);
 
       // Row 0 (header) - no dropdown options
       expect(result[0][1]?.dropdownOptions).toBeUndefined();
@@ -77,20 +84,12 @@ describe('spreadsheet-adapter', () => {
       expect(result[1][2]?.dropdownOptions).toEqual(['Small', 'Large']);
     });
 
-    it('handles specifications in different orders', () => {
-      const reorderedSpecs: Specification[] = [
-        {
-          id: 'spec-2',
-          name: 'Size',
-          order: 0, // Size first
-          values: [{ id: 'v3', displayValue: 'Small', skuFragment: 'S' }],
-        },
-        {
-          id: 'spec-1',
-          name: 'Color',
-          order: 1, // Color second
-          values: [{ id: 'v1', displayValue: 'Red', skuFragment: 'R' }],
-        },
+    it('columns determine dropdown options by specId, not spec order', () => {
+      // Columns reference specs by specId, so column order can differ from spec order
+      const reorderedColumns: ColumnDef[] = [
+        { id: 'col-sku', type: 'sku', header: 'SKU' },
+        { id: 'col-size', type: 'spec', specId: 'spec-2', header: 'Size' }, // Size first
+        { id: 'col-color', type: 'spec', specId: 'spec-1', header: 'Color' }, // Color second
       ];
 
       const data: CellData[][] = [
@@ -98,21 +97,25 @@ describe('spreadsheet-adapter', () => {
         [{ v: 'SKU-001' }, { v: 'Small' }, { v: 'Red' }],
       ];
 
-      const result = convertToSpreadsheetData(data, reorderedSpecs);
+      const result = convertToSpreadsheetData(data, reorderedColumns, mockSpecifications);
 
-      // Col 1 should have Size dropdown options (order 0)
-      expect(result[1][1]?.dropdownOptions).toEqual(['Small']);
-      // Col 2 should have Color dropdown options (order 1)
-      expect(result[1][2]?.dropdownOptions).toEqual(['Red']);
+      // Col 1 should have Size dropdown options (linked to spec-2)
+      expect(result[1][1]?.dropdownOptions).toEqual(['Small', 'Large']);
+      // Col 2 should have Color dropdown options (linked to spec-1)
+      expect(result[1][2]?.dropdownOptions).toEqual(['Red', 'Blue']);
     });
 
     it('handles empty cells correctly', () => {
+      const columnsWithTwoCols: ColumnDef[] = [
+        { id: 'col-sku', type: 'sku', header: 'SKU' },
+        { id: 'col-color', type: 'spec', specId: 'spec-1', header: 'Color' },
+      ];
       const data: CellData[][] = [
         [{ v: 'SKU' }, { v: 'Color' }],
         [{}, {}], // Empty cells
       ];
 
-      const result = convertToSpreadsheetData(data, mockSpecifications);
+      const result = convertToSpreadsheetData(data, columnsWithTwoCols, mockSpecifications);
 
       // Empty SKU cell should be readOnly with null value
       expect(result[1][0]).toEqual({ value: null, readOnly: true });
@@ -121,26 +124,70 @@ describe('spreadsheet-adapter', () => {
     });
 
     it('preserves background color as className', () => {
+      const skuOnlyColumns: ColumnDef[] = [
+        { id: 'col-sku', type: 'sku', header: 'SKU' },
+      ];
       const data: CellData[][] = [
         [{ v: 'SKU' }],
         [{ v: 'SKU-001', bg: '#fef3c7' }], // amber duplicate warning
       ];
 
-      const result = convertToSpreadsheetData(data, mockSpecifications);
+      const result = convertToSpreadsheetData(data, skuOnlyColumns, mockSpecifications);
 
       expect(result[1][0]?.className).toBe('bg-[#fef3c7]');
     });
 
     it('handles cells with only m (display text) value', () => {
+      const skuOnlyColumns: ColumnDef[] = [
+        { id: 'col-sku', type: 'sku', header: 'SKU' },
+      ];
       const data: CellData[][] = [
         [{ m: 'SKU' }],
         [{ m: 'Red' }],
       ];
 
-      const result = convertToSpreadsheetData(data, mockSpecifications);
+      const result = convertToSpreadsheetData(data, skuOnlyColumns, mockSpecifications);
 
       expect(result[0][0]?.value).toBe('SKU');
       expect(result[1][0]?.value).toBe('Red');
+    });
+
+    it('free columns have no dropdown options', () => {
+      const columnsWithFree: ColumnDef[] = [
+        { id: 'col-sku', type: 'sku', header: 'SKU' },
+        { id: 'col-color', type: 'spec', specId: 'spec-1', header: 'Color' },
+        { id: 'col-notes', type: 'free', header: 'Notes' },
+      ];
+      const data: CellData[][] = [
+        [{ v: 'SKU' }, { v: 'Color' }, { v: 'Notes' }],
+        [{ v: 'SKU-001' }, { v: 'Red' }, { v: 'Test note' }],
+      ];
+
+      const result = convertToSpreadsheetData(data, columnsWithFree, mockSpecifications);
+
+      // Spec column should have dropdown
+      expect(result[1][1]?.dropdownOptions).toEqual(['Red', 'Blue']);
+      // Free column should NOT have dropdown
+      expect(result[1][2]?.dropdownOptions).toBeUndefined();
+      expect(result[1][2]?.value).toBe('Test note');
+    });
+
+    it('free columns are not readOnly', () => {
+      const columnsWithFree: ColumnDef[] = [
+        { id: 'col-sku', type: 'sku', header: 'SKU' },
+        { id: 'col-notes', type: 'free', header: 'Notes' },
+      ];
+      const data: CellData[][] = [
+        [{ v: 'SKU' }, { v: 'Notes' }],
+        [{ v: 'SKU-001' }, { v: 'Test note' }],
+      ];
+
+      const result = convertToSpreadsheetData(data, columnsWithFree, mockSpecifications);
+
+      // SKU column should be readOnly
+      expect(result[1][0]?.readOnly).toBe(true);
+      // Free column should NOT be readOnly
+      expect(result[1][1]?.readOnly).toBeUndefined();
     });
   });
 
@@ -215,7 +262,7 @@ describe('spreadsheet-adapter', () => {
         [{ v: 'SKU-B-L', m: 'SKU-B-L' }, { v: 'Blue', m: 'Blue' }, { v: 'Large', m: 'Large' }],
       ];
 
-      const spreadsheetData = convertToSpreadsheetData(original, mockSpecifications);
+      const spreadsheetData = convertToSpreadsheetData(original, mockColumns, mockSpecifications);
       const result = convertFromSpreadsheetData(spreadsheetData);
 
       // Values should be preserved

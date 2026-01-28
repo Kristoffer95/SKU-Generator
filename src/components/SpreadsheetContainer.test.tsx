@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, within, act } from '@testing-library/react'
 import { useSheetsStore } from '@/store/sheets'
 import { useSpecificationsStore } from '@/store/specifications'
-import type { Specification, CellData, SheetConfig } from '@/types'
+import type { Specification, CellData, SheetConfig, ColumnDef } from '@/types'
 import { createColumnsFromSpecs } from '@/lib/sample-data'
 
 /**
@@ -16,6 +16,33 @@ function createSheetWithSpecs(
 ): string {
   const sheetId = crypto.randomUUID()
   const columns = createColumnsFromSpecs(specifications)
+  const sheet: SheetConfig = {
+    id: sheetId,
+    name,
+    type: 'data',
+    data,
+    columns,
+    specifications,
+  }
+  const { sheets } = useSheetsStore.getState()
+  useSheetsStore.setState({
+    sheets: [...sheets, sheet],
+    activeSheetId: sheetId,
+  })
+  return sheetId
+}
+
+/**
+ * Helper to create a sheet with explicit columns
+ * Use this when testing column type behavior (spec vs free columns)
+ */
+function createSheetWithColumns(
+  name: string,
+  data: CellData[][],
+  columns: ColumnDef[],
+  specifications: Specification[]
+): string {
+  const sheetId = crypto.randomUUID()
   const sheet: SheetConfig = {
     id: sheetId,
     name,
@@ -416,7 +443,7 @@ describe('SpreadsheetContainer onChange handler', () => {
       {
         id: 'spec-1',
         name: 'Color',
-        order: 1, // Color has higher order
+        order: 1, // Color has higher order (comes second in SKU)
         values: [
           { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
         ],
@@ -431,25 +458,36 @@ describe('SpreadsheetContainer onChange handler', () => {
       },
     ]
 
-    // Set up sheet with Color column before Size column (opposite of spec order)
-    const sheetId = createSheetWithSpecs(
+    // Set up columns with Color column before Size column (opposite of spec order)
+    // The columns array explicitly references specs by specId
+    const columns: ColumnDef[] = [
+      { id: 'col-sku', type: 'sku', header: 'SKU' },
+      { id: 'col-color', type: 'spec', specId: 'spec-1', header: 'Color' }, // Color first in columns
+      { id: 'col-size', type: 'spec', specId: 'spec-2', header: 'Size' },   // Size second in columns
+    ]
+
+    // Data matches column order: [SKU, Color, Size]
+    const sheetId = createSheetWithColumns(
       'Products',
       [
         [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
         [{ v: '' }, { v: '' }, { v: '' }],
       ],
+      columns,
       specs
     )
 
     render(<SpreadsheetContainer />)
 
-    // Simulate user selecting Red and Small
+    // Simulate user selecting Red and Small (Color in col 1, Size in col 2)
     capturedOnChange?.([
       [{ value: 'SKU' }, { value: 'Color' }, { value: 'Size' }],
       [{ value: '' }, { value: 'Red' }, { value: 'Small' }],
     ])
 
     // SKU should be S-R (Size first due to order:0, Color second due to order:1)
+    // Even though Color is in column 1 and Size is in column 2, the SKU fragments
+    // are joined in spec.order order: Size(0) then Color(1)
     const { sheets } = useSheetsStore.getState()
     const sheet = sheets.find(s => s.id === sheetId)!
     expect(sheet.data[1][0]?.v).toBe('S-R')
@@ -1273,7 +1311,7 @@ describe('SpreadsheetContainer SKU auto-generation from dropdown selection', () 
     expect(sheet.data[1][0]?.v).toBe('R-S')
   })
 
-  it('does not generate SKU when headers are missing', () => {
+  it('free columns do not contribute to SKU generation', () => {
     const specs: Specification[] = [
       {
         id: 'spec-color',
@@ -1283,21 +1321,27 @@ describe('SpreadsheetContainer SKU auto-generation from dropdown selection', () 
       },
     ]
 
-    // Create sheet with wrong headers
-    const sheetId = createSheetWithSpecs('Products', [
-      [{ v: 'SKU' }, { v: 'WrongHeader' }], // Header doesn't match spec name
+    // Create sheet with a free column (not linked to any spec)
+    const columns: ColumnDef[] = [
+      { id: 'col-sku', type: 'sku', header: 'SKU' },
+      { id: 'col-notes', type: 'free', header: 'Notes' }, // Free column - no spec
+    ]
+
+    const sheetId = createSheetWithColumns('Products', [
+      [{ v: 'SKU' }, { v: 'Notes' }],
       [{ v: '' }, { v: '' }],
-    ], specs)
+    ], columns, specs)
 
     render(<SpreadsheetContainer />)
 
-    // Simulate selecting Red in a column with wrong header
+    // Simulate typing in the free column (value that looks like a spec value)
     capturedOnChange?.([
-      [{ value: 'SKU' }, { value: 'WrongHeader' }],
-      [{ value: '' }, { value: 'Red' }],
+      [{ value: 'SKU' }, { value: 'Notes' }],
+      [{ value: '' }, { value: 'Red' }], // "Red" in a free column
     ])
 
-    // SKU should be empty (header doesn't match any spec name)
+    // SKU should be empty because the Notes column is type 'free', not 'spec'
+    // Free columns don't contribute to SKU generation
     const sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
     expect(sheet.data[1][0]?.v).toBe('')
   })

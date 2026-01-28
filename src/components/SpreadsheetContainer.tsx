@@ -2,16 +2,15 @@ import { useMemo, useCallback, useRef, useEffect, useState } from "react"
 import Spreadsheet, { Matrix, CellBase, Selection, RangeSelection, PointRange } from "react-spreadsheet"
 import { useSheetsStore } from "@/store/sheets"
 import { useSettingsStore } from "@/store/settings"
-import { processAutoSKU } from "@/lib/auto-sku"
-import { validateDataSheet, findDuplicateSKUs, ValidationError } from "@/lib/validation"
+import { processAutoSKUFromColumns, processAutoSKUForAllRowsFromColumns } from "@/lib/auto-sku"
+import { validateDataSheetFromColumns, findDuplicateSKUs, ValidationError } from "@/lib/validation"
 import { ValidationPanel } from "@/components/ValidationPanel"
 import { SheetTabs } from "@/components/spreadsheet/SheetTabs"
 import { SpreadsheetToolbar } from "@/components/spreadsheet/SpreadsheetToolbar"
 import { DropdownEditor } from "@/components/spreadsheet/DropdownEditor"
 import { convertToSpreadsheetData, convertFromSpreadsheetData } from "@/lib/spreadsheet-adapter"
 import { importFromExcel, importFromCSV, exportToExcel, exportToCSV } from "@/lib/import-export"
-import { processAutoSKUForAllRows } from "@/lib/auto-sku"
-import type { CellData } from "@/types"
+import type { CellData, ColumnDef } from "@/types"
 import type { SKUMatrix } from "@/types/spreadsheet"
 
 /**
@@ -69,14 +68,19 @@ function applyDuplicateHighlighting(matrix: SKUMatrix, duplicateRows: Set<number
 }
 
 const EMPTY_SPECIFICATIONS: never[] = []
+const EMPTY_COLUMNS: ColumnDef[] = []
 
 export function SpreadsheetContainer() {
   const { sheets, activeSheetId, setActiveSheet, setSheetData, addSheetWithId, removeSheet, updateSheet } = useSheetsStore()
-  // Get active sheet and use its local specifications
+  // Get active sheet and use its local specifications and columns
   const activeSheet = sheets.find((s) => s.id === activeSheetId)
   const specifications = useMemo(
     () => activeSheet?.specifications ?? EMPTY_SPECIFICATIONS,
     [activeSheet?.specifications]
+  )
+  const columns = useMemo(
+    () => activeSheet?.columns ?? EMPTY_COLUMNS,
+    [activeSheet?.columns]
   )
   const delimiter = useSettingsStore((state) => state.delimiter)
   const prefix = useSettingsStore((state) => state.prefix)
@@ -173,11 +177,11 @@ export function SpreadsheetContainer() {
     }
     isUndoRedoRef.current = false
 
-    // Auto-generate SKUs for changed rows
-    processAutoSKU(oldData, newData, specifications, settings)
+    // Auto-generate SKUs for changed rows (only spec columns contribute)
+    processAutoSKUFromColumns(oldData, newData, columns, specifications, settings)
 
     setSheetData(activeSheetId, newData)
-  }, [activeSheetId, setSheetData, settings, specifications])
+  }, [activeSheetId, setSheetData, settings, specifications, columns])
 
   // Undo handler
   const handleUndo = useCallback(() => {
@@ -264,8 +268,8 @@ export function SpreadsheetContainer() {
         importedData = dataSheet.data
       }
 
-      // Regenerate SKUs for all rows
-      processAutoSKUForAllRows(importedData, specifications, settings)
+      // Regenerate SKUs for all rows (only spec columns contribute)
+      processAutoSKUForAllRowsFromColumns(importedData, columns, specifications, settings)
 
       // Update the active sheet with imported data
       setSheetData(activeSheetId, importedData)
@@ -276,7 +280,7 @@ export function SpreadsheetContainer() {
     } catch (error) {
       console.error("Import failed:", error)
     }
-  }, [activeSheetId, setSheetData, specifications, settings])
+  }, [activeSheetId, setSheetData, columns, specifications, settings])
 
   // Export all sheets to Excel
   const handleExportExcel = useCallback(() => {
@@ -330,10 +334,11 @@ export function SpreadsheetContainer() {
   // Compute validation errors for the active sheet
   const validationErrors = useMemo((): ValidationError[] => {
     if (!activeSheet) return []
-    const missingValueErrors = validateDataSheet(activeSheet.data, specifications)
+    // Use column-based validation (only validates spec columns, not free columns)
+    const missingValueErrors = validateDataSheetFromColumns(activeSheet.data, columns, specifications)
     const duplicateErrors = findDuplicateSKUs(activeSheet.data)
     return [...missingValueErrors, ...duplicateErrors]
-  }, [activeSheet, specifications])
+  }, [activeSheet, columns, specifications])
 
   // Convert sheet data to react-spreadsheet format
   const spreadsheetData = useMemo(() => {
@@ -343,12 +348,12 @@ export function SpreadsheetContainer() {
     const duplicateErrors = findDuplicateSKUs(activeSheet.data)
     const duplicateRows = new Set(duplicateErrors.map(err => err.row))
 
-    // Convert to react-spreadsheet format
-    const matrix = convertToSpreadsheetData(activeSheet.data, specifications)
+    // Convert to react-spreadsheet format using columns for type detection
+    const matrix = convertToSpreadsheetData(activeSheet.data, columns, specifications)
 
     // Apply duplicate highlighting
     return applyDuplicateHighlighting(matrix, duplicateRows)
-  }, [activeSheet, specifications])
+  }, [activeSheet, columns, specifications])
 
   // Sheets data for SheetTabs component
   const sheetTabsData = useMemo(() => {

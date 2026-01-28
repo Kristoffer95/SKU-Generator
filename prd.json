@@ -261,7 +261,7 @@
       "Free column values do not affect generated SKU",
       "spreadsheet-adapter correctly identifies column types from columns array"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "add-column-dialog",

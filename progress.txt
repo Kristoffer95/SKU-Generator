@@ -1,3 +1,34 @@
+## column-types-spec-free - COMPLETED
+Support two column types: spec columns (dropdown) and free columns (plain text, no SKU contribution)
+
+### Key decisions
+- Updated spreadsheet-adapter.ts to accept columns array and use ColumnDef.type for column behavior
+- Spec columns (type='spec'): get dropdownOptions from linked specification via specId
+- Free columns (type='free'): render as plain text input, no dropdown, no SKU contribution
+- SKU columns (type='sku'): read-only for data rows, auto-generated
+- Added column-based functions: generateRowSKUFromColumns, processAutoSKUFromColumns, validateDataSheetFromColumns
+- Old header-based functions marked @deprecated but kept for backwards compatibility
+- SKU generation uses spec.order for fragment ordering, regardless of column order in sheet
+
+### Files changed
+- src/lib/spreadsheet-adapter.ts (signature change: data, columns, specifications)
+- src/lib/sheet-sku.ts (added generateRowSKUFromColumns, buildSpecValueMap)
+- src/lib/auto-sku.ts (added updateRowSKUFromColumns, findChangedRowsFromColumns, processAutoSKUFromColumns, processAutoSKUForAllRowsFromColumns)
+- src/lib/validation.ts (added validateDataSheetFromColumns)
+- src/components/SpreadsheetContainer.tsx (uses column-based functions, passes columns to adapter)
+- src/lib/spreadsheet-adapter.test.ts (updated tests, added free column tests)
+- src/components/SpreadsheetContainer.test.tsx (added createSheetWithColumns helper, updated/fixed 2 tests)
+
+### Notes
+- All 6 stepsToVerify criteria implemented and tested
+- Free columns have no dropdown options (verified in tests)
+- Free column values do not affect SKU (verified in tests)
+- Spec order determines SKU fragment order, not column position (verified in tests)
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (572 tests)
+- npm run build passes
+
 ## sheet-default-rows - COMPLETED
 New sheets created with 50 empty rows by default and only SKU column
 

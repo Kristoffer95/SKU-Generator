@@ -1,8 +1,8 @@
-import type { CellData, Specification } from '../types';
+import type { CellData, Specification, ColumnDef } from '../types';
 import type { SKUCell, SKUMatrix } from '../types/spreadsheet';
 
 /**
- * Get dropdown options (displayValues) for a specification column
+ * Get dropdown options (displayValues) for a specification
  */
 function getDropdownOptionsForSpec(spec: Specification): string[] {
   return spec.values.map((v) => v.displayValue);
@@ -12,23 +12,29 @@ function getDropdownOptionsForSpec(spec: Specification): string[] {
  * Convert CellData[][] (Fortune-Sheet format) to SKUMatrix (react-spreadsheet format)
  *
  * @param data - The Fortune-Sheet cell data
- * @param specifications - Array of specifications sorted by order
+ * @param columns - Array of column definitions that determine column types
+ * @param specifications - Array of specifications for dropdown options
  * @returns SKUMatrix for react-spreadsheet
  *
- * Column structure:
- * - Column 0: SKU column (read-only except header row)
- * - Columns 1+: Spec columns with dropdown options
+ * Column structure based on ColumnDef types:
+ * - 'sku' columns: read-only except header row
+ * - 'spec' columns: dropdown options from linked specification
+ * - 'free' columns: plain text input (no dropdown)
  */
 export function convertToSpreadsheetData(
   data: CellData[][],
+  columns: ColumnDef[],
   specifications: Specification[]
 ): SKUMatrix {
   if (data.length === 0) {
     return [];
   }
 
-  // Sort specifications by order for column mapping
-  const sortedSpecs = [...specifications].sort((a, b) => a.order - b.order);
+  // Build a map of specId -> Specification for quick lookup
+  const specMap = new Map<string, Specification>();
+  for (const spec of specifications) {
+    specMap.set(spec.id, spec);
+  }
 
   const result: SKUMatrix = [];
 
@@ -37,15 +43,20 @@ export function convertToSpreadsheetData(
     const isHeaderRow = rowIndex === 0;
     const resultRow: (SKUCell | null)[] = [];
 
-    // Determine number of columns: SKU + number of specs (minimum)
-    // But also include any existing data columns
-    const numCols = Math.max(sortedSpecs.length + 1, row.length);
+    // Determine number of columns from columns array, but include existing data
+    const numCols = Math.max(columns.length, row.length);
 
     for (let colIndex = 0; colIndex < numCols; colIndex++) {
       const cell = row[colIndex];
-      const isSKUColumn = colIndex === 0;
-      const specIndex = colIndex - 1; // -1 because col 0 is SKU
-      const spec = sortedSpecs[specIndex];
+      const columnDef = columns[colIndex];
+      const columnType = columnDef?.type ?? 'free'; // Default to 'free' for extra columns
+      const isSKUColumn = columnType === 'sku';
+      const isSpecColumn = columnType === 'spec';
+
+      // Get the linked specification for spec columns
+      const linkedSpec = isSpecColumn && columnDef?.specId
+        ? specMap.get(columnDef.specId)
+        : undefined;
 
       // Handle empty/undefined cells
       if (!cell || (cell.v === undefined && cell.m === undefined)) {
@@ -55,13 +66,14 @@ export function convertToSpreadsheetData(
             value: null,
             readOnly: true,
           });
-        } else if (!isSKUColumn && spec && !isHeaderRow) {
+        } else if (isSpecColumn && linkedSpec && !isHeaderRow) {
           // Empty spec column cell (non-header) should have dropdown options
           resultRow.push({
             value: null,
-            dropdownOptions: getDropdownOptionsForSpec(spec),
+            dropdownOptions: getDropdownOptionsForSpec(linkedSpec),
           });
         } else {
+          // Free columns or header row: just null
           resultRow.push(null);
         }
         continue;
@@ -75,15 +87,17 @@ export function convertToSpreadsheetData(
         value: value === undefined ? null : value,
       };
 
-      // SKU column (col 0): read-only for all rows except header
+      // SKU column: read-only for all rows except header
       if (isSKUColumn && !isHeaderRow) {
         skuCell.readOnly = true;
       }
 
-      // Spec columns (col 1+): add dropdown options for non-header rows
-      if (!isSKUColumn && spec && !isHeaderRow) {
-        skuCell.dropdownOptions = getDropdownOptionsForSpec(spec);
+      // Spec columns: add dropdown options for non-header rows
+      if (isSpecColumn && linkedSpec && !isHeaderRow) {
+        skuCell.dropdownOptions = getDropdownOptionsForSpec(linkedSpec);
       }
+
+      // Free columns: no special treatment (plain text input)
 
       // Preserve background color as className if set
       if (cell.bg) {

@@ -1,4 +1,4 @@
-import type { CellData, Specification, AppSettings } from '../types';
+import type { CellData, Specification, AppSettings, ColumnDef } from '../types';
 
 /**
  * Extract string value from a CellData object
@@ -9,7 +9,29 @@ const getCellValue = (cell: CellData | undefined): string => {
 };
 
 /**
+ * Build a map of specId -> cell value from row data using column definitions
+ * Only includes values from 'spec' type columns
+ */
+function buildSpecValueMap(
+  row: CellData[],
+  columns: ColumnDef[]
+): Map<string, string> {
+  const map = new Map<string, string>();
+  for (let i = 0; i < columns.length; i++) {
+    const col = columns[i];
+    // Only include spec columns with a valid specId
+    if (col.type !== 'spec' || !col.specId) continue;
+    const value = getCellValue(row[i]);
+    if (value) {
+      map.set(col.specId, value);
+    }
+  }
+  return map;
+}
+
+/**
  * Build a map of header name -> cell value from row data
+ * @deprecated Use buildSpecValueMap with columns for proper column type handling
  */
 function buildHeaderValueMap(
   rowValues: CellData[],
@@ -28,7 +50,55 @@ function buildHeaderValueMap(
 }
 
 /**
+ * Generate SKU for a data sheet row using column definitions
+ * Only spec columns contribute to the SKU generation
+ *
+ * Specifications are sorted by their order field before building the SKU,
+ * so column order in the data sheet does NOT affect SKU composition.
+ *
+ * @param row - The full row data (including SKU column)
+ * @param columns - Column definitions for this sheet
+ * @param specifications - Array of specifications from store
+ * @param settings - App settings for delimiter, prefix, suffix
+ * @returns Generated SKU string
+ */
+export function generateRowSKUFromColumns(
+  row: CellData[],
+  columns: ColumnDef[],
+  specifications: Specification[],
+  settings: AppSettings
+): string {
+  // Build a map of specId -> cell value from spec columns only
+  const specValueMap = buildSpecValueMap(row, columns);
+
+  // Sort specifications by order field
+  const sortedSpecs = [...specifications].sort((a, b) => a.order - b.order);
+
+  const skuFragments: string[] = [];
+
+  // Process specs in order, look up cell value by spec id
+  for (const spec of sortedSpecs) {
+    const cellValue = specValueMap.get(spec.id);
+    if (!cellValue) continue;
+
+    // Find the value with matching displayValue
+    const specValue = spec.values.find((v) => v.displayValue === cellValue);
+    if (specValue && specValue.skuFragment) {
+      skuFragments.push(specValue.skuFragment);
+    }
+  }
+
+  if (skuFragments.length === 0) {
+    return '';
+  }
+
+  const joined = skuFragments.join(settings.delimiter);
+  return `${settings.prefix}${joined}${settings.suffix}`;
+}
+
+/**
  * Generate SKU for a data sheet row based on specifications from store
+ * @deprecated Use generateRowSKUFromColumns with columns for proper column type handling
  *
  * Specifications are sorted by their order field before building the SKU,
  * so column order in the data sheet does NOT affect SKU composition.

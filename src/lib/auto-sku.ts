@@ -1,8 +1,37 @@
-import type { CellData, Specification, AppSettings } from '../types';
-import { generateRowSKU, extractColumnHeaders } from './sheet-sku';
+import type { CellData, Specification, AppSettings, ColumnDef } from '../types';
+import { generateRowSKU, extractColumnHeaders, generateRowSKUFromColumns } from './sheet-sku';
+
+/**
+ * Update SKU for a single row in a data sheet using column definitions
+ * Modifies the data array in place by setting the SKU column value
+ * Only 'spec' type columns contribute to SKU generation
+ */
+export function updateRowSKUFromColumns(
+  data: CellData[][],
+  rowIndex: number,
+  columns: ColumnDef[],
+  specifications: Specification[],
+  settings: AppSettings
+): void {
+  if (rowIndex === 0 || rowIndex >= data.length) return; // Skip header row
+
+  const row = data[rowIndex];
+  if (!row || row.length === 0) return;
+
+  // Find the SKU column index
+  const skuColumnIndex = columns.findIndex(col => col.type === 'sku');
+  if (skuColumnIndex === -1) return; // No SKU column
+
+  // Generate SKU using column definitions (only spec columns contribute)
+  const sku = generateRowSKUFromColumns(row, columns, specifications, settings);
+
+  // Set SKU value at the SKU column index
+  row[skuColumnIndex] = { v: sku, m: sku };
+}
 
 /**
  * Update SKU for a single row in a data sheet
+ * @deprecated Use updateRowSKUFromColumns with columns for proper column type handling
  * Modifies the data array in place by setting the first column value (index 0)
  */
 export function updateRowSKU(
@@ -32,6 +61,48 @@ export function updateRowSKU(
 
 /**
  * Compare two sheet data arrays and find rows that have changed
+ * Uses column definitions to determine which columns to compare (excludes SKU columns)
+ * Returns array of row indices that differ (excluding header row 0)
+ */
+export function findChangedRowsFromColumns(
+  oldData: CellData[][],
+  newData: CellData[][],
+  columns: ColumnDef[]
+): number[] {
+  const changedRows: number[] = [];
+  const maxRows = Math.max(oldData.length, newData.length);
+
+  for (let rowIndex = 1; rowIndex < maxRows; rowIndex++) {
+    const oldRow = oldData[rowIndex];
+    const newRow = newData[rowIndex];
+
+    // If rows are different lengths or one doesn't exist, it changed
+    if (!oldRow || !newRow || oldRow.length !== newRow.length) {
+      changedRows.push(rowIndex);
+      continue;
+    }
+
+    // Compare cell values, excluding SKU columns
+    for (let colIndex = 0; colIndex < Math.max(oldRow.length, newRow.length); colIndex++) {
+      const columnDef = columns[colIndex];
+      // Skip SKU columns - they are auto-generated
+      if (columnDef?.type === 'sku') continue;
+
+      const oldVal = oldRow[colIndex]?.v ?? oldRow[colIndex]?.m ?? '';
+      const newVal = newRow[colIndex]?.v ?? newRow[colIndex]?.m ?? '';
+      if (String(oldVal).trim() !== String(newVal).trim()) {
+        changedRows.push(rowIndex);
+        break;
+      }
+    }
+  }
+
+  return changedRows;
+}
+
+/**
+ * Compare two sheet data arrays and find rows that have changed
+ * @deprecated Use findChangedRowsFromColumns with columns for proper column type handling
  * Returns array of row indices that differ (excluding header row 0)
  */
 export function findChangedRows(oldData: CellData[][], newData: CellData[][]): number[] {
@@ -65,6 +136,24 @@ export function findChangedRows(oldData: CellData[][], newData: CellData[][]): n
 
 /**
  * Process all changed rows in a data sheet and update their SKUs
+ * Uses column definitions for proper column type handling
+ */
+export function processAutoSKUFromColumns(
+  oldData: CellData[][],
+  newData: CellData[][],
+  columns: ColumnDef[],
+  specifications: Specification[],
+  settings: AppSettings
+): void {
+  const changedRows = findChangedRowsFromColumns(oldData, newData, columns);
+  changedRows.forEach(rowIndex => {
+    updateRowSKUFromColumns(newData, rowIndex, columns, specifications, settings);
+  });
+}
+
+/**
+ * Process all changed rows in a data sheet and update their SKUs
+ * @deprecated Use processAutoSKUFromColumns with columns for proper column type handling
  */
 export function processAutoSKU(
   oldData: CellData[][],
@@ -80,6 +169,23 @@ export function processAutoSKU(
 
 /**
  * Process all data rows in a sheet and regenerate their SKUs
+ * Uses column definitions for proper column type handling
+ */
+export function processAutoSKUForAllRowsFromColumns(
+  data: CellData[][],
+  columns: ColumnDef[],
+  specifications: Specification[],
+  settings: AppSettings
+): void {
+  // Process all rows except header (row 0)
+  for (let rowIndex = 1; rowIndex < data.length; rowIndex++) {
+    updateRowSKUFromColumns(data, rowIndex, columns, specifications, settings);
+  }
+}
+
+/**
+ * Process all data rows in a sheet and regenerate their SKUs
+ * @deprecated Use processAutoSKUForAllRowsFromColumns with columns for proper column type handling
  * Used after import to ensure all SKUs are generated correctly
  */
 export function processAutoSKUForAllRows(
