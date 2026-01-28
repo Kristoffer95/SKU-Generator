@@ -1,3 +1,24 @@
+## migration-spreadsheet-adapter - COMPLETED
+Create data conversion utilities for react-spreadsheet (convertToSpreadsheetData, convertFromSpreadsheetData)
+
+### Key decisions
+- convertToSpreadsheetData transforms CellData[][] to SKUMatrix
+- Row 0 (header) cells have no readOnly or dropdownOptions
+- Col 0 (SKU) cells for row > 0 get readOnly: true
+- Spec columns (col 1+) for row > 0 get dropdownOptions from sorted specifications
+- Specifications sorted by order field to match column positions
+- Background colors converted to Tailwind-style className (bg-[#hex])
+- convertFromSpreadsheetData transforms back, extracting bg from className
+
+### Files changed
+- src/lib/spreadsheet-adapter.ts (new)
+- src/lib/spreadsheet-adapter.test.ts (new, 15 tests)
+
+### Notes
+- Uses SKUCell/SKUMatrix types from migration-spreadsheet-types task
+- Handles empty cells, null values, numeric values
+- Roundtrip conversion preserves values
+
 ## migration-spreadsheet-types - COMPLETED
 Create extended cell type for react-spreadsheet (SKUCell interface, SKUMatrix type)
 

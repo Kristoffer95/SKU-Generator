@@ -22,7 +22,7 @@
       "convertFromSpreadsheetData converts SKUMatrix back to CellData[][]",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "migration-dropdown-editor",
