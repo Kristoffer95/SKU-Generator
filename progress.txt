@@ -1,3 +1,19 @@
+## spec-store-3: Add skuFragment uniqueness validation
+
+**Completed**: Added validateSkuFragment selector and enforced uniqueness
+
+**Key decisions**:
+- validateSkuFragment(specId, skuFragment, excludeValueId?) returns true if unique
+- addSpecValue returns null if duplicate skuFragment in same spec
+- updateSpecValue returns false if would create duplicate
+- Different specs can share same skuFragment (Color:R and Size:R allowed)
+
+**Files changed**:
+- src/store/specifications.ts: Added validateSkuFragment, updated addSpecValue/updateSpecValue
+- src/store/specifications.test.ts: Added 9 new tests for validation
+
+---
+
 ## spec-store-2: Revive useSpecificationsStore as single source of truth
 
 **Completed**: Store already fully implemented in spec-store-1

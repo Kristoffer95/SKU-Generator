@@ -8,10 +8,11 @@ interface SpecificationsState {
   updateSpecification: (id: string, updates: Partial<Pick<Specification, 'name'>>) => void;
   removeSpecification: (id: string) => void;
   reorderSpec: (specId: string, newOrder: number) => void;
-  addSpecValue: (specId: string, displayValue: string, skuFragment: string) => string;
-  updateSpecValue: (specId: string, valueId: string, updates: Partial<Pick<SpecValue, 'displayValue' | 'skuFragment'>>) => void;
+  addSpecValue: (specId: string, displayValue: string, skuFragment: string) => string | null;
+  updateSpecValue: (specId: string, valueId: string, updates: Partial<Pick<SpecValue, 'displayValue' | 'skuFragment'>>) => boolean;
   removeSpecValue: (specId: string, valueId: string) => void;
   getSpecificationById: (id: string) => Specification | undefined;
+  validateSkuFragment: (specId: string, skuFragment: string, excludeValueId?: string) => boolean;
 }
 
 const generateId = () => crypto.randomUUID();
@@ -92,6 +93,12 @@ export const useSpecificationsStore = create<SpecificationsState>()(
       },
 
       addSpecValue: (specId: string, displayValue: string, skuFragment: string) => {
+        const { validateSkuFragment } = get();
+        // Check for duplicate skuFragment within this spec
+        if (!validateSkuFragment(specId, skuFragment)) {
+          return null;
+        }
+
         const valueId = generateId();
 
         set((state) => ({
@@ -106,6 +113,14 @@ export const useSpecificationsStore = create<SpecificationsState>()(
       },
 
       updateSpecValue: (specId: string, valueId: string, updates: Partial<Pick<SpecValue, 'displayValue' | 'skuFragment'>>) => {
+        const { validateSkuFragment } = get();
+        // If updating skuFragment, validate uniqueness (excluding current value)
+        if (updates.skuFragment !== undefined) {
+          if (!validateSkuFragment(specId, updates.skuFragment, valueId)) {
+            return false;
+          }
+        }
+
         set((state) => ({
           specifications: state.specifications.map((spec) =>
             spec.id === specId
@@ -118,6 +133,7 @@ export const useSpecificationsStore = create<SpecificationsState>()(
               : spec
           ),
         }));
+        return true;
       },
 
       removeSpecValue: (specId: string, valueId: string) => {
@@ -132,6 +148,16 @@ export const useSpecificationsStore = create<SpecificationsState>()(
 
       getSpecificationById: (id: string) => {
         return get().specifications.find((spec) => spec.id === id);
+      },
+
+      validateSkuFragment: (specId: string, skuFragment: string, excludeValueId?: string) => {
+        const spec = get().specifications.find((s) => s.id === specId);
+        if (!spec) return true; // Allow if spec not found (edge case)
+
+        // Check if any other value in this spec has the same skuFragment
+        return !spec.values.some(
+          (val) => val.skuFragment === skuFragment && val.id !== excludeValueId
+        );
       },
     }),
     {

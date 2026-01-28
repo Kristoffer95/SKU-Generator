@@ -132,8 +132,9 @@ describe('useSpecificationsStore', () => {
       const { addSpecification, addSpecValue, updateSpecValue } = useSpecificationsStore.getState();
       const specId = addSpecification('Color');
       const valueId = addSpecValue(specId, 'Red', 'R');
+      expect(valueId).not.toBeNull();
 
-      updateSpecValue(specId, valueId, { skuFragment: 'RD' });
+      updateSpecValue(specId, valueId as string, { skuFragment: 'RD' });
 
       const { specifications } = useSpecificationsStore.getState();
       expect(specifications[0].values[0].skuFragment).toBe('RD');
@@ -143,8 +144,9 @@ describe('useSpecificationsStore', () => {
       const { addSpecification, addSpecValue, updateSpecValue } = useSpecificationsStore.getState();
       const specId = addSpecification('Color');
       const valueId = addSpecValue(specId, 'Red', 'R');
+      expect(valueId).not.toBeNull();
 
-      updateSpecValue(specId, valueId, { displayValue: 'Crimson' });
+      updateSpecValue(specId, valueId as string, { displayValue: 'Crimson' });
 
       const { specifications } = useSpecificationsStore.getState();
       expect(specifications[0].values[0].displayValue).toBe('Crimson');
@@ -154,9 +156,10 @@ describe('useSpecificationsStore', () => {
       const { addSpecification, addSpecValue, removeSpecValue } = useSpecificationsStore.getState();
       const specId = addSpecification('Color');
       const valueId = addSpecValue(specId, 'Red', 'R');
+      expect(valueId).not.toBeNull();
       addSpecValue(specId, 'Blue', 'B');
 
-      removeSpecValue(specId, valueId);
+      removeSpecValue(specId, valueId as string);
 
       const { specifications } = useSpecificationsStore.getState();
       expect(specifications[0].values).toHaveLength(1);
@@ -177,6 +180,101 @@ describe('useSpecificationsStore', () => {
       const { getSpecificationById } = useSpecificationsStore.getState();
       const spec = getSpecificationById('non-existent');
       expect(spec).toBeUndefined();
+    });
+  });
+
+  describe('validateSkuFragment', () => {
+    it('should return true for unique skuFragment within spec', () => {
+      const { addSpecification, addSpecValue, validateSkuFragment } = useSpecificationsStore.getState();
+      const specId = addSpecification('Color');
+      addSpecValue(specId, 'Red', 'R');
+
+      expect(validateSkuFragment(specId, 'B')).toBe(true);
+    });
+
+    it('should return false for duplicate skuFragment within same spec', () => {
+      const { addSpecification, addSpecValue, validateSkuFragment } = useSpecificationsStore.getState();
+      const specId = addSpecification('Color');
+      addSpecValue(specId, 'Red', 'R');
+
+      expect(validateSkuFragment(specId, 'R')).toBe(false);
+    });
+
+    it('should allow same skuFragment in different specs', () => {
+      const { addSpecification, addSpecValue, validateSkuFragment } = useSpecificationsStore.getState();
+      const colorId = addSpecification('Color');
+      const sizeId = addSpecification('Size');
+      addSpecValue(colorId, 'Red', 'R');
+
+      // Same 'R' should be valid in Size spec
+      expect(validateSkuFragment(sizeId, 'R')).toBe(true);
+    });
+
+    it('should exclude specific valueId when validating for updates', () => {
+      const { addSpecification, addSpecValue, validateSkuFragment } = useSpecificationsStore.getState();
+      const specId = addSpecification('Color');
+      const valueId = addSpecValue(specId, 'Red', 'R');
+      expect(valueId).not.toBeNull();
+
+      // Should be valid when excluding the value that has 'R'
+      expect(validateSkuFragment(specId, 'R', valueId as string)).toBe(true);
+    });
+
+    it('should return true for non-existent spec', () => {
+      const { validateSkuFragment } = useSpecificationsStore.getState();
+      expect(validateSkuFragment('non-existent', 'R')).toBe(true);
+    });
+  });
+
+  describe('skuFragment uniqueness enforcement', () => {
+    it('should prevent adding value with duplicate skuFragment', () => {
+      const { addSpecification, addSpecValue } = useSpecificationsStore.getState();
+      const specId = addSpecification('Color');
+      addSpecValue(specId, 'Red', 'R');
+
+      const duplicateResult = addSpecValue(specId, 'Rose', 'R');
+
+      expect(duplicateResult).toBeNull();
+      const { specifications } = useSpecificationsStore.getState();
+      expect(specifications[0].values).toHaveLength(1);
+    });
+
+    it('should prevent updating value to duplicate skuFragment', () => {
+      const { addSpecification, addSpecValue, updateSpecValue } = useSpecificationsStore.getState();
+      const specId = addSpecification('Color');
+      addSpecValue(specId, 'Red', 'R');
+      const blueId = addSpecValue(specId, 'Blue', 'B');
+      expect(blueId).not.toBeNull();
+
+      const updateResult = updateSpecValue(specId, blueId as string, { skuFragment: 'R' });
+
+      expect(updateResult).toBe(false);
+      const { specifications } = useSpecificationsStore.getState();
+      expect(specifications[0].values[1].skuFragment).toBe('B');
+    });
+
+    it('should allow updating value to same skuFragment (no change)', () => {
+      const { addSpecification, addSpecValue, updateSpecValue } = useSpecificationsStore.getState();
+      const specId = addSpecification('Color');
+      const valueId = addSpecValue(specId, 'Red', 'R');
+      expect(valueId).not.toBeNull();
+
+      const updateResult = updateSpecValue(specId, valueId as string, { skuFragment: 'R' });
+
+      expect(updateResult).toBe(true);
+    });
+
+    it('should allow updating displayValue without skuFragment validation', () => {
+      const { addSpecification, addSpecValue, updateSpecValue } = useSpecificationsStore.getState();
+      const specId = addSpecification('Color');
+      const valueId = addSpecValue(specId, 'Red', 'R');
+      expect(valueId).not.toBeNull();
+
+      const updateResult = updateSpecValue(specId, valueId as string, { displayValue: 'Crimson' });
+
+      expect(updateResult).toBe(true);
+      const { specifications } = useSpecificationsStore.getState();
+      expect(specifications[0].values[0].displayValue).toBe('Crimson');
     });
   });
 });

@@ -31,7 +31,7 @@
       "Adding a value with duplicate skuFragment within same spec is prevented or returns error",
       "Different specs can have same skuFragment (e.g., Color:R and Size:R is allowed)"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "remove-config-1",
