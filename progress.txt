@@ -1,3 +1,22 @@
+## sheet-default-rows - COMPLETED
+New sheets created with 50 empty rows by default and only SKU column
+
+### Key decisions
+- Added createEmptyDataRows() helper to generate empty row arrays
+- Modified createEmptySheet() to include 50 empty data rows after header
+- Modified addSheetWithId() to use same 50-row structure
+- Each empty row has one empty cell ({}) matching column count
+
+### Files changed
+- src/store/sheets.ts (added createEmptyDataRows, updated createEmptySheet and addSheetWithId)
+- src/store/sheets.test.ts (updated tests for 51 rows, added sheet-default-rows test suite)
+
+### Notes
+- All 5 stepsToVerify criteria implemented and tested
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (570 tests)
+
 ## sheet-local-specifications - COMPLETED
 Make specifications local to each sheet instead of global
 

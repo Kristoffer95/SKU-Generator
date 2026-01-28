@@ -59,17 +59,28 @@ const createDefaultColumns = (): ColumnDef[] => {
 };
 
 /**
+ * Creates empty data rows for a new sheet.
+ * Each row has empty cells matching the number of columns.
+ */
+const createEmptyDataRows = (columnCount: number, rowCount: number): CellData[][] => {
+  return Array.from({ length: rowCount }, () =>
+    Array.from({ length: columnCount }, () => ({}))
+  );
+};
+
+/**
  * Creates an empty sheet with default SKU column and empty specifications.
- * New sheets start with just the SKU column; users add spec columns as needed.
+ * New sheets start with just the SKU column and 50 empty data rows; users add spec columns as needed.
  */
 const createEmptySheet = (name: string, type: SheetConfig['type'] = 'data'): SheetConfig => {
   const columns = type === 'data' ? createDefaultColumns() : [];
   const headerRow = type === 'data' ? createHeaderRowFromColumns(columns) : [];
+  const emptyRows = type === 'data' ? createEmptyDataRows(columns.length, 50) : [];
   return {
     id: generateId(),
     name,
     type,
-    data: headerRow.length > 0 ? [headerRow] : [],
+    data: headerRow.length > 0 ? [headerRow, ...emptyRows] : [],
     columns,
     specifications: [],
   };
@@ -154,11 +165,12 @@ export const useSheetsStore = create<SheetsState>()(
 
         const columns = createDefaultColumns();
         const headerRow = createHeaderRowFromColumns(columns);
+        const emptyRows = createEmptyDataRows(columns.length, 50);
         const newSheet: SheetConfig = {
           id,
           name,
           type: 'data',
-          data: headerRow.length > 0 ? [headerRow] : [],
+          data: headerRow.length > 0 ? [headerRow, ...emptyRows] : [],
           columns,
           specifications: [],
         };

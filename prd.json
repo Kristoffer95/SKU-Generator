@@ -233,7 +233,7 @@
       "Each empty row has an empty cell for the SKU column",
       "User can add spec columns to populate the sheet"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "column-drag-reorder",

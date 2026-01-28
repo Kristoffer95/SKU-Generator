@@ -188,15 +188,20 @@ describe('useSheetsStore', () => {
   });
 
   describe('addSheet', () => {
-    it('should add a sheet with default name and SKU header', () => {
+    it('should add a sheet with default name, SKU header, and 50 empty rows', () => {
       const { addSheet } = useSheetsStore.getState();
       const id = addSheet();
 
       const { sheets, activeSheetId } = useSheetsStore.getState();
       expect(sheets).toHaveLength(1);
       expect(sheets[0].name).toBe('Sheet 1');
-      // When no specs exist, header row only has SKU
-      expect(sheets[0].data).toEqual([[{ v: 'SKU', m: 'SKU' }]]);
+      // New sheets have header row + 50 empty data rows = 51 total
+      expect(sheets[0].data).toHaveLength(51);
+      // Header row only has SKU when no specs exist
+      expect(sheets[0].data[0]).toEqual([{ v: 'SKU', m: 'SKU' }]);
+      // Each empty row has one empty cell for SKU column
+      expect(sheets[0].data[1]).toEqual([{}]);
+      expect(sheets[0].data[50]).toEqual([{}]);
       expect(activeSheetId).toBe(id);
     });
 
@@ -215,7 +220,8 @@ describe('useSheetsStore', () => {
 
       const { sheets } = useSheetsStore.getState();
       // New sheets only have SKU column - specs are now per-sheet and start empty
-      expect(sheets[0].data).toHaveLength(1);
+      // 51 rows = 1 header + 50 empty data rows
+      expect(sheets[0].data).toHaveLength(51);
       expect(sheets[0].data[0]).toEqual([{ v: 'SKU', m: 'SKU' }]);
       expect(sheets[0].specifications).toEqual([]);
       expect(sheets[0].columns).toHaveLength(1);
@@ -241,8 +247,77 @@ describe('useSheetsStore', () => {
     });
   });
 
+  describe('sheet-default-rows feature', () => {
+    it('new sheets should have exactly 51 rows (1 header + 50 data rows)', () => {
+      const { addSheet } = useSheetsStore.getState();
+      addSheet('Test Sheet');
+
+      const { sheets } = useSheetsStore.getState();
+      expect(sheets[0].data).toHaveLength(51);
+    });
+
+    it('new sheets should have only SKU column initially', () => {
+      const { addSheet } = useSheetsStore.getState();
+      addSheet('Test Sheet');
+
+      const { sheets } = useSheetsStore.getState();
+      // Only SKU column
+      expect(sheets[0].columns).toHaveLength(1);
+      expect(sheets[0].columns[0].type).toBe('sku');
+      expect(sheets[0].columns[0].header).toBe('SKU');
+    });
+
+    it('header row should have only SKU column header', () => {
+      const { addSheet } = useSheetsStore.getState();
+      addSheet('Test Sheet');
+
+      const { sheets } = useSheetsStore.getState();
+      // Row 0 is header with SKU
+      expect(sheets[0].data[0]).toHaveLength(1);
+      expect(sheets[0].data[0][0]).toEqual({ v: 'SKU', m: 'SKU' });
+    });
+
+    it('each empty row should have an empty cell for the SKU column', () => {
+      const { addSheet } = useSheetsStore.getState();
+      addSheet('Test Sheet');
+
+      const { sheets } = useSheetsStore.getState();
+      // Rows 1-50 are empty data rows with one empty cell each
+      for (let i = 1; i <= 50; i++) {
+        expect(sheets[0].data[i]).toHaveLength(1);
+        expect(sheets[0].data[i][0]).toEqual({});
+      }
+    });
+
+    it('user can add spec columns to populate the sheet', () => {
+      const { addSheet, updateSheet } = useSheetsStore.getState();
+      addSheet('Test Sheet');
+
+      const { sheets } = useSheetsStore.getState();
+      const sheet = sheets[0];
+
+      // Simulate adding a spec column by manually updating the sheet data
+      // (In practice, this would be done through the store's column management methods)
+      const newData = sheet.data.map((row, index) => {
+        if (index === 0) {
+          // Update header row
+          return [...row, { v: 'Color', m: 'Color' }];
+        }
+        // Add empty cell for new column in data rows
+        return [...row, {}];
+      });
+
+      updateSheet(sheet.id, { data: newData });
+
+      // The sheet can be updated with new columns
+      const { sheets: updatedSheets } = useSheetsStore.getState();
+      expect(updatedSheets[0].data[0]).toHaveLength(2);
+      expect(updatedSheets[0].data[0][1]).toEqual({ v: 'Color', m: 'Color' });
+    });
+  });
+
   describe('addSheetWithId', () => {
-    it('should add a sheet with specific ID and SKU header', () => {
+    it('should add a sheet with specific ID, SKU header, and 50 empty rows', () => {
       const { addSheetWithId } = useSheetsStore.getState();
       addSheetWithId('custom-id-123', 'External Sheet');
 
@@ -251,8 +326,12 @@ describe('useSheetsStore', () => {
       expect(sheets[0].id).toBe('custom-id-123');
       expect(sheets[0].name).toBe('External Sheet');
       expect(sheets[0].type).toBe('data');
-      // When no specs exist, header row only has SKU
-      expect(sheets[0].data).toEqual([[{ v: 'SKU', m: 'SKU' }]]);
+      // New sheets have header row + 50 empty data rows = 51 total
+      expect(sheets[0].data).toHaveLength(51);
+      // Header row only has SKU when no specs exist
+      expect(sheets[0].data[0]).toEqual([{ v: 'SKU', m: 'SKU' }]);
+      // Each empty row has one empty cell for SKU column
+      expect(sheets[0].data[1]).toEqual([{}]);
       expect(activeSheetId).toBe('custom-id-123');
     });
 
@@ -270,7 +349,8 @@ describe('useSheetsStore', () => {
 
       const { sheets } = useSheetsStore.getState();
       // New sheets only have SKU column - specs are now per-sheet and start empty
-      expect(sheets[0].data).toHaveLength(1);
+      // 51 rows = 1 header + 50 empty data rows
+      expect(sheets[0].data).toHaveLength(51);
       expect(sheets[0].data[0]).toEqual([{ v: 'SKU', m: 'SKU' }]);
       expect(sheets[0].specifications).toEqual([]);
       expect(sheets[0].columns).toHaveLength(1);
