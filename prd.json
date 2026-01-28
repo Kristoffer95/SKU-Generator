@@ -398,5 +398,20 @@
       "npm run test passes for guided-tour tests"
     ],
     "passes": true
+  },
+  {
+    "id": "spec-value-sku-reactivity",
+    "category": "Bug Fix",
+    "description": "SKU does not reactively update when spec value's skuFragment is edited. When editing a spec value's SKU fragment in the sidebar (e.g., changing 'COT' to 'COT-updated'), all SKUs in the spreadsheet that use that value should automatically regenerate. Currently the SKU remains stale showing the old fragment.",
+    "stepsToVerify": [
+      "Add a row with spec values selected (e.g., Red, Small, Cotton generating R-S-COT)",
+      "In sidebar, edit Cotton's SKU fragment from 'COT' to 'COT-NEW'",
+      "SKU in spreadsheet immediately updates to 'R-S-COT-NEW'",
+      "Works for all rows that contain the edited spec value",
+      "Works across all sheets that have columns using that spec",
+      "Undo/redo properly handles the SKU regeneration",
+      "npm run typecheck passes"
+    ],
+    "passes": true
   }
 ]

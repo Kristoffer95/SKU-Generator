@@ -1,9 +1,12 @@
-import { useEffect, useRef } from 'react';
-import { useSpecificationsStore } from '@/store/specifications';
+import { useEffect, useRef, useMemo } from 'react';
 import { useSheetsStore } from '@/store/sheets';
 import { useSettingsStore } from '@/store/settings';
-import { updateRowSKU } from '@/lib/auto-sku';
-import type { Specification, CellData } from '@/types';
+import { updateRowSKUFromColumns } from '@/lib/auto-sku';
+import type { Specification, CellData, ColumnDef } from '@/types';
+
+// Empty array constants to avoid creating new references on every render
+const EMPTY_SPECIFICATIONS: Specification[] = [];
+const EMPTY_COLUMNS: ColumnDef[] = [];
 
 /**
  * Deep compare two specification arrays to detect changes in skuFragments
@@ -74,124 +77,159 @@ function getDisplayValueChanges(prev: Specification[], next: Specification[]): D
 }
 
 /**
- * Update cell values in all data sheets when a displayValue is renamed
- * Finds cells with the old value in columns matching the spec name and updates them
+ * Update cell values in a single sheet when a displayValue is renamed
+ * Uses column definitions to find which columns to update
  */
-function updateDisplayValuesInSheets(changes: DisplayValueChange[]): void {
+function updateDisplayValuesInSheet(
+  sheetId: string,
+  changes: DisplayValueChange[],
+  columns: ColumnDef[],
+  specifications: Specification[]
+): void {
   if (changes.length === 0) return;
 
   const { sheets, setSheetData } = useSheetsStore.getState();
+  const sheet = sheets.find(s => s.id === sheetId);
 
-  sheets.forEach((sheet) => {
-    if (sheet.type !== 'data' || sheet.data.length === 0) return;
+  if (!sheet || sheet.type !== 'data' || sheet.data.length === 0) return;
 
-    // Extract headers from first row to find column indices for spec names
-    const headers = sheet.data[0]?.map(cell => String(cell?.v ?? cell?.m ?? '').trim()) ?? [];
+  // Build a map of column index -> change to apply
+  // Find columns by specId, then match to the spec name from change
+  const columnChanges = new Map<number, DisplayValueChange>();
+  for (const change of changes) {
+    // Find the spec by name
+    const spec = specifications.find(s => s.name === change.specName);
+    if (!spec) continue;
 
-    // Build a map of column index -> change to apply for this sheet
-    const columnChanges = new Map<number, DisplayValueChange>();
-    for (const change of changes) {
-      const colIndex = headers.indexOf(change.specName);
-      if (colIndex !== -1) {
+    // Find all columns that reference this spec
+    columns.forEach((col, colIndex) => {
+      if (col.type === 'spec' && col.specId === spec.id) {
         columnChanges.set(colIndex, change);
       }
-    }
-
-    // If no columns match any change, skip this sheet
-    if (columnChanges.size === 0) return;
-
-    // Create a copy of the data to modify
-    let modified = false;
-    const newData: CellData[][] = sheet.data.map((row, rowIndex) => {
-      // Skip header row (row 0)
-      if (rowIndex === 0) return [...row];
-
-      const newRow = [...row];
-      for (const [colIndex, change] of columnChanges) {
-        const cell = row[colIndex];
-        const cellValue = String(cell?.v ?? cell?.m ?? '').trim();
-
-        // If cell value matches the old displayValue, update it
-        if (cellValue === change.oldDisplayValue) {
-          newRow[colIndex] = {
-            ...cell,
-            v: change.newDisplayValue,
-            m: change.newDisplayValue,
-          };
-          modified = true;
-        }
-      }
-
-      return newRow;
     });
+  }
 
-    // Only update the sheet if we made changes
-    if (modified) {
-      setSheetData(sheet.id, newData);
+  // If no columns match any change, skip this sheet
+  if (columnChanges.size === 0) return;
+
+  // Create a copy of the data to modify
+  let modified = false;
+  const newData: CellData[][] = sheet.data.map((row, rowIndex) => {
+    // Skip header row (row 0)
+    if (rowIndex === 0) return [...row];
+
+    const newRow = [...row];
+    for (const [colIndex, change] of columnChanges) {
+      const cell = row[colIndex];
+      const cellValue = String(cell?.v ?? cell?.m ?? '').trim();
+
+      // If cell value matches the old displayValue, update it
+      if (cellValue === change.oldDisplayValue) {
+        newRow[colIndex] = {
+          ...cell,
+          v: change.newDisplayValue,
+          m: change.newDisplayValue,
+        };
+        modified = true;
+      }
     }
+
+    return newRow;
   });
+
+  // Only update the sheet if we made changes
+  if (modified) {
+    setSheetData(sheetId, newData);
+  }
 }
 
 /**
- * Regenerate all SKUs in all data sheets using current specifications
+ * Regenerate all SKUs in a single sheet using its local specifications and columns
  */
-function regenerateAllSKUs(
+function regenerateSheetSKUs(
+  sheetId: string,
+  columns: ColumnDef[],
   specifications: Specification[],
   settings: { delimiter: string; prefix: string; suffix: string }
 ): void {
   const { sheets, setSheetData } = useSheetsStore.getState();
+  const sheet = sheets.find(s => s.id === sheetId);
 
+  if (!sheet || sheet.type !== 'data' || sheet.data.length <= 1) return;
   if (specifications.length === 0) return;
 
-  sheets.forEach((sheet) => {
-    if (sheet.type !== 'data' || sheet.data.length <= 1) return;
+  // Create a copy of the data to modify
+  const newData = sheet.data.map((row) => [...row]);
 
-    // Create a copy of the data to modify
-    const newData = sheet.data.map((row) => [...row]);
+  // Update SKU for each data row (skip header row 0)
+  for (let rowIndex = 1; rowIndex < newData.length; rowIndex++) {
+    updateRowSKUFromColumns(newData, rowIndex, columns, specifications, settings);
+  }
 
-    // Update SKU for each data row (skip header row 0)
-    for (let rowIndex = 1; rowIndex < newData.length; rowIndex++) {
-      updateRowSKU(newData, rowIndex, specifications, settings);
-    }
-
-    // Update the sheet in the store
-    setSheetData(sheet.id, newData);
-  });
+  // Update the sheet in the store
+  setSheetData(sheetId, newData);
 }
 
 /**
  * Hook that watches for specification changes and regenerates SKUs automatically
  *
  * Handles reactivity for:
- * - skuFragment changes (reactivity-1)
- * - displayValue changes (reactivity-3)
+ * - skuFragment changes: regenerates all SKUs in the active sheet
+ * - displayValue changes: updates cell values in the active sheet
  *
+ * This hook watches the active sheet's local specifications (not global specs).
  * Call this hook at the app root level to enable automatic SKU updates.
  */
 export function useSkuReactivity(): void {
-  const specifications = useSpecificationsStore((state) => state.specifications);
+  // Get active sheet and its local specifications and columns
+  const activeSheetId = useSheetsStore((state) => state.activeSheetId);
+  const sheets = useSheetsStore((state) => state.sheets);
+  const activeSheet = sheets.find(s => s.id === activeSheetId);
+
+  // Memoize to avoid creating new array references on every render
+  const specifications = useMemo(
+    () => activeSheet?.specifications ?? EMPTY_SPECIFICATIONS,
+    [activeSheet?.specifications]
+  );
+  const columns = useMemo(
+    () => activeSheet?.columns ?? EMPTY_COLUMNS,
+    [activeSheet?.columns]
+  );
+
+  // Get settings
   const delimiter = useSettingsStore((state) => state.delimiter);
   const prefix = useSettingsStore((state) => state.prefix);
   const suffix = useSettingsStore((state) => state.suffix);
 
-  // Store previous specifications for comparison
+  // Store previous specifications and sheet ID for comparison
   const prevSpecsRef = useRef<Specification[]>(specifications);
+  const prevSheetIdRef = useRef<string | null>(activeSheetId);
 
   useEffect(() => {
-    const prevSpecs = prevSpecsRef.current;
-
-    // Check if skuFragment changed - regenerate SKUs
-    if (hasSkuFragmentChanged(prevSpecs, specifications)) {
-      regenerateAllSKUs(specifications, { delimiter, prefix, suffix });
+    // If sheet changed, just update ref and don't trigger SKU regeneration
+    if (prevSheetIdRef.current !== activeSheetId) {
+      prevSpecsRef.current = specifications;
+      prevSheetIdRef.current = activeSheetId;
+      return;
     }
 
-    // Check if displayValue changed - update cell values (not SKUs)
+    const prevSpecs = prevSpecsRef.current;
+
+    // Check if displayValue changed - update cell values FIRST (before SKU regeneration)
+    // This ensures that when both displayValue and skuFragment change together,
+    // the cells have the correct displayValue before SKU regeneration runs
     const displayValueChanges = getDisplayValueChanges(prevSpecs, specifications);
-    if (displayValueChanges.length > 0) {
-      updateDisplayValuesInSheets(displayValueChanges);
+    if (activeSheetId && displayValueChanges.length > 0) {
+      updateDisplayValuesInSheet(activeSheetId, displayValueChanges, columns, specifications);
+    }
+
+    // Check if skuFragment changed - regenerate all SKUs in the active sheet
+    // This runs AFTER displayValue updates so cells have correct values for matching
+    if (activeSheetId && hasSkuFragmentChanged(prevSpecs, specifications)) {
+      regenerateSheetSKUs(activeSheetId, columns, specifications, { delimiter, prefix, suffix });
     }
 
     // Update ref for next comparison
     prevSpecsRef.current = specifications;
-  }, [specifications, delimiter, prefix, suffix]);
+  }, [activeSheetId, specifications, columns, delimiter, prefix, suffix]);
 }

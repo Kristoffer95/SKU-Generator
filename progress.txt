@@ -1,3 +1,32 @@
+## spec-value-sku-reactivity - COMPLETED
+Fix SKU reactivity when spec value's skuFragment is edited in sidebar
+
+### Key decisions
+- Root cause: useSkuReactivity hook was watching global useSpecificationsStore, but app now uses sheet-local specs in useSheetsStore
+- Rewrote useSkuReactivity to watch active sheet's specifications from useSheetsStore instead of global store
+- Uses useMemo to avoid creating new array references on every render
+- Updated regenerateSheetSKUs to use column-based SKU generation (updateRowSKUFromColumns)
+- Updated updateDisplayValuesInSheet to use column definitions (specId) for matching, not header name
+- Fixed order of operations: displayValue updates must happen BEFORE SKU regeneration when both change at once
+- Added prevSheetIdRef to prevent SKU regeneration when just switching sheets
+
+### Files changed
+- src/lib/use-sku-reactivity.ts (complete rewrite: watch sheet-local specs, use column-based functions)
+- src/lib/use-sku-reactivity.test.ts (complete rewrite: test sheet-local specs, proper column setup)
+
+### Notes
+- All 7 stepsToVerify criteria met:
+  1. Add a row with spec values selected ✓
+  2. In sidebar, edit spec value's SKU fragment ✓
+  3. SKU in spreadsheet immediately updates ✓
+  4. Works for all rows containing edited spec value ✓
+  5. Only updates active sheet (specs are per-sheet now) ✓
+  6. Undo/redo works (handled by existing undo/redo in SpreadsheetContainer) ✓
+  7. npm run typecheck passes ✓
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (747 tests, 14 for use-sku-reactivity)
+- npm run build passes
+
 ## update-documentation-tour - COMPLETED
 Update GUIDE.md and guided-tour.ts to reflect current app architecture
 
