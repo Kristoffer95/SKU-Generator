@@ -1,3 +1,27 @@
+## sku-gen-1: Modify generateRowSKU to accept Specification[] and sort by order
+
+**Completed**: generateRowSKU now uses Specification[] and sorts by order field
+
+**Key decisions**:
+- Changed generateRowSKU signature: ParsedSpec[] → Specification[]
+- Added buildHeaderValueMap helper to map column headers to cell values
+- Sort specifications by order field before building SKU
+- Column order in data sheet no longer affects SKU composition
+- SKU fragments use spec order, not column position
+- Updated auto-sku.ts: updateRowSKU/processAutoSKU now use Specification[]
+- Updated SettingsDialog to use specifications store instead of Config sheet
+
+**Files changed**:
+- src/lib/sheet-sku.ts: Changed to accept Specification[], sort by order
+- src/lib/sheet-sku.test.ts: Updated tests for new type, added order independence tests
+- src/lib/auto-sku.ts: Changed ParsedSpec[] to Specification[]
+- src/lib/auto-sku.test.ts: Updated tests for Specification type
+- src/lib/e2e-workflow.test.ts: Updated to use Specification[] for generateRowSKU
+- src/components/SettingsDialog.tsx: Use specifications store for SKU recalculation
+- src/components/SettingsDialog.test.tsx: Updated tests to use specifications store
+
+---
+
 ## sidebar-ui-4: Update AddSpecDialog to work with specifications store
 
 **Completed**: AddSpecDialog now writes to useSpecificationsStore instead of Config sheet

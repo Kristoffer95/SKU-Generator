@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useSettingsStore } from "@/store/settings"
 import { useSheetsStore } from "@/store/sheets"
-import { parseConfigSheet } from "@/lib/config-sheet"
+import { useSpecificationsStore } from "@/store/specifications"
 import { updateRowSKU } from "@/lib/auto-sku"
 import type { AppSettings } from "@/types"
 
@@ -29,7 +29,8 @@ const DELIMITER_OPTIONS = [
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { delimiter, prefix, suffix, updateSettings } = useSettingsStore()
-  const { sheets, getConfigSheet, setSheetData } = useSheetsStore()
+  const { sheets, setSheetData } = useSheetsStore()
+  const specifications = useSpecificationsStore((state) => state.specifications)
 
   // Track if current delimiter is a standard option
   const isInitiallyCustom = !DELIMITER_OPTIONS.some((o) => o.value === delimiter)
@@ -61,10 +62,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
    * Recalculate all SKUs in all data sheets with new settings
    */
   const recalculateAllSKUs = (newSettings: AppSettings) => {
-    const configSheet = getConfigSheet()
-    if (!configSheet) return
-
-    const parsedSpecs = parseConfigSheet(configSheet.data)
+    if (specifications.length === 0) return
 
     // Process each data sheet
     sheets.forEach((sheet) => {
@@ -75,7 +73,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
       // Update SKU for each data row (skip header row 0)
       for (let rowIndex = 1; rowIndex < newData.length; rowIndex++) {
-        updateRowSKU(newData, rowIndex, parsedSpecs, newSettings)
+        updateRowSKU(newData, rowIndex, specifications, newSettings)
       }
 
       // Update the sheet in the store

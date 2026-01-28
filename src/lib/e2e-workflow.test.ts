@@ -2,8 +2,8 @@
  * PRD-012: End-to-End Verification Tests
  *
  * These integration tests verify the complete workflow:
- * 1. Config sheet spec definitions -> parsed correctly
- * 2. SKU generation from row values using Config lookup
+ * 1. Config sheet spec definitions -> parsed correctly (legacy - for migration)
+ * 2. SKU generation from row values using specifications from store
  * 3. Settings (delimiter, prefix, suffix) applied correctly
  * 4. Export/import round-trip preserves Config and data
  */
@@ -13,7 +13,7 @@ import { parseConfigSheet, getSpecValues, lookupSkuCode, getSpecNames } from './
 import { generateRowSKU, extractColumnHeaders, getRowValuesWithoutSKU } from './sheet-sku';
 import { updateRowSKU, processAutoSKU } from './auto-sku';
 import { exportToExcelBlob, sheetToCSVString, importFromExcel } from './import-export';
-import type { CellData, SheetConfig, ParsedSpec } from '../types';
+import type { CellData, SheetConfig, ParsedSpec, Specification } from '../types';
 
 describe('PRD-012: End-to-End Verification', () => {
   // Sample Config sheet data matching PRD-012 requirements:
@@ -30,13 +30,44 @@ describe('PRD-012: End-to-End Verification', () => {
     [{ v: 'Type', m: 'Type' }, { v: 'Premium', m: 'Premium' }, { v: 'PRM', m: 'PRM' }],
   ];
 
+  // Specifications array (new format used by store) - equivalent data to configSheetData
+  const specifications: Specification[] = [
+    {
+      id: 'temp',
+      name: 'Temperature',
+      order: 0,
+      values: [
+        { id: 'v1', displayValue: '29deg C', skuFragment: '29C' },
+        { id: 'v2', displayValue: '30deg C', skuFragment: '30C' },
+      ],
+    },
+    {
+      id: 'color',
+      name: 'Color',
+      order: 1,
+      values: [
+        { id: 'v3', displayValue: 'Red', skuFragment: 'R' },
+        { id: 'v4', displayValue: 'Blue', skuFragment: 'B' },
+      ],
+    },
+    {
+      id: 'type',
+      name: 'Type',
+      order: 2,
+      values: [
+        { id: 'v5', displayValue: 'Standard', skuFragment: 'STD' },
+        { id: 'v6', displayValue: 'Premium', skuFragment: 'PRM' },
+      ],
+    },
+  ];
+
   let parsedSpecs: ParsedSpec[];
 
   beforeEach(() => {
     parsedSpecs = parseConfigSheet(configSheetData);
   });
 
-  describe('Step 1-3: Config sheet parsing', () => {
+  describe('Step 1-3: Config sheet parsing (legacy - for migration)', () => {
     it('parses Temperature specification with 2 values', () => {
       const tempValues = getSpecValues(parsedSpecs, 'Temperature');
       expect(tempValues).toHaveLength(2);
@@ -101,7 +132,7 @@ describe('PRD-012: End-to-End Verification', () => {
       ];
       const headers = ['Temperature', 'Color', 'Type'];
 
-      const sku = generateRowSKU(rowValues, headers, parsedSpecs, settings);
+      const sku = generateRowSKU(rowValues, headers, specifications, settings);
       expect(sku).toBe('29C-R-STD');
     });
 
@@ -113,7 +144,7 @@ describe('PRD-012: End-to-End Verification', () => {
         [{ v: '' }, { v: '29deg C' }, { v: 'Red' }, { v: 'Standard' }], // data row
       ];
 
-      updateRowSKU(sheetData, 1, parsedSpecs, settings);
+      updateRowSKU(sheetData, 1, specifications, settings);
 
       expect(sheetData[1][0].v).toBe('29C-R-STD');
       expect(sheetData[1][0].m).toBe('29C-R-STD');
@@ -131,7 +162,7 @@ describe('PRD-012: End-to-End Verification', () => {
       ];
       const headers = ['Temperature', 'Color', 'Type'];
 
-      const sku = generateRowSKU(rowValues, headers, parsedSpecs, settings);
+      const sku = generateRowSKU(rowValues, headers, specifications, settings);
       expect(sku).toBe('29C-B-STD');
     });
 
@@ -147,7 +178,7 @@ describe('PRD-012: End-to-End Verification', () => {
         [{ v: '29C-R-STD' }, { v: '29deg C' }, { v: 'Blue' }, { v: 'Standard' }], // Color changed, SKU not yet updated
       ];
 
-      processAutoSKU(oldData, newData, parsedSpecs, settings);
+      processAutoSKU(oldData, newData, specifications, settings);
 
       // SKU should now be updated at index 0
       expect(newData[1][0].v).toBe('29C-B-STD');
@@ -232,7 +263,7 @@ describe('PRD-012: End-to-End Verification', () => {
       ];
       const headers = ['Temperature', 'Color', 'Type'];
 
-      const sku = generateRowSKU(rowValues, headers, parsedSpecs, settings);
+      const sku = generateRowSKU(rowValues, headers, specifications, settings);
       expect(sku).toBe('29C_R_STD');
     });
 
@@ -245,7 +276,7 @@ describe('PRD-012: End-to-End Verification', () => {
       ];
       const headers = ['Temperature', 'Color', 'Type'];
 
-      const sku = generateRowSKU(rowValues, headers, parsedSpecs, settings);
+      const sku = generateRowSKU(rowValues, headers, specifications, settings);
       expect(sku).toBe('PRD-29C-R-STD-v1');
     });
 
@@ -258,7 +289,7 @@ describe('PRD-012: End-to-End Verification', () => {
       ];
       const headers = ['Temperature', 'Color', 'Type'];
 
-      const sku = generateRowSKU(rowValues, headers, parsedSpecs, settings);
+      const sku = generateRowSKU(rowValues, headers, specifications, settings);
       expect(sku).toBe('29CRSTD');
     });
   });
@@ -274,11 +305,11 @@ describe('PRD-012: End-to-End Verification', () => {
       ];
       const headers = ['Temperature', 'Color', 'Type'];
 
-      const sku = generateRowSKU(rowValues, headers, parsedSpecs, settings);
+      const sku = generateRowSKU(rowValues, headers, specifications, settings);
       expect(sku).toBe('29C-R');
     });
 
-    it('handles values not in Config (no SKU code found)', () => {
+    it('handles values not in specs (no SKU code found)', () => {
       const rowValues: CellData[] = [
         { v: 'Unknown' },
         { v: 'Red' },
@@ -286,7 +317,7 @@ describe('PRD-012: End-to-End Verification', () => {
       ];
       const headers = ['Temperature', 'Color', 'Type'];
 
-      const sku = generateRowSKU(rowValues, headers, parsedSpecs, settings);
+      const sku = generateRowSKU(rowValues, headers, specifications, settings);
       // Unknown value has no SKU code, only Red and Standard contribute
       expect(sku).toBe('R-STD');
     });
@@ -299,16 +330,16 @@ describe('PRD-012: End-to-End Verification', () => {
       ];
       const headers = ['Temperature', 'Color', 'Type'];
 
-      const sku = generateRowSKU(rowValues, headers, parsedSpecs, settings);
+      const sku = generateRowSKU(rowValues, headers, specifications, settings);
       expect(sku).toBe('');
     });
 
-    it('lookupSkuCode returns correct code', () => {
+    it('lookupSkuCode returns correct code (legacy - for migration)', () => {
       const code = lookupSkuCode(parsedSpecs, 'Temperature', '29deg C');
       expect(code).toBe('29C');
     });
 
-    it('lookupSkuCode returns empty string for unknown value', () => {
+    it('lookupSkuCode returns empty string for unknown value (legacy)', () => {
       const code = lookupSkuCode(parsedSpecs, 'Temperature', 'Unknown');
       expect(code).toBe('');
     });
@@ -326,6 +357,60 @@ describe('PRD-012: End-to-End Verification', () => {
       expect(values).toHaveLength(3);
       expect(values[0]?.v).toBe('29deg C');
       expect(values[2]?.v).toBe('Standard');
+    });
+  });
+
+  describe('Order field independence (new behavior)', () => {
+    const settings = { delimiter: '-', prefix: '', suffix: '' };
+
+    it('SKU composition is based on spec order, not column order', () => {
+      // Specs with different order: Type=0, Color=1, Temperature=2
+      const reorderedSpecs: Specification[] = [
+        {
+          id: 'type',
+          name: 'Type',
+          order: 0,
+          values: [{ id: 'v1', displayValue: 'Standard', skuFragment: 'STD' }],
+        },
+        {
+          id: 'color',
+          name: 'Color',
+          order: 1,
+          values: [{ id: 'v2', displayValue: 'Red', skuFragment: 'R' }],
+        },
+        {
+          id: 'temp',
+          name: 'Temperature',
+          order: 2,
+          values: [{ id: 'v3', displayValue: '29deg C', skuFragment: '29C' }],
+        },
+      ];
+
+      // Data sheet columns in original order: Temperature, Color, Type
+      const rowValues: CellData[] = [
+        { v: '29deg C' },
+        { v: 'Red' },
+        { v: 'Standard' },
+      ];
+      const headers = ['Temperature', 'Color', 'Type'];
+
+      const sku = generateRowSKU(rowValues, headers, reorderedSpecs, settings);
+      // SKU should be STD-R-29C based on order (Type=0, Color=1, Temp=2)
+      expect(sku).toBe('STD-R-29C');
+    });
+
+    it('reordering columns in data sheet does not change SKU', () => {
+      // Data sheet with reversed column order: Type, Color, Temperature
+      const rowValues: CellData[] = [
+        { v: 'Standard' },
+        { v: 'Red' },
+        { v: '29deg C' },
+      ];
+      const headers = ['Type', 'Color', 'Temperature'];
+
+      const sku = generateRowSKU(rowValues, headers, specifications, settings);
+      // SKU should still be 29C-R-STD based on spec order (Temp=0, Color=1, Type=2)
+      expect(sku).toBe('29C-R-STD');
     });
   });
 });

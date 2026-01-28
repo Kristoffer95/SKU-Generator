@@ -1,4 +1,4 @@
-import type { CellData, ParsedSpec, AppSettings } from '../types';
+import type { CellData, Specification, AppSettings } from '../types';
 import { generateRowSKU, extractColumnHeaders } from './sheet-sku';
 
 /**
@@ -8,7 +8,7 @@ import { generateRowSKU, extractColumnHeaders } from './sheet-sku';
 export function updateRowSKU(
   data: CellData[][],
   rowIndex: number,
-  parsedSpecs: ParsedSpec[],
+  specifications: Specification[],
   settings: AppSettings
 ): void {
   if (rowIndex === 0 || rowIndex >= data.length) return; // Skip header row
@@ -24,7 +24,7 @@ export function updateRowSKU(
   const rowValues = row.slice(1, headers.length + 1);
 
   // Generate SKU
-  const sku = generateRowSKU(rowValues, headers, parsedSpecs, settings);
+  const sku = generateRowSKU(rowValues, headers, specifications, settings);
 
   // SKU is always at index 0
   row[0] = { v: sku, m: sku };
@@ -69,11 +69,11 @@ export function findChangedRows(oldData: CellData[][], newData: CellData[][]): n
 export function processAutoSKU(
   oldData: CellData[][],
   newData: CellData[][],
-  parsedSpecs: ParsedSpec[],
+  specifications: Specification[],
   settings: AppSettings
 ): void {
   const changedRows = findChangedRows(oldData, newData);
   changedRows.forEach(rowIndex => {
-    updateRowSKU(newData, rowIndex, parsedSpecs, settings);
+    updateRowSKU(newData, rowIndex, specifications, settings);
   });
 }

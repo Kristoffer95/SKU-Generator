@@ -123,7 +123,7 @@
       "SKU is built as: prefix + fragments.join(delimiter) + suffix",
       "Reordering columns in data sheet does not change SKU"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "sku-gen-2",

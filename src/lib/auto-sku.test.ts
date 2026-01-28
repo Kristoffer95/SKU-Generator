@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { updateRowSKU, findChangedRows, processAutoSKU } from './auto-sku';
-import type { CellData, ParsedSpec, AppSettings } from '../types';
+import type { CellData, Specification, AppSettings } from '../types';
 
 describe('findChangedRows', () => {
   it('returns empty array when both arrays are empty', () => {
@@ -87,20 +87,20 @@ describe('findChangedRows', () => {
 
 describe('updateRowSKU', () => {
   const defaultSettings: AppSettings = { delimiter: '-', prefix: '', suffix: '' };
-  const parsedSpecs: ParsedSpec[] = [
-    { name: 'Color', values: [{ label: 'Red', skuCode: 'R' }, { label: 'Blue', skuCode: 'B' }] },
-    { name: 'Size', values: [{ label: 'Small', skuCode: 'S' }, { label: 'Large', skuCode: 'L' }] },
+  const specifications: Specification[] = [
+    { id: 'color', name: 'Color', order: 0, values: [{ id: 'v1', displayValue: 'Red', skuFragment: 'R' }, { id: 'v2', displayValue: 'Blue', skuFragment: 'B' }] },
+    { id: 'size', name: 'Size', order: 1, values: [{ id: 'v3', displayValue: 'Small', skuFragment: 'S' }, { id: 'v4', displayValue: 'Large', skuFragment: 'L' }] },
   ];
 
   it('skips header row (index 0)', () => {
     const data: CellData[][] = [[{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }]];
-    updateRowSKU(data, 0, parsedSpecs, defaultSettings);
+    updateRowSKU(data, 0, specifications, defaultSettings);
     expect(data[0][0]).toEqual({ v: 'SKU' });
   });
 
   it('skips row index out of bounds', () => {
     const data: CellData[][] = [[{ v: 'SKU' }, { v: 'Color' }]];
-    updateRowSKU(data, 5, parsedSpecs, defaultSettings);
+    updateRowSKU(data, 5, specifications, defaultSettings);
     expect(data.length).toBe(1);
   });
 
@@ -109,7 +109,7 @@ describe('updateRowSKU', () => {
       [{ v: 'SKU' }, { v: 'Color' }],
       [{ v: '' }, { v: 'Red' }],
     ];
-    updateRowSKU(data, 1, parsedSpecs, defaultSettings);
+    updateRowSKU(data, 1, specifications, defaultSettings);
     expect(data[1][0]).toEqual({ v: 'R', m: 'R' });
   });
 
@@ -118,7 +118,7 @@ describe('updateRowSKU', () => {
       [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
       [{ v: '' }, { v: 'Red' }, { v: 'Small' }],
     ];
-    updateRowSKU(data, 1, parsedSpecs, defaultSettings);
+    updateRowSKU(data, 1, specifications, defaultSettings);
     expect(data[1][0]).toEqual({ v: 'R-S', m: 'R-S' });
   });
 
@@ -127,7 +127,7 @@ describe('updateRowSKU', () => {
       [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
       [{ v: '' }, { v: 'Red' }, { v: 'Small' }],
     ];
-    updateRowSKU(data, 1, parsedSpecs, { delimiter: '_', prefix: '', suffix: '' });
+    updateRowSKU(data, 1, specifications, { delimiter: '_', prefix: '', suffix: '' });
     expect(data[1][0]).toEqual({ v: 'R_S', m: 'R_S' });
   });
 
@@ -136,7 +136,7 @@ describe('updateRowSKU', () => {
       [{ v: 'SKU' }, { v: 'Color' }],
       [{ v: '' }, { v: 'Red' }],
     ];
-    updateRowSKU(data, 1, parsedSpecs, { delimiter: '-', prefix: 'PRE-', suffix: '-SUF' });
+    updateRowSKU(data, 1, specifications, { delimiter: '-', prefix: 'PRE-', suffix: '-SUF' });
     expect(data[1][0]).toEqual({ v: 'PRE-R-SUF', m: 'PRE-R-SUF' });
   });
 
@@ -145,7 +145,7 @@ describe('updateRowSKU', () => {
       [{ v: 'SKU' }, { v: 'Unknown' }],
       [{ v: 'old' }, { v: 'Value' }],
     ];
-    updateRowSKU(data, 1, parsedSpecs, defaultSettings);
+    updateRowSKU(data, 1, specifications, defaultSettings);
     expect(data[1][0]).toEqual({ v: '', m: '' });
   });
 
@@ -155,7 +155,7 @@ describe('updateRowSKU', () => {
       [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
       [{ v: '' }, { v: 'Red' }, { v: 'Small' }],
     ];
-    updateRowSKU(data, 1, parsedSpecs, defaultSettings);
+    updateRowSKU(data, 1, specifications, defaultSettings);
     expect(data[1][0]).toEqual({ v: 'R-S', m: 'R-S' });
   });
 
@@ -164,16 +164,32 @@ describe('updateRowSKU', () => {
       [{ v: 'SKU' }, { v: 'Color' }],
       [],
     ];
-    updateRowSKU(data, 1, parsedSpecs, defaultSettings);
+    updateRowSKU(data, 1, specifications, defaultSettings);
     expect(data[1]).toEqual([]);
+  });
+
+  it('respects spec order field, not column order', () => {
+    // Specs have Size with order=0, Color with order=1
+    const specsReversedOrder: Specification[] = [
+      { id: 'color', name: 'Color', order: 1, values: [{ id: 'v1', displayValue: 'Red', skuFragment: 'R' }] },
+      { id: 'size', name: 'Size', order: 0, values: [{ id: 'v2', displayValue: 'Small', skuFragment: 'S' }] },
+    ];
+    // Data sheet has Color first, then Size
+    const data: CellData[][] = [
+      [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+      [{ v: '' }, { v: 'Red' }, { v: 'Small' }],
+    ];
+    updateRowSKU(data, 1, specsReversedOrder, defaultSettings);
+    // SKU should be S-R (Size first because order=0)
+    expect(data[1][0]).toEqual({ v: 'S-R', m: 'S-R' });
   });
 });
 
 describe('processAutoSKU', () => {
   const defaultSettings: AppSettings = { delimiter: '-', prefix: '', suffix: '' };
-  const parsedSpecs: ParsedSpec[] = [
-    { name: 'Color', values: [{ label: 'Red', skuCode: 'R' }, { label: 'Blue', skuCode: 'B' }] },
-    { name: 'Size', values: [{ label: 'Small', skuCode: 'S' }] },
+  const specifications: Specification[] = [
+    { id: 'color', name: 'Color', order: 0, values: [{ id: 'v1', displayValue: 'Red', skuFragment: 'R' }, { id: 'v2', displayValue: 'Blue', skuFragment: 'B' }] },
+    { id: 'size', name: 'Size', order: 1, values: [{ id: 'v3', displayValue: 'Small', skuFragment: 'S' }] },
   ];
 
   it('updates SKU for changed row', () => {
@@ -186,7 +202,7 @@ describe('processAutoSKU', () => {
       [{ v: '' }, { v: 'Red' }],
     ];
 
-    processAutoSKU(oldData, newData, parsedSpecs, defaultSettings);
+    processAutoSKU(oldData, newData, specifications, defaultSettings);
     expect(newData[1][0]).toEqual({ v: 'R', m: 'R' });
   });
 
@@ -202,7 +218,7 @@ describe('processAutoSKU', () => {
       [{ v: '' }, { v: 'Blue' }],
     ];
 
-    processAutoSKU(oldData, newData, parsedSpecs, defaultSettings);
+    processAutoSKU(oldData, newData, specifications, defaultSettings);
     expect(newData[1][0]).toEqual({ v: 'R', m: 'R' });
     expect(newData[2][0]).toEqual({ v: 'B', m: 'B' });
   });
@@ -217,7 +233,7 @@ describe('processAutoSKU', () => {
       [{ v: 'OLD' }, { v: 'Red' }],
     ];
 
-    processAutoSKU(oldData, newData, parsedSpecs, defaultSettings);
+    processAutoSKU(oldData, newData, specifications, defaultSettings);
     // SKU column was changed but value column was not, so no update
     expect(newData[1][0]).toEqual({ v: 'OLD' });
   });
@@ -232,7 +248,7 @@ describe('processAutoSKU', () => {
       [{ v: '' }, { v: 'Red' }, { v: 'Small' }],
     ];
 
-    processAutoSKU(oldData, newData, parsedSpecs, defaultSettings);
+    processAutoSKU(oldData, newData, specifications, defaultSettings);
     expect(newData[1][0]).toEqual({ v: 'R-S', m: 'R-S' });
   });
 
@@ -246,7 +262,7 @@ describe('processAutoSKU', () => {
       [{ v: 'R' }, { v: 'Blue' }],
     ];
 
-    processAutoSKU(oldData, newData, parsedSpecs, defaultSettings);
+    processAutoSKU(oldData, newData, specifications, defaultSettings);
     expect(newData[1][0]).toEqual({ v: 'B', m: 'B' });
   });
 });

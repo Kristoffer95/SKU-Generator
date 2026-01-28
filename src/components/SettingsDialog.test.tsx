@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { SettingsDialog } from './SettingsDialog'
 import { useSettingsStore } from '@/store/settings'
 import { useSheetsStore } from '@/store/sheets'
+import { useSpecificationsStore } from '@/store/specifications'
 
 // Reset stores before each test
 beforeEach(() => {
@@ -14,6 +15,9 @@ beforeEach(() => {
   useSheetsStore.setState({
     sheets: [],
     activeSheetId: null,
+  })
+  useSpecificationsStore.setState({
+    specifications: [],
   })
 })
 
@@ -98,20 +102,26 @@ describe('SettingsDialog', () => {
   })
 
   it('recalculates SKUs in data sheets when settings change', () => {
-    // Setup: Config sheet with specs and a data sheet with values
+    // Setup: Specifications in store and a data sheet with values
     // SKU is now at index 0 (Column A)
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'color',
+          name: 'Color',
+          order: 0,
+          values: [{ id: 'v1', displayValue: 'Red', skuFragment: 'R' }],
+        },
+        {
+          id: 'size',
+          name: 'Size',
+          order: 1,
+          values: [{ id: 'v2', displayValue: 'Small', skuFragment: 'S' }],
+        },
+      ],
+    })
     useSheetsStore.setState({
       sheets: [
-        {
-          id: 'config-1',
-          name: 'Config',
-          type: 'config',
-          data: [
-            [{ v: 'Specification' }, { v: 'Value' }, { v: 'SKU Code' }],
-            [{ v: 'Color' }, { v: 'Red' }, { v: 'R' }],
-            [{ v: 'Size' }, { v: 'Small' }, { v: 'S' }],
-          ],
-        },
         {
           id: 'data-1',
           name: 'Sheet 1',
@@ -139,17 +149,18 @@ describe('SettingsDialog', () => {
 
   it('applies prefix and suffix to recalculated SKUs', () => {
     // SKU is now at index 0 (Column A)
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'color',
+          name: 'Color',
+          order: 0,
+          values: [{ id: 'v1', displayValue: 'Red', skuFragment: 'R' }],
+        },
+      ],
+    })
     useSheetsStore.setState({
       sheets: [
-        {
-          id: 'config-1',
-          name: 'Config',
-          type: 'config',
-          data: [
-            [{ v: 'Specification' }, { v: 'Value' }, { v: 'SKU Code' }],
-            [{ v: 'Color' }, { v: 'Red' }, { v: 'R' }],
-          ],
-        },
         {
           id: 'data-1',
           name: 'Sheet 1',
