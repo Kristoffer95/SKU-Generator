@@ -1,3 +1,25 @@
+## migration-sheet-tabs - COMPLETED
+Custom SheetTabs component for multi-sheet navigation
+
+### Key decisions
+- Props: sheets, activeSheetId, onActivate, onRename, onDelete, onAdd
+- Tab switching via single click calls onActivate(id)
+- Inline rename on double-click, commits on Enter/blur, cancels on Escape
+- Delete confirmation requires two clicks, auto-resets after 3 seconds
+- Delete button hidden when only one sheet exists (can't delete last sheet)
+- Active tab has distinct styling: bg-background with border, inactive uses bg-muted/50
+- Uses data-testid attributes for testing
+- Uses Tailwind CSS, lucide-react icons (Plus, X), and cn utility
+
+### Files changed
+- src/components/spreadsheet/SheetTabs.tsx (new)
+- src/components/spreadsheet/SheetTabs.test.tsx (new, 23 tests)
+
+### Notes
+- Standalone component ready to integrate with SpreadsheetContainer
+- Tests cover: rendering, tab switching, renaming, deletion, adding, edge cases
+- Uses fireEvent instead of userEvent to avoid fake timer issues
+
 ## migration-dropdown-editor - COMPLETED
 Custom DataEditor component for dropdown selection in spec columns
 

@@ -50,7 +50,7 @@
       "+ button calls onAdd",
       "Active tab has distinct styling (border/background)"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "migration-toolbar",
