@@ -77,7 +77,7 @@
       "npm install completes without errors",
       "npm run build completes without errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "migration-container-rewrite",

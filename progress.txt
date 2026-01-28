@@ -1,3 +1,24 @@
+## migration-dependencies - COMPLETED
+Swap spreadsheet library dependencies - remove Fortune-Sheet, add react-spreadsheet
+
+### Key decisions
+- Removed @fortune-sheet/react from dependencies
+- Added react-spreadsheet ^0.9.5 and scheduler ^0.23.2
+- Rewrote SpreadsheetContainer to use react-spreadsheet imports
+- Integrated SheetTabs, SpreadsheetToolbar, DropdownEditor components
+- Added basic undo/redo history tracking in SpreadsheetContainer
+- Import/export/click-to-navigate are placeholder implementations
+
+### Files changed
+- package.json (dependencies swapped)
+- src/components/SpreadsheetContainer.tsx (rewritten for react-spreadsheet)
+
+### Notes
+- SpreadsheetContainer.test.tsx still mocks @fortune-sheet/react (migration-tests-update task)
+- Build passes, 42 tests fail (expected - tests need update)
+- Local CellBase type in types/spreadsheet.ts can now be removed since react-spreadsheet is installed
+- Full implementation details deferred to migration-container-rewrite task
+
 ## migration-toolbar - COMPLETED
 SpreadsheetToolbar component with basic actions for spreadsheet manipulation
 
