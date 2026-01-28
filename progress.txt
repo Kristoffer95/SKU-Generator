@@ -1,3 +1,22 @@
+## remove-config-1: Remove Config sheet from initialization
+
+**Completed**: Config sheet no longer created on first launch; specs go to store
+
+**Key decisions**:
+- initializeWithSampleData() creates only Sample Products data sheet (no Config)
+- getSampleSpecifications() returns Specification[] with Color/Size/Material
+- Sample specs added directly to useSpecificationsStore on first launch
+- onRehydrateStorage also updated to use new pattern
+- Legacy createSampleSheets() kept with @deprecated for migration task
+
+**Files changed**:
+- src/lib/sample-data.ts: Added getSampleSpecifications(), createSampleProductSheet()
+- src/store/sheets.ts: Updated initializeWithSampleData() and onRehydrateStorage
+- src/lib/sample-data.test.ts: Added tests for getSampleSpecifications()
+- src/store/sheets.test.ts: Updated tests for new behavior (no Config sheet)
+
+---
+
 ## spec-store-3: Add skuFragment uniqueness validation
 
 **Completed**: Added validateSkuFragment selector and enforced uniqueness

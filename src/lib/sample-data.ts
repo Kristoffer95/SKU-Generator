@@ -1,6 +1,8 @@
-import type { CellData, SheetConfig } from '../types';
+import type { CellData, SheetConfig, Specification } from '../types';
 
-/** Config sheet header row */
+const generateId = () => crypto.randomUUID();
+
+/** Config sheet header row - kept for backwards compatibility/migration */
 const CONFIG_SHEET_HEADERS: CellData[] = [
   { v: 'Specification', m: 'Specification' },
   { v: 'Value', m: 'Value' },
@@ -8,8 +10,48 @@ const CONFIG_SHEET_HEADERS: CellData[] = [
 ];
 
 /**
+ * Returns sample specifications in the Specification[] format for the specifications store.
+ * Includes Color, Size, and Material with 3 values each.
+ */
+export function getSampleSpecifications(): Specification[] {
+  return [
+    {
+      id: generateId(),
+      name: 'Color',
+      order: 0,
+      values: [
+        { id: generateId(), displayValue: 'Red', skuFragment: 'R' },
+        { id: generateId(), displayValue: 'Blue', skuFragment: 'B' },
+        { id: generateId(), displayValue: 'Green', skuFragment: 'G' },
+      ],
+    },
+    {
+      id: generateId(),
+      name: 'Size',
+      order: 1,
+      values: [
+        { id: generateId(), displayValue: 'Small', skuFragment: 'S' },
+        { id: generateId(), displayValue: 'Medium', skuFragment: 'M' },
+        { id: generateId(), displayValue: 'Large', skuFragment: 'L' },
+      ],
+    },
+    {
+      id: generateId(),
+      name: 'Material',
+      order: 2,
+      values: [
+        { id: generateId(), displayValue: 'Cotton', skuFragment: 'COT' },
+        { id: generateId(), displayValue: 'Polyester', skuFragment: 'POL' },
+        { id: generateId(), displayValue: 'Wool', skuFragment: 'WOL' },
+      ],
+    },
+  ];
+}
+
+/**
  * Returns sample Config sheet data with Color, Size, and Material specifications.
  * Includes header row + 9 spec entries (3 for each spec).
+ * @deprecated Use getSampleSpecifications() instead - Config sheet is being removed
  */
 export function getSampleConfigData(): CellData[][] {
   return [
@@ -87,11 +129,22 @@ export function getSampleProductData(): CellData[][] {
   ];
 }
 
-const generateId = () => crypto.randomUUID();
+/**
+ * Creates sample product sheet for first-time users.
+ * Returns only a data sheet - specifications are stored in useSpecificationsStore.
+ */
+export function createSampleProductSheet(): SheetConfig {
+  return {
+    id: generateId(),
+    name: 'Sample Products',
+    type: 'data',
+    data: getSampleProductData(),
+  };
+}
 
 /**
  * Creates sample sheets for first-time users.
- * Returns a Config sheet with sample specs and a Sample Products data sheet.
+ * @deprecated Use createSampleProductSheet() + getSampleSpecifications() instead
  */
 export function createSampleSheets(): { configSheet: SheetConfig; productSheet: SheetConfig } {
   const configSheet: SheetConfig = {

@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { SheetConfig, CellData } from '../types';
-import { createSampleSheets, isFirstLaunch, markAsInitialized } from '../lib/sample-data';
+import { createSampleProductSheet, getSampleSpecifications, isFirstLaunch, markAsInitialized } from '../lib/sample-data';
+import { useSpecificationsStore } from './specifications';
 
 interface SheetsState {
   sheets: SheetConfig[];
@@ -65,22 +66,16 @@ export const useSheetsStore = create<SheetsState>()(
         const { sheets } = get();
         // Only initialize on first launch (no existing sheets)
         if (sheets.length === 0 && isFirstLaunch()) {
-          const { configSheet, productSheet } = createSampleSheets();
+          const productSheet = createSampleProductSheet();
+          // Add sample specifications to the specifications store
+          const sampleSpecs = getSampleSpecifications();
+          useSpecificationsStore.setState({ specifications: sampleSpecs });
           set({
-            sheets: [configSheet, productSheet],
-            activeSheetId: configSheet.id,
+            sheets: [productSheet],
+            activeSheetId: productSheet.id,
           });
           markAsInitialized();
         } else {
-          // Fall back to normal init if sheets exist
-          const hasConfigSheet = sheets.some((s) => s.type === 'config');
-          if (!hasConfigSheet) {
-            const configSheet = createConfigSheet();
-            set({
-              sheets: [configSheet, ...sheets],
-              activeSheetId: configSheet.id,
-            });
-          }
           // Mark as initialized if we have any sheets
           if (sheets.length > 0) {
             markAsInitialized();
@@ -200,9 +195,12 @@ export const useSheetsStore = create<SheetsState>()(
       onRehydrateStorage: () => (state) => {
         // Called AFTER hydration completes - this is the right time to init sample data
         if (state && isFirstLaunch()) {
-          const { configSheet, productSheet } = createSampleSheets();
-          state.sheets = [configSheet, productSheet];
-          state.activeSheetId = configSheet.id;
+          const productSheet = createSampleProductSheet();
+          // Add sample specifications to the specifications store
+          const sampleSpecs = getSampleSpecifications();
+          useSpecificationsStore.setState({ specifications: sampleSpecs });
+          state.sheets = [productSheet];
+          state.activeSheetId = productSheet.id;
           markAsInitialized();
         } else if (state && state.sheets.length > 0) {
           // Mark as initialized if we already have data

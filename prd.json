@@ -42,7 +42,7 @@
       "Sample specifications are added to useSpecificationsStore instead",
       "Fresh app load shows only data sheet(s), no Config tab"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "remove-config-2",

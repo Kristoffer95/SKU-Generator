@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useSheetsStore } from './sheets';
+import { useSpecificationsStore } from './specifications';
 
 describe('useSheetsStore', () => {
   beforeEach(() => {
     useSheetsStore.setState({ sheets: [], activeSheetId: null });
+    useSpecificationsStore.setState({ specifications: [] });
   });
 
   describe('initializeWithConfigSheet', () => {
@@ -50,21 +52,48 @@ describe('useSheetsStore', () => {
   describe('initializeWithSampleData', () => {
     beforeEach(() => {
       localStorage.clear();
+      useSpecificationsStore.setState({ specifications: [] });
     });
 
-    it('should create Config and Sample Products sheets on first launch', () => {
+    it('should create only Sample Products sheet on first launch (no Config sheet)', () => {
       const { initializeWithSampleData } = useSheetsStore.getState();
       initializeWithSampleData();
 
       const { sheets, activeSheetId } = useSheetsStore.getState();
-      expect(sheets).toHaveLength(2);
-      expect(sheets[0].name).toBe('Config');
-      expect(sheets[0].type).toBe('config');
-      expect(sheets[0].data).toHaveLength(10); // header + 9 specs
-      expect(sheets[1].name).toBe('Sample Products');
-      expect(sheets[1].type).toBe('data');
-      expect(sheets[1].data).toHaveLength(6); // header + 5 products
+      expect(sheets).toHaveLength(1);
+      expect(sheets[0].name).toBe('Sample Products');
+      expect(sheets[0].type).toBe('data');
+      expect(sheets[0].data).toHaveLength(6); // header + 5 products
       expect(activeSheetId).toBe(sheets[0].id);
+      // Verify no Config sheet
+      expect(sheets.find((s) => s.type === 'config')).toBeUndefined();
+    });
+
+    it('should add sample specifications to useSpecificationsStore', () => {
+      const { initializeWithSampleData } = useSheetsStore.getState();
+      initializeWithSampleData();
+
+      const { specifications } = useSpecificationsStore.getState();
+      expect(specifications).toHaveLength(3);
+      expect(specifications.map((s) => s.name)).toEqual(['Color', 'Size', 'Material']);
+    });
+
+    it('should include Color, Size, Material specs in specifications store', () => {
+      const { initializeWithSampleData } = useSheetsStore.getState();
+      initializeWithSampleData();
+
+      const { specifications } = useSpecificationsStore.getState();
+      const colorSpec = specifications.find((s) => s.name === 'Color');
+      expect(colorSpec).toBeDefined();
+      expect(colorSpec!.values.map((v) => v.displayValue)).toEqual(['Red', 'Blue', 'Green']);
+
+      const sizeSpec = specifications.find((s) => s.name === 'Size');
+      expect(sizeSpec).toBeDefined();
+      expect(sizeSpec!.values.map((v) => v.displayValue)).toEqual(['Small', 'Medium', 'Large']);
+
+      const materialSpec = specifications.find((s) => s.name === 'Material');
+      expect(materialSpec).toBeDefined();
+      expect(materialSpec!.values.map((v) => v.displayValue)).toEqual(['Cotton', 'Polyester', 'Wool']);
     });
 
     it('should mark app as initialized after creating sample data', () => {
@@ -76,37 +105,27 @@ describe('useSheetsStore', () => {
       expect(localStorage.getItem('sku-has-data')).toBe('true');
     });
 
-    it('should include Color, Size, Material specs in Config', () => {
-      const { initializeWithSampleData, getConfigSheet } = useSheetsStore.getState();
-      initializeWithSampleData();
-
-      const configSheet = getConfigSheet();
-      const specNames = configSheet!.data.slice(1).map((row) => row[0]?.v);
-      expect(specNames.filter((n) => n === 'Color')).toHaveLength(3);
-      expect(specNames.filter((n) => n === 'Size')).toHaveLength(3);
-      expect(specNames.filter((n) => n === 'Material')).toHaveLength(3);
-    });
-
-    it('should fallback to Config sheet if sheets already exist', () => {
+    it('should not add sheets if sheets already exist', () => {
       const { addSheet, initializeWithSampleData } = useSheetsStore.getState();
       addSheet('Existing Sheet');
 
       initializeWithSampleData();
 
       const { sheets } = useSheetsStore.getState();
-      expect(sheets).toHaveLength(2);
-      expect(sheets[0].type).toBe('config');
-      expect(sheets[0].data).toHaveLength(1); // Only header row (not sample data)
-      expect(sheets[1].name).toBe('Existing Sheet');
+      expect(sheets).toHaveLength(1);
+      expect(sheets[0].name).toBe('Existing Sheet');
+      // No Config sheet should be added
+      expect(sheets.find((s) => s.type === 'config')).toBeUndefined();
     });
 
-    it('should not duplicate Config sheet on multiple calls', () => {
+    it('should not duplicate data on multiple calls', () => {
       const { initializeWithSampleData } = useSheetsStore.getState();
       initializeWithSampleData();
       initializeWithSampleData();
 
       const { sheets } = useSheetsStore.getState();
-      expect(sheets.filter((s) => s.type === 'config')).toHaveLength(1);
+      expect(sheets).toHaveLength(1);
+      expect(sheets[0].type).toBe('data');
     });
   });
 

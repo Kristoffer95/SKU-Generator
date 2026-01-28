@@ -2,7 +2,9 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   getSampleConfigData,
   getSampleProductData,
+  getSampleSpecifications,
   createSampleSheets,
+  createSampleProductSheet,
   isFirstLaunch,
   markAsInitialized,
 } from './sample-data';
@@ -107,7 +109,72 @@ describe('sample-data', () => {
     });
   });
 
-  describe('createSampleSheets', () => {
+  describe('getSampleSpecifications', () => {
+    it('returns 3 specifications', () => {
+      const specs = getSampleSpecifications();
+      expect(specs).toHaveLength(3);
+    });
+
+    it('includes Color spec with correct values', () => {
+      const specs = getSampleSpecifications();
+      const colorSpec = specs.find((s) => s.name === 'Color');
+      expect(colorSpec).toBeDefined();
+      expect(colorSpec!.order).toBe(0);
+      expect(colorSpec!.values).toHaveLength(3);
+      expect(colorSpec!.values.map((v) => v.displayValue)).toEqual(['Red', 'Blue', 'Green']);
+      expect(colorSpec!.values.map((v) => v.skuFragment)).toEqual(['R', 'B', 'G']);
+    });
+
+    it('includes Size spec with correct values', () => {
+      const specs = getSampleSpecifications();
+      const sizeSpec = specs.find((s) => s.name === 'Size');
+      expect(sizeSpec).toBeDefined();
+      expect(sizeSpec!.order).toBe(1);
+      expect(sizeSpec!.values).toHaveLength(3);
+      expect(sizeSpec!.values.map((v) => v.displayValue)).toEqual(['Small', 'Medium', 'Large']);
+      expect(sizeSpec!.values.map((v) => v.skuFragment)).toEqual(['S', 'M', 'L']);
+    });
+
+    it('includes Material spec with correct values', () => {
+      const specs = getSampleSpecifications();
+      const materialSpec = specs.find((s) => s.name === 'Material');
+      expect(materialSpec).toBeDefined();
+      expect(materialSpec!.order).toBe(2);
+      expect(materialSpec!.values).toHaveLength(3);
+      expect(materialSpec!.values.map((v) => v.displayValue)).toEqual(['Cotton', 'Polyester', 'Wool']);
+      expect(materialSpec!.values.map((v) => v.skuFragment)).toEqual(['COT', 'POL', 'WOL']);
+    });
+
+    it('specs have unique IDs', () => {
+      const specs = getSampleSpecifications();
+      const ids = specs.map((s) => s.id);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+
+    it('spec values have unique IDs', () => {
+      const specs = getSampleSpecifications();
+      const allValueIds = specs.flatMap((s) => s.values.map((v) => v.id));
+      expect(new Set(allValueIds).size).toBe(allValueIds.length);
+    });
+  });
+
+  describe('createSampleProductSheet', () => {
+    it('returns a data sheet', () => {
+      const sheet = createSampleProductSheet();
+      expect(sheet).toBeDefined();
+      expect(sheet.type).toBe('data');
+    });
+
+    it('has correct properties', () => {
+      const sheet = createSampleProductSheet();
+      expect(sheet.name).toBe('Sample Products');
+      expect(sheet.type).toBe('data');
+      expect(sheet.id).toBeDefined();
+      expect(sheet.data).toHaveLength(6);
+    });
+  });
+
+  describe('createSampleSheets (deprecated)', () => {
     it('returns config sheet and product sheet', () => {
       const { configSheet, productSheet } = createSampleSheets();
       expect(configSheet).toBeDefined();
