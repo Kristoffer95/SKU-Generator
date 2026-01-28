@@ -1,3 +1,24 @@
+## validation-2: Duplicate SKU detection
+
+**Completed**: findDuplicateSKUs function detects rows with duplicate SKU values and highlights them
+
+**Key decisions**:
+- Extended ValidationError type to include 'duplicate-sku' as a type
+- findDuplicateSKUs builds map of SKU value -> row indices, flags all rows with non-unique SKUs
+- Error message includes all row numbers sharing the same SKU for easy identification
+- Empty/whitespace-only SKU cells are not considered duplicates (skipped)
+- Whitespace trimmed before comparison for consistent matching
+- SpreadsheetContainer highlights duplicate SKU cells with amber background (#fef3c7)
+- Non-duplicate SKU cells keep the standard read-only background (#f1f5f9)
+
+**Files changed**:
+- src/lib/validation.ts: Added 'duplicate-sku' to ValidationError type, added findDuplicateSKUs function
+- src/lib/validation.test.ts: Added 11 tests for duplicate SKU detection
+- src/components/SpreadsheetContainer.tsx: Added duplicate highlighting via findDuplicateSKUs, DUPLICATE_SKU_BG_COLOR constant
+- src/components/SpreadsheetContainer.test.tsx: Added 7 tests for duplicate SKU highlighting
+
+---
+
 ## validation-1: Create validation module to detect deleted values
 
 **Completed**: validateDataSheet function detects cells with values no longer in their specification

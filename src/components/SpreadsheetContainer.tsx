@@ -6,6 +6,7 @@ import { useSheetsStore } from "@/store/sheets"
 import { useSettingsStore } from "@/store/settings"
 import { useSpecificationsStore } from "@/store/specifications"
 import { processAutoSKU } from "@/lib/auto-sku"
+import { findDuplicateSKUs } from "@/lib/validation"
 import type { CellData, Specification } from "@/types"
 
 /**
@@ -37,16 +38,23 @@ function isDataEqual(a: CellData[][], b: CellData[][]): boolean {
 const SKU_COLUMN_BG_COLOR = "#f1f5f9"
 
 /**
+ * Background color for duplicate SKU warning (amber/yellow tint)
+ */
+const DUPLICATE_SKU_BG_COLOR = "#fef3c7"
+
+/**
  * Convert our CellData[][] to Fortune-Sheet CellMatrix format
  * Applies visual styling to indicate SKU column (column 0) is read-only
+ * Highlights duplicate SKU cells with a warning color
  */
-function convertToFortuneSheetData(data: CellData[][]): CellMatrix {
+function convertToFortuneSheetData(data: CellData[][], duplicateRows: Set<number>): CellMatrix {
   return data.map((row, rowIndex) =>
     row.map((cell, colIndex) => {
       if (!cell || (cell.v === undefined && cell.m === undefined)) {
         // For empty cells in SKU column (except header), still apply background
         if (colIndex === 0 && rowIndex > 0) {
-          return { bg: SKU_COLUMN_BG_COLOR } as Cell
+          const bgColor = duplicateRows.has(rowIndex) ? DUPLICATE_SKU_BG_COLOR : SKU_COLUMN_BG_COLOR
+          return { bg: bgColor } as Cell
         }
         return null
       }
@@ -57,7 +65,7 @@ function convertToFortuneSheetData(data: CellData[][]): CellMatrix {
       }
       // Apply background color to SKU column (column 0), except header row
       if (colIndex === 0 && rowIndex > 0) {
-        result.bg = SKU_COLUMN_BG_COLOR
+        result.bg = duplicateRows.has(rowIndex) ? DUPLICATE_SKU_BG_COLOR : SKU_COLUMN_BG_COLOR
       }
       return result
     })
@@ -208,12 +216,16 @@ export function SpreadsheetContainer() {
   // Convert sheets to Fortune-Sheet format with hooks and dataVerification for dropdowns
   const fortuneSheetData: Sheet[] = useMemo(() => {
     return sheets.map((sheet, index) => {
+      // Find duplicate SKUs in this sheet
+      const duplicateErrors = findDuplicateSKUs(sheet.data)
+      const duplicateRows = new Set(duplicateErrors.map(err => err.row))
+
       const sheetData: Sheet = {
         id: sheet.id,
         name: sheet.name,
         order: index,
         status: sheet.id === activeSheetId ? 1 : 0,
-        data: convertToFortuneSheetData(sheet.data),
+        data: convertToFortuneSheetData(sheet.data, duplicateRows),
         // Add dropdown validation for columns that match specification names
         dataVerification: buildDataVerification(sheet.data, specifications),
         // Configure column 0 (SKU) as read-only

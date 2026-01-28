@@ -178,7 +178,7 @@
       "Warning includes which rows have duplicates",
       "Duplicate SKUs are highlighted in the spreadsheet"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "validation-3",

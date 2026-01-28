@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateDataSheet } from './validation';
+import { validateDataSheet, findDuplicateSKUs } from './validation';
 import type { CellData, Specification } from '../types';
 
 // Helper to create cell data
@@ -202,5 +202,151 @@ describe('validateDataSheet', () => {
       message: 'Value "Red" does not exist in specification "Color"',
       type: 'missing-value',
     });
+  });
+});
+
+describe('findDuplicateSKUs', () => {
+  it('returns empty array for empty data', () => {
+    const errors = findDuplicateSKUs([]);
+    expect(errors).toEqual([]);
+  });
+
+  it('returns empty array for header-only data', () => {
+    const data: CellData[][] = [[cell('SKU'), cell('Color'), cell('Size')]];
+    const errors = findDuplicateSKUs(data);
+    expect(errors).toEqual([]);
+  });
+
+  it('returns empty array when all SKUs are unique', () => {
+    const data: CellData[][] = [
+      [cell('SKU'), cell('Color'), cell('Size')],
+      [cell('R-S'), cell('Red'), cell('Small')],
+      [cell('B-M'), cell('Blue'), cell('Medium')],
+      [cell('G-L'), cell('Green'), cell('Large')],
+    ];
+    const errors = findDuplicateSKUs(data);
+    expect(errors).toEqual([]);
+  });
+
+  it('detects two rows with the same SKU', () => {
+    const data: CellData[][] = [
+      [cell('SKU'), cell('Color'), cell('Size')],
+      [cell('R-S'), cell('Red'), cell('Small')],
+      [cell('R-S'), cell('Red'), cell('Small')], // Duplicate
+    ];
+    const errors = findDuplicateSKUs(data);
+
+    expect(errors).toHaveLength(2);
+    // Both rows should be flagged
+    expect(errors[0]).toEqual({
+      row: 1,
+      column: 0,
+      message: 'Duplicate SKU "R-S" found in rows 1, 2',
+      type: 'duplicate-sku',
+    });
+    expect(errors[1]).toEqual({
+      row: 2,
+      column: 0,
+      message: 'Duplicate SKU "R-S" found in rows 1, 2',
+      type: 'duplicate-sku',
+    });
+  });
+
+  it('detects multiple rows with the same SKU', () => {
+    const data: CellData[][] = [
+      [cell('SKU'), cell('Color')],
+      [cell('ABC'), cell('Red')],
+      [cell('XYZ'), cell('Blue')],
+      [cell('ABC'), cell('Red')], // Duplicate of row 1
+      [cell('ABC'), cell('Red')], // Duplicate of rows 1 and 3
+    ];
+    const errors = findDuplicateSKUs(data);
+
+    expect(errors).toHaveLength(3);
+    expect(errors[0].row).toBe(1);
+    expect(errors[1].row).toBe(3);
+    expect(errors[2].row).toBe(4);
+    expect(errors[0].message).toBe('Duplicate SKU "ABC" found in rows 1, 3, 4');
+  });
+
+  it('detects multiple different duplicate SKUs', () => {
+    const data: CellData[][] = [
+      [cell('SKU'), cell('Color')],
+      [cell('AAA'), cell('Red')],
+      [cell('BBB'), cell('Blue')],
+      [cell('AAA'), cell('Red')], // Duplicate of AAA
+      [cell('BBB'), cell('Blue')], // Duplicate of BBB
+    ];
+    const errors = findDuplicateSKUs(data);
+
+    expect(errors).toHaveLength(4);
+    // Check AAA duplicates
+    const aaaErrors = errors.filter((e) => e.message.includes('AAA'));
+    expect(aaaErrors).toHaveLength(2);
+    expect(aaaErrors[0].row).toBe(1);
+    expect(aaaErrors[1].row).toBe(3);
+    // Check BBB duplicates
+    const bbbErrors = errors.filter((e) => e.message.includes('BBB'));
+    expect(bbbErrors).toHaveLength(2);
+    expect(bbbErrors[0].row).toBe(2);
+    expect(bbbErrors[1].row).toBe(4);
+  });
+
+  it('ignores empty SKU values', () => {
+    const data: CellData[][] = [
+      [cell('SKU'), cell('Color')],
+      [cell(''), cell('Red')], // Empty SKU
+      [cell(''), cell('Blue')], // Empty SKU - should not be flagged as duplicate
+      [cell('R-S'), cell('Green')],
+    ];
+    const errors = findDuplicateSKUs(data);
+    expect(errors).toEqual([]);
+  });
+
+  it('handles whitespace-only SKU values as empty', () => {
+    const data: CellData[][] = [
+      [cell('SKU'), cell('Color')],
+      [cell('   '), cell('Red')], // Whitespace SKU
+      [cell('   '), cell('Blue')], // Whitespace SKU - should not be flagged
+      [cell('R-S'), cell('Green')],
+    ];
+    const errors = findDuplicateSKUs(data);
+    expect(errors).toEqual([]);
+  });
+
+  it('trims whitespace when comparing SKUs', () => {
+    const data: CellData[][] = [
+      [cell('SKU'), cell('Color')],
+      [cell('R-S'), cell('Red')],
+      [cell('  R-S  '), cell('Blue')], // Same SKU with whitespace
+    ];
+    const errors = findDuplicateSKUs(data);
+
+    expect(errors).toHaveLength(2);
+    expect(errors[0].message).toBe('Duplicate SKU "R-S" found in rows 1, 2');
+  });
+
+  it('handles sparse data array', () => {
+    const data: CellData[][] = [
+      [cell('SKU'), cell('Color')],
+      [cell('R-S'), cell('Red')],
+      undefined as unknown as CellData[], // Sparse row
+      [cell('R-S'), cell('Blue')],
+    ];
+    const errors = findDuplicateSKUs(data);
+
+    expect(errors).toHaveLength(2);
+    expect(errors[0].row).toBe(1);
+    expect(errors[1].row).toBe(3);
+  });
+
+  it('handles rows with missing first cell', () => {
+    const data: CellData[][] = [
+      [cell('SKU'), cell('Color')],
+      [undefined as unknown as CellData, cell('Red')], // No SKU cell
+      [cell('R-S'), cell('Blue')],
+    ];
+    const errors = findDuplicateSKUs(data);
+    expect(errors).toEqual([]);
   });
 });

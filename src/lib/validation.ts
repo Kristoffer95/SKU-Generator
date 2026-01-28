@@ -8,7 +8,7 @@ export interface ValidationError {
   row: number;
   column: number;
   message: string;
-  type: 'missing-value';
+  type: 'missing-value' | 'duplicate-sku';
 }
 
 /**
@@ -73,6 +73,61 @@ export function validateDataSheet(
           column: colIndex,
           message: `Value "${cellValue}" does not exist in specification "${headerName}"`,
           type: 'missing-value',
+        });
+      }
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * Find duplicate SKU values across rows in a data sheet.
+ * Returns validation errors for all rows that have non-unique SKU values.
+ *
+ * @param data - The sheet data (2D array of cells)
+ * @returns Array of validation errors for rows with duplicate SKUs
+ */
+export function findDuplicateSKUs(data: CellData[][]): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  if (!data || data.length <= 1) {
+    return errors; // No data rows to check
+  }
+
+  // Build a map of SKU value -> list of row indices that have that SKU
+  const skuToRows = new Map<string, number[]>();
+
+  // Start from row 1 (skip header row)
+  for (let rowIndex = 1; rowIndex < data.length; rowIndex++) {
+    const row = data[rowIndex];
+    if (!row) continue;
+
+    // SKU is in column 0
+    const skuValue = getCellValue(row[0]);
+
+    // Skip empty SKU values
+    if (!skuValue) continue;
+
+    const existingRows = skuToRows.get(skuValue);
+    if (existingRows) {
+      existingRows.push(rowIndex);
+    } else {
+      skuToRows.set(skuValue, [rowIndex]);
+    }
+  }
+
+  // Find all SKUs that appear in multiple rows
+  for (const [sku, rows] of skuToRows) {
+    if (rows.length > 1) {
+      // Create an error for each row with this duplicate SKU
+      const rowList = rows.join(', ');
+      for (const rowIndex of rows) {
+        errors.push({
+          row: rowIndex,
+          column: 0, // SKU column
+          message: `Duplicate SKU "${sku}" found in rows ${rowList}`,
+          type: 'duplicate-sku',
         });
       }
     }

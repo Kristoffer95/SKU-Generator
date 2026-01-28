@@ -762,3 +762,154 @@ describe('SpreadsheetContainer SKU column visual styling', () => {
     expect(sheet.data[1][0].bg).toBe('#f1f5f9')
   })
 })
+
+describe('SpreadsheetContainer duplicate SKU highlighting', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+    capturedHooks = {}
+    capturedData = []
+  })
+
+  it('highlights duplicate SKU cells with amber background', () => {
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R-S' }, { v: 'Red' }],
+      [{ v: 'R-S' }, { v: 'Red' }], // Duplicate SKU
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    const sheet = capturedData.find((s: { id: string }) => s.id === sheetId)
+
+    // Both duplicate rows should have amber background on SKU column
+    expect(sheet.data[1][0].bg).toBe('#fef3c7')
+    expect(sheet.data[2][0].bg).toBe('#fef3c7')
+  })
+
+  it('uses normal background for unique SKUs', () => {
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R-S' }, { v: 'Red' }],
+      [{ v: 'B-L' }, { v: 'Blue' }], // Unique SKU
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    const sheet = capturedData.find((s: { id: string }) => s.id === sheetId)
+
+    // Both should have normal gray-blue background (unique SKUs)
+    expect(sheet.data[1][0].bg).toBe('#f1f5f9')
+    expect(sheet.data[2][0].bg).toBe('#f1f5f9')
+  })
+
+  it('highlights all rows with the same duplicate SKU', () => {
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'ABC' }, { v: 'Red' }],
+      [{ v: 'XYZ' }, { v: 'Blue' }],
+      [{ v: 'ABC' }, { v: 'Green' }], // Duplicate of row 1
+      [{ v: 'ABC' }, { v: 'Yellow' }], // Also duplicate
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    const sheet = capturedData.find((s: { id: string }) => s.id === sheetId)
+
+    // All ABC rows should be highlighted
+    expect(sheet.data[1][0].bg).toBe('#fef3c7')
+    expect(sheet.data[3][0].bg).toBe('#fef3c7')
+    expect(sheet.data[4][0].bg).toBe('#fef3c7')
+
+    // XYZ should have normal background (unique)
+    expect(sheet.data[2][0].bg).toBe('#f1f5f9')
+  })
+
+  it('highlights multiple different duplicate SKU groups', () => {
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'AAA' }, { v: 'Red' }],
+      [{ v: 'BBB' }, { v: 'Blue' }],
+      [{ v: 'AAA' }, { v: 'Green' }], // Duplicate of AAA
+      [{ v: 'BBB' }, { v: 'Yellow' }], // Duplicate of BBB
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    const sheet = capturedData.find((s: { id: string }) => s.id === sheetId)
+
+    // All duplicate rows should be highlighted
+    expect(sheet.data[1][0].bg).toBe('#fef3c7') // AAA
+    expect(sheet.data[2][0].bg).toBe('#fef3c7') // BBB
+    expect(sheet.data[3][0].bg).toBe('#fef3c7') // AAA duplicate
+    expect(sheet.data[4][0].bg).toBe('#fef3c7') // BBB duplicate
+  })
+
+  it('does not highlight empty SKU cells as duplicates', () => {
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: 'Red' }], // Empty SKU
+      [{ v: '' }, { v: 'Blue' }], // Another empty SKU (not duplicates)
+      [{ v: 'R-S' }, { v: 'Green' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    const sheet = capturedData.find((s: { id: string }) => s.id === sheetId)
+
+    // Empty cells should have normal background, not duplicate highlight
+    expect(sheet.data[1][0].bg).toBe('#f1f5f9')
+    expect(sheet.data[2][0].bg).toBe('#f1f5f9')
+    expect(sheet.data[3][0].bg).toBe('#f1f5f9')
+  })
+
+  it('handles mix of duplicate and unique SKUs', () => {
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R-S' }, { v: 'Red' }],
+      [{ v: 'R-S' }, { v: 'Red' }], // Duplicate
+      [{ v: 'B-L' }, { v: 'Blue' }], // Unique
+      [{ v: 'G-M' }, { v: 'Green' }], // Unique
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    const sheet = capturedData.find((s: { id: string }) => s.id === sheetId)
+
+    // Duplicate rows highlighted
+    expect(sheet.data[1][0].bg).toBe('#fef3c7')
+    expect(sheet.data[2][0].bg).toBe('#fef3c7')
+
+    // Unique rows have normal background
+    expect(sheet.data[3][0].bg).toBe('#f1f5f9')
+    expect(sheet.data[4][0].bg).toBe('#f1f5f9')
+  })
+
+  it('highlights empty SKU cells in duplicate rows with amber background', () => {
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R-S' }, { v: 'Red' }],
+      [{}, { v: 'Blue' }], // Unique empty
+      [{ v: 'R-S' }, { v: 'Green' }], // Duplicate
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    const sheet = capturedData.find((s: { id: string }) => s.id === sheetId)
+
+    // Duplicate rows highlighted
+    expect(sheet.data[1][0].bg).toBe('#fef3c7')
+    expect(sheet.data[3][0].bg).toBe('#fef3c7')
+
+    // Empty but unique cell has normal background
+    expect(sheet.data[2][0].bg).toBe('#f1f5f9')
+  })
+})
