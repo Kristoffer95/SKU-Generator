@@ -87,7 +87,7 @@
       "After reorder, all SKUs in all data sheets are regenerated",
       "Order persists after page reload"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "sidebar-ui-3",

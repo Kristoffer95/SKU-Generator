@@ -1,10 +1,13 @@
 import { useState, useMemo, useEffect, useCallback } from "react"
-import { Plus, ChevronDown } from "lucide-react"
-import { AnimatePresence, motion } from "framer-motion"
+import { Plus, ChevronDown, GripVertical } from "lucide-react"
+import { AnimatePresence, motion, Reorder } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { useSpecificationsStore } from "@/store/specifications"
+import { useSheetsStore } from "@/store/sheets"
+import { useSettingsStore } from "@/store/settings"
 import { AddSpecDialog } from "@/components/AddSpecDialog"
 import { registerTourDialogOpeners, unregisterTourDialogOpeners } from "@/lib/guided-tour"
+import { updateRowSKU } from "@/lib/auto-sku"
 import type { Specification } from "@/types"
 
 interface SpecItemProps {
@@ -16,17 +19,19 @@ function SpecItem({ spec, isFirst }: SpecItemProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   return (
-    <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: "auto" }}
-      exit={{ opacity: 0, height: 0 }}
-      transition={{ duration: 0.2 }}
+    <div
       className="overflow-hidden"
       {...(isFirst ? { "data-tour": "spec-item" } : {})}
     >
       <div className="rounded-md border bg-card">
         {/* Header */}
         <div className="flex items-center gap-1 p-2">
+          <div
+            className="cursor-grab active:cursor-grabbing p-1 -ml-1 text-muted-foreground hover:text-foreground"
+            data-testid="drag-handle"
+          >
+            <GripVertical className="h-4 w-4" />
+          </div>
           <button
             className="flex flex-1 items-center gap-2 text-left"
             onClick={() => setIsExpanded(!isExpanded)}
@@ -86,18 +91,81 @@ function SpecItem({ spec, isFirst }: SpecItemProps) {
           )}
         </AnimatePresence>
       </div>
-    </motion.div>
+    </div>
   )
 }
 
 export function SpecificationList() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const specifications = useSpecificationsStore((state) => state.specifications)
+  const reorderSpec = useSpecificationsStore((state) => state.reorderSpec)
+  const sheets = useSheetsStore((state) => state.sheets)
+  const setSheetData = useSheetsStore((state) => state.setSheetData)
+  const delimiter = useSettingsStore((state) => state.delimiter)
+  const prefix = useSettingsStore((state) => state.prefix)
+  const suffix = useSettingsStore((state) => state.suffix)
 
   // Sort specifications by order field (lowest first)
   const sortedSpecifications = useMemo(() => {
     return [...specifications].sort((a, b) => a.order - b.order)
   }, [specifications])
+
+  // Local state for drag reordering (to avoid store updates during drag)
+  const [localOrder, setLocalOrder] = useState<Specification[]>(sortedSpecifications)
+
+  // Sync local order when store specifications change (but not during drag)
+  useEffect(() => {
+    setLocalOrder(sortedSpecifications)
+  }, [sortedSpecifications])
+
+  // Regenerate all SKUs in all data sheets
+  const regenerateAllSKUs = useCallback((updatedSpecs: Specification[]) => {
+    if (updatedSpecs.length === 0) return
+
+    const settings = { delimiter, prefix, suffix }
+
+    sheets.forEach((sheet) => {
+      if (sheet.type !== "data" || sheet.data.length <= 1) return
+
+      // Create a copy of the data to modify
+      const newData = sheet.data.map((row) => [...row])
+
+      // Update SKU for each data row (skip header row 0)
+      for (let rowIndex = 1; rowIndex < newData.length; rowIndex++) {
+        updateRowSKU(newData, rowIndex, updatedSpecs, settings)
+      }
+
+      // Update the sheet in the store
+      setSheetData(sheet.id, newData)
+    })
+  }, [sheets, setSheetData, delimiter, prefix, suffix])
+
+  // Handle reorder during drag (updates local state only)
+  const handleReorder = useCallback((reorderedSpecs: Specification[]) => {
+    setLocalOrder(reorderedSpecs)
+  }, [])
+
+  // Commit reorder to store when drag ends
+  const handleDragEnd = useCallback(() => {
+    // Check if order actually changed by comparing IDs
+    const orderChanged = localOrder.some(
+      (spec, index) => sortedSpecifications[index]?.id !== spec.id
+    )
+
+    if (!orderChanged) return
+
+    // Update the store with new order
+    localOrder.forEach((spec, newIndex) => {
+      if (spec.order !== newIndex) {
+        reorderSpec(spec.id, newIndex)
+      }
+    })
+
+    // After reordering, regenerate all SKUs with updated order
+    // Get the latest specifications from store after reorder
+    const latestSpecs = useSpecificationsStore.getState().specifications
+    regenerateAllSKUs(latestSpecs)
+  }, [localOrder, sortedSpecifications, reorderSpec, regenerateAllSKUs])
 
   // Callbacks for tour dialog openers
   const openAddSpecDialog = useCallback(() => {
@@ -134,17 +202,26 @@ export function SpecificationList() {
             Click "Add Specification" to create one.
           </motion.div>
         ) : (
-          <div className="p-2 space-y-1">
-            <AnimatePresence initial={false}>
-              {sortedSpecifications.map((spec, index) => (
+          <Reorder.Group
+            axis="y"
+            values={localOrder}
+            onReorder={handleReorder}
+            className="p-2 space-y-1"
+          >
+            {localOrder.map((spec, index) => (
+              <Reorder.Item
+                key={spec.id}
+                value={spec}
+                className="list-none"
+                onDragEnd={handleDragEnd}
+              >
                 <SpecItem
-                  key={spec.id}
                   spec={spec}
                   isFirst={index === 0}
                 />
-              ))}
-            </AnimatePresence>
-          </div>
+              </Reorder.Item>
+            ))}
+          </Reorder.Group>
         )}
       </div>
       <div className="p-2 border-t">

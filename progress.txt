@@ -1,3 +1,21 @@
+## sidebar-ui-2: Add drag-and-drop reordering to SpecificationList
+
+**Completed**: Specifications can now be reordered via drag-and-drop in the sidebar
+
+**Key decisions**:
+- Used framer-motion's `Reorder.Group` and `Reorder.Item` components (already in project)
+- Added `GripVertical` drag handle icon to each spec item
+- Used local state (`localOrder`) during drag to avoid store updates until drag ends
+- On drag end: calls `reorderSpec` for moved items, then regenerates all SKUs
+- `regenerateAllSKUs` iterates all data sheets and calls `updateRowSKU` for each row
+- Syncs local state with store when specifications change (via useEffect)
+
+**Files changed**:
+- src/components/SpecificationList.tsx: Added Reorder components, drag handles, reorder logic
+- src/components/SpecificationList.test.tsx: Added 5 tests for drag-and-drop behavior
+
+---
+
 ## readonly-sku-1: Make SKU column (column 0) read-only in data sheets
 
 **Completed**: Column 0 is now read-only; users cannot manually edit SKU values
