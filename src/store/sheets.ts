@@ -41,12 +41,32 @@ const CONFIG_SHEET_HEADERS: CellData[] = [
   { v: 'SKU Code', m: 'SKU Code' },
 ];
 
-const createEmptySheet = (name: string, type: SheetConfig['type'] = 'data'): SheetConfig => ({
-  id: generateId(),
-  name,
-  type,
-  data: [],
-});
+/**
+ * Creates the header row for a new data sheet.
+ * Includes 'SKU' in column 0 and existing specification names in columns 1+ sorted by order.
+ */
+const createHeaderRow = (): CellData[] => {
+  const { specifications } = useSpecificationsStore.getState();
+  // Sort specs by order field
+  const sortedSpecs = [...specifications].sort((a, b) => a.order - b.order);
+
+  // Build header row: SKU + sorted spec names
+  const headers: CellData[] = [{ v: 'SKU', m: 'SKU' }];
+  for (const spec of sortedSpecs) {
+    headers.push({ v: spec.name, m: spec.name });
+  }
+  return headers;
+};
+
+const createEmptySheet = (name: string, type: SheetConfig['type'] = 'data'): SheetConfig => {
+  const headerRow = type === 'data' ? createHeaderRow() : [];
+  return {
+    id: generateId(),
+    name,
+    type,
+    data: headerRow.length > 0 ? [headerRow] : [],
+  };
+};
 
 /**
  * @deprecated Config sheet approach is deprecated.
@@ -123,11 +143,12 @@ export const useSheetsStore = create<SheetsState>()(
         // Check if sheet with this ID already exists
         if (sheets.some((s) => s.id === id)) return;
 
+        const headerRow = createHeaderRow();
         const newSheet: SheetConfig = {
           id,
           name,
           type: 'data',
-          data: [],
+          data: headerRow.length > 0 ? [headerRow] : [],
         };
 
         set({

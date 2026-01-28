@@ -188,15 +188,39 @@ describe('useSheetsStore', () => {
   });
 
   describe('addSheet', () => {
-    it('should add a sheet with default name', () => {
+    it('should add a sheet with default name and SKU header', () => {
       const { addSheet } = useSheetsStore.getState();
       const id = addSheet();
 
       const { sheets, activeSheetId } = useSheetsStore.getState();
       expect(sheets).toHaveLength(1);
       expect(sheets[0].name).toBe('Sheet 1');
-      expect(sheets[0].data).toEqual([]);
+      // When no specs exist, header row only has SKU
+      expect(sheets[0].data).toEqual([[{ v: 'SKU', m: 'SKU' }]]);
       expect(activeSheetId).toBe(id);
+    });
+
+    it('should initialize sheet with SKU and existing spec headers sorted by order', () => {
+      // Set up specs in store
+      useSpecificationsStore.setState({
+        specifications: [
+          { id: 's2', name: 'Size', order: 1, values: [] },
+          { id: 's1', name: 'Color', order: 0, values: [] },
+          { id: 's3', name: 'Material', order: 2, values: [] },
+        ],
+      });
+
+      const { addSheet } = useSheetsStore.getState();
+      addSheet();
+
+      const { sheets } = useSheetsStore.getState();
+      expect(sheets[0].data).toHaveLength(1);
+      expect(sheets[0].data[0]).toEqual([
+        { v: 'SKU', m: 'SKU' },
+        { v: 'Color', m: 'Color' },
+        { v: 'Size', m: 'Size' },
+        { v: 'Material', m: 'Material' },
+      ]);
     });
 
     it('should add a sheet with custom name', () => {
@@ -219,7 +243,7 @@ describe('useSheetsStore', () => {
   });
 
   describe('addSheetWithId', () => {
-    it('should add a sheet with specific ID', () => {
+    it('should add a sheet with specific ID and SKU header', () => {
       const { addSheetWithId } = useSheetsStore.getState();
       addSheetWithId('custom-id-123', 'External Sheet');
 
@@ -228,7 +252,29 @@ describe('useSheetsStore', () => {
       expect(sheets[0].id).toBe('custom-id-123');
       expect(sheets[0].name).toBe('External Sheet');
       expect(sheets[0].type).toBe('data');
+      // When no specs exist, header row only has SKU
+      expect(sheets[0].data).toEqual([[{ v: 'SKU', m: 'SKU' }]]);
       expect(activeSheetId).toBe('custom-id-123');
+    });
+
+    it('should initialize sheet with SKU and existing spec headers sorted by order', () => {
+      useSpecificationsStore.setState({
+        specifications: [
+          { id: 's2', name: 'Size', order: 1, values: [] },
+          { id: 's1', name: 'Color', order: 0, values: [] },
+        ],
+      });
+
+      const { addSheetWithId } = useSheetsStore.getState();
+      addSheetWithId('test-id', 'Products');
+
+      const { sheets } = useSheetsStore.getState();
+      expect(sheets[0].data).toHaveLength(1);
+      expect(sheets[0].data[0]).toEqual([
+        { v: 'SKU', m: 'SKU' },
+        { v: 'Color', m: 'Color' },
+        { v: 'Size', m: 'Size' },
+      ]);
     });
 
     it('should not add duplicate sheet if ID already exists', () => {

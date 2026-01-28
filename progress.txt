@@ -1,3 +1,21 @@
+## sheet-headers-1: Initialize new sheets with proper headers
+
+**Completed**: New data sheets now initialize with SKU and spec headers in row 0
+
+**Key decisions**:
+- Created `createHeaderRow()` helper in sheets.ts that reads specs from store
+- Specs sorted by `order` field before adding to header row
+- Header row format: ['SKU', spec1.name, spec2.name, ...]
+- Both `addSheet()` and `addSheetWithId()` now use `createHeaderRow()`
+- Empty specs result in header row with only 'SKU'
+- Non-data sheets (type !== 'data') still get empty data array
+
+**Files changed**:
+- src/store/sheets.ts: Added createHeaderRow(), modified createEmptySheet() and addSheetWithId()
+- src/store/sheets.test.ts: Updated existing test, added 2 new tests for header initialization
+
+---
+
 ## migration-1: Config sheet to specifications store migration
 
 **Completed**: Automatic migration of Config sheet data to specifications store on app load

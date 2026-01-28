@@ -247,5 +247,46 @@
       "Data sheets remain intact with correct values"
     ],
     "passes": true
+  },
+  {
+    "id": "sheet-headers-1",
+    "category": "Sheet Initialization",
+    "description": "Fix new sheet creation to initialize with proper headers. When a new data sheet is created via addSheet() or addSheetWithId(), it must have 'SKU' in cell A1 (column 0) and existing specification names in B1, C1, etc. (columns 1+) sorted by spec order field.",
+    "stepsToVerify": [
+      "Create new sheet via + button in tab bar",
+      "Row 1 (index 0) has 'SKU' in column A",
+      "Row 1 has existing spec names in columns B, C, D, etc. matching spec order",
+      "Dropdowns appear in spec columns for data rows",
+      "npm run typecheck passes"
+    ],
+    "passes": true
+  },
+  {
+    "id": "sheet-headers-2",
+    "category": "Sheet Initialization",
+    "description": "Fix AddSpecDialog column insertion logic. Currently inserts spec columns before SKU (treating SKU as last column), but SKU must be at column 0. New spec columns should be appended at the end after existing spec columns.",
+    "stepsToVerify": [
+      "Add new specification via Add Specification dialog",
+      "SKU remains in column A (index 0)",
+      "New spec column is appended at the end (after existing spec columns)",
+      "If sheet was empty, header row is created with SKU in A1 and new spec in B1",
+      "Existing data rows get empty cell added at the end for new spec",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "sku-autogen-1",
+    "category": "SKU Generation",
+    "description": "Verify SKU auto-generation works when selecting values from dropdowns. The SKU in column A should auto-generate when user selects spec values in a row. This depends on correct headers being in row 0 - if headers are missing or incorrect, SKU generation fails silently.",
+    "stepsToVerify": [
+      "Create new sheet (should have proper headers after sheet-headers-1 fix)",
+      "Select a value from dropdown in column B (first spec column)",
+      "SKU in column A updates with the selected value's skuFragment",
+      "Select values in additional spec columns",
+      "SKU in column A shows all fragments joined by delimiter",
+      "Example: selecting Red (R) and Small (S) produces 'R-S' in SKU column"
+    ],
+    "passes": false
   }
 ]
