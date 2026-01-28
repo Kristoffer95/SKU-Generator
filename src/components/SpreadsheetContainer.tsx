@@ -219,6 +219,12 @@ export function SpreadsheetContainer() {
       // Get sheet config from snapshot ref
       const sheetConfig = sheetsSnapshotRef.current.find(s => s.id === sheet.id)
 
+      // Skip Config sheets - they should only be modified through explicit spec operations (AddSpecDialog)
+      // This prevents Fortune-Sheet onChange from overwriting spec definitions
+      if (sheetConfig?.type === "config") {
+        return
+      }
+
       // For data sheets, auto-generate SKUs for changed rows
       if (sheetConfig?.type === "data") {
         processAutoSKU(oldData, newData, parsedSpecs, settings)

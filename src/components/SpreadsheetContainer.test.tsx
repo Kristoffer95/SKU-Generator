@@ -2,14 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { useSheetsStore } from '@/store/sheets'
 
-// Track hooks passed to Workbook for testing
+// Track hooks and onChange passed to Workbook for testing
 let capturedHooks: Record<string, (...args: unknown[]) => unknown> = {}
+let capturedOnChange: ((data: unknown[]) => void) | null = null
 
 // Mock Fortune-Sheet Workbook since it uses canvas
 vi.mock('@fortune-sheet/react', () => ({
-  Workbook: vi.fn(({ data, showSheetTabs, hooks }) => {
-    // Capture hooks for testing
+  Workbook: vi.fn(({ data, showSheetTabs, hooks, onChange }) => {
+    // Capture hooks and onChange for testing
     capturedHooks = hooks || {}
+    capturedOnChange = onChange || null
     return (
       <div data-testid="mock-workbook">
         <span data-testid="sheet-count">{data?.length || 0} sheets</span>
@@ -111,6 +113,66 @@ describe('buildDataVerification helper', () => {
 
     // The component should have rendered without errors
     expect(screen.getByTestId('mock-workbook')).toBeInTheDocument()
+  })
+})
+
+describe('SpreadsheetContainer onChange handler', () => {
+  beforeEach(() => {
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    capturedHooks = {}
+    capturedOnChange = null
+  })
+
+  it('does not overwrite Config sheet data when onChange is triggered', () => {
+    // Initialize with Config sheet containing specs
+    useSheetsStore.getState().initializeWithConfigSheet()
+    const configSheet = useSheetsStore.getState().getConfigSheet()!
+    useSheetsStore.getState().setSheetData(configSheet.id, [
+      [{ v: 'Specification' }, { v: 'Value' }, { v: 'SKU Code' }],
+      [{ v: 'Color' }, { v: 'Red' }, { v: 'R' }],
+      [{ v: 'Color' }, { v: 'Blue' }, { v: 'B' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Simulate Fortune-Sheet onChange with modified Config data (e.g., empty data)
+    capturedOnChange?.([{
+      id: configSheet.id,
+      name: 'Config',
+      data: [[null, null, null]], // Empty/corrupted data
+    }])
+
+    // Config sheet data should remain unchanged (specs preserved)
+    const updatedConfigSheet = useSheetsStore.getState().getConfigSheet()!
+    expect(updatedConfigSheet.data.length).toBe(3) // Header + 2 spec rows
+    expect(updatedConfigSheet.data[1][0]?.v).toBe('Color')
+    expect(updatedConfigSheet.data[1][1]?.v).toBe('Red')
+  })
+
+  it('allows data sheet updates via onChange', () => {
+    useSheetsStore.getState().initializeWithConfigSheet()
+    const dataSheetId = useSheetsStore.getState().addSheet('Data')
+    useSheetsStore.getState().setSheetData(dataSheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: '' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Simulate Fortune-Sheet onChange with updated data sheet
+    capturedOnChange?.([{
+      id: dataSheetId,
+      name: 'Data',
+      data: [
+        [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+        [{ v: '', m: '' }, { v: 'Red', m: 'Red' }],
+      ],
+    }])
+
+    // Data sheet should be updated
+    const { sheets } = useSheetsStore.getState()
+    const dataSheet = sheets.find(s => s.id === dataSheetId)!
+    expect(dataSheet.data[1][1]?.v).toBe('Red')
   })
 })
 

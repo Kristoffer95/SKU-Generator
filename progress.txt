@@ -1,3 +1,15 @@
+## PRD-018: Config Sheet Overwrite Bug Fix - COMPLETE
+- Fixed bug where specifications disappear when editing any cell
+- Config sheet was being overwritten by Fortune-Sheet onChange handler
+- Added early return in handleChange callback: if (sheetConfig?.type === 'config') { return }
+- Config sheet data now only modified through explicit spec operations (AddSpecDialog)
+- Added 2 tests: Config sheet protection from onChange, data sheet updates still work
+- All feedback loops pass (234 tests, typecheck, lint)
+
+Files changed:
+- src/components/SpreadsheetContainer.tsx (early return for Config sheets in handleChange)
+- src/components/SpreadsheetContainer.test.tsx (+2 tests for onChange handler behavior)
+
 ## PRD-017: Documentation - COMPLETE
 - Created comprehensive GUIDE.md with 12 sections covering all app features
 - Sections: Getting Started, Config Sheet, Adding Specifications, Data Sheets, Column Headers, Using Dropdowns, SKU Generation, Settings, Import/Export, Multi-Sheet Workflow, Tips and Best Practices, Troubleshooting

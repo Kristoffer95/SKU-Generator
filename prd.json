@@ -285,6 +285,25 @@
         "Link GUIDE.md from README.md for easy discoverability"
       ],
       "passes": true
+    },
+    {
+      "id": "PRD-018",
+      "category": "Bug Fix",
+      "description": "Fix bug where specifications disappear when editing any cell - Config sheet is being overwritten by Fortune-Sheet onChange handler",
+      "stepsToVerify": [
+        "In src/components/SpreadsheetContainer.tsx handleChange callback, add early return for Config sheets",
+        "Add check: if (sheetConfig?.type === 'config') { return } before setSheetData call",
+        "This ensures Config sheet data is only modified through explicit spec operations (AddSpecDialog), not Fortune-Sheet onChange",
+        "Verify: Add specifications to Config sheet via AddSpecDialog",
+        "Verify: Edit a cell in a data sheet",
+        "Verify: Specifications remain intact in Config sheet after editing",
+        "Verify: Specifications remain intact after switching between sheets",
+        "Verify: SKU auto-generation still works correctly for data sheets",
+        "Run npm run typecheck with no errors",
+        "Run npm run lint with no errors",
+        "Run npm run test with all tests passing"
+      ],
+      "passes": true
     }
   ]
 }
