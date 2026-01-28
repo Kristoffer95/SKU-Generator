@@ -1,3 +1,24 @@
+## sidebar-ui-3: Inline editing for specification values in sidebar
+
+**Completed**: Users can click on spec values to edit displayValue and skuFragment inline
+
+**Key decisions**:
+- Created `SpecValueItem` component within SpecificationList.tsx
+- Click on value triggers edit mode with two inputs (displayValue + skuFragment)
+- Pre-fills inputs with current values
+- Save via checkmark button or Enter key, cancel via X button or Escape
+- Validates skuFragment uniqueness within spec before saving
+- Shows error message below inputs if duplicate skuFragment detected
+- Error clears automatically when skuFragment input changes
+- Uses existing `updateSpecValue` store action (returns false on duplicate)
+- SKU updates happen automatically via existing `useSkuReactivity` hook
+
+**Files changed**:
+- src/components/SpecificationList.tsx: Added SpecValueItem with edit form, validation
+- src/components/SpecificationList.test.tsx: Added 9 tests for inline editing
+
+---
+
 ## reactivity-1: Auto-regenerate SKUs when skuFragment changes
 
 **Completed**: SKUs automatically regenerate when any skuFragment is changed in the specifications store

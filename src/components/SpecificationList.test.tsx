@@ -383,4 +383,355 @@ describe("SpecificationList", () => {
       expect(sorted[2].name).toBe("Size")
     })
   })
+
+  describe("inline editing", () => {
+    it("shows edit form when clicking on a value", async () => {
+      const user = userEvent.setup()
+      useSpecificationsStore.setState({
+        specifications: [
+          createSpecification("Color", 0, [
+            { displayValue: "Red", skuFragment: "R" },
+          ]),
+        ],
+      })
+
+      render(<SpecificationList />)
+
+      // Expand the spec first
+      await user.click(screen.getByText("Color"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("value-item")).toBeInTheDocument()
+      })
+
+      // Click on the value to edit
+      await user.click(screen.getByTestId("value-item"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("value-edit-form")).toBeInTheDocument()
+        expect(screen.getByTestId("edit-display-value")).toBeInTheDocument()
+        expect(screen.getByTestId("edit-sku-fragment")).toBeInTheDocument()
+      })
+    })
+
+    it("pre-fills edit inputs with current values", async () => {
+      const user = userEvent.setup()
+      useSpecificationsStore.setState({
+        specifications: [
+          createSpecification("Color", 0, [
+            { displayValue: "Red", skuFragment: "R" },
+          ]),
+        ],
+      })
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByText("Color"))
+      await waitFor(() => {
+        expect(screen.getByTestId("value-item")).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId("value-item"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-display-value")).toHaveValue("Red")
+        expect(screen.getByTestId("edit-sku-fragment")).toHaveValue("R")
+      })
+    })
+
+    it("saves changes when clicking save button", async () => {
+      const user = userEvent.setup()
+      const spec = createSpecification("Color", 0, [
+        { displayValue: "Red", skuFragment: "R" },
+      ])
+      useSpecificationsStore.setState({ specifications: [spec] })
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByText("Color"))
+      await waitFor(() => {
+        expect(screen.getByTestId("value-item")).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId("value-item"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-display-value")).toBeInTheDocument()
+      })
+
+      // Change the display value
+      const displayInput = screen.getByTestId("edit-display-value")
+      await user.clear(displayInput)
+      await user.type(displayInput, "Crimson")
+
+      // Save
+      await user.click(screen.getByTestId("save-edit"))
+
+      // Verify the store was updated
+      await waitFor(() => {
+        const specs = useSpecificationsStore.getState().specifications
+        const value = specs[0].values[0]
+        expect(value.displayValue).toBe("Crimson")
+        expect(value.skuFragment).toBe("R") // Should remain unchanged
+      })
+    })
+
+    it("saves changes when pressing Enter", async () => {
+      const user = userEvent.setup()
+      const spec = createSpecification("Color", 0, [
+        { displayValue: "Red", skuFragment: "R" },
+      ])
+      useSpecificationsStore.setState({ specifications: [spec] })
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByText("Color"))
+      await waitFor(() => {
+        expect(screen.getByTestId("value-item")).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId("value-item"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-sku-fragment")).toBeInTheDocument()
+      })
+
+      // Change the SKU fragment
+      const skuInput = screen.getByTestId("edit-sku-fragment")
+      await user.clear(skuInput)
+      await user.type(skuInput, "RD{Enter}")
+
+      // Verify the store was updated
+      await waitFor(() => {
+        const specs = useSpecificationsStore.getState().specifications
+        const value = specs[0].values[0]
+        expect(value.skuFragment).toBe("RD")
+      })
+    })
+
+    it("cancels editing when clicking cancel button", async () => {
+      const user = userEvent.setup()
+      useSpecificationsStore.setState({
+        specifications: [
+          createSpecification("Color", 0, [
+            { displayValue: "Red", skuFragment: "R" },
+          ]),
+        ],
+      })
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByText("Color"))
+      await waitFor(() => {
+        expect(screen.getByTestId("value-item")).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId("value-item"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-display-value")).toBeInTheDocument()
+      })
+
+      // Make changes
+      const displayInput = screen.getByTestId("edit-display-value")
+      await user.clear(displayInput)
+      await user.type(displayInput, "Changed")
+
+      // Cancel
+      await user.click(screen.getByTestId("cancel-edit"))
+
+      // Edit form should be closed
+      await waitFor(() => {
+        expect(screen.queryByTestId("value-edit-form")).not.toBeInTheDocument()
+      })
+
+      // Store should not be updated
+      const specs = useSpecificationsStore.getState().specifications
+      expect(specs[0].values[0].displayValue).toBe("Red")
+    })
+
+    it("cancels editing when pressing Escape", async () => {
+      const user = userEvent.setup()
+      useSpecificationsStore.setState({
+        specifications: [
+          createSpecification("Color", 0, [
+            { displayValue: "Red", skuFragment: "R" },
+          ]),
+        ],
+      })
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByText("Color"))
+      await waitFor(() => {
+        expect(screen.getByTestId("value-item")).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId("value-item"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-display-value")).toBeInTheDocument()
+      })
+
+      // Press Escape
+      await user.keyboard("{Escape}")
+
+      // Edit form should be closed
+      await waitFor(() => {
+        expect(screen.queryByTestId("value-edit-form")).not.toBeInTheDocument()
+      })
+    })
+
+    it("shows error for duplicate skuFragment within same spec", async () => {
+      const user = userEvent.setup()
+      // Create spec with two values
+      const spec: Specification = {
+        id: "spec-color",
+        name: "Color",
+        order: 0,
+        values: [
+          { id: "v1", displayValue: "Red", skuFragment: "R" },
+          { id: "v2", displayValue: "Blue", skuFragment: "B" },
+        ],
+      }
+      useSpecificationsStore.setState({ specifications: [spec] })
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByText("Color"))
+      await waitFor(() => {
+        expect(screen.getAllByTestId("value-item")).toHaveLength(2)
+      })
+
+      // Click on Blue value to edit
+      const valueItems = screen.getAllByTestId("value-item")
+      await user.click(valueItems[1]) // Blue
+
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-sku-fragment")).toBeInTheDocument()
+      })
+
+      // Try to change skuFragment to 'R' which is already used by Red
+      const skuInput = screen.getByTestId("edit-sku-fragment")
+      await user.clear(skuInput)
+      await user.type(skuInput, "R")
+
+      // Try to save
+      await user.click(screen.getByTestId("save-edit"))
+
+      // Should show error
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-error")).toBeInTheDocument()
+        expect(screen.getByTestId("edit-error")).toHaveTextContent(
+          /unique within this specification/i
+        )
+      })
+
+      // Store should not be updated
+      const specs = useSpecificationsStore.getState().specifications
+      expect(specs[0].values[1].skuFragment).toBe("B") // Still 'B'
+    })
+
+    it("allows same skuFragment in different specs", async () => {
+      const user = userEvent.setup()
+      useSpecificationsStore.setState({
+        specifications: [
+          {
+            id: "spec-color",
+            name: "Color",
+            order: 0,
+            values: [{ id: "v1", displayValue: "Red", skuFragment: "R" }],
+          },
+          {
+            id: "spec-size",
+            name: "Size",
+            order: 1,
+            values: [{ id: "v2", displayValue: "Regular", skuFragment: "X" }],
+          },
+        ],
+      })
+
+      render(<SpecificationList />)
+
+      // Expand Size spec
+      await user.click(screen.getByText("Size"))
+      await waitFor(() => {
+        expect(screen.getByTestId("value-item")).toBeInTheDocument()
+      })
+
+      // Click to edit
+      await user.click(screen.getByTestId("value-item"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-sku-fragment")).toBeInTheDocument()
+      })
+
+      // Change skuFragment to 'R' (same as Color spec's Red)
+      const skuInput = screen.getByTestId("edit-sku-fragment")
+      await user.clear(skuInput)
+      await user.type(skuInput, "R")
+
+      // Save
+      await user.click(screen.getByTestId("save-edit"))
+
+      // Should succeed (no error shown)
+      await waitFor(() => {
+        expect(screen.queryByTestId("edit-error")).not.toBeInTheDocument()
+        expect(screen.queryByTestId("value-edit-form")).not.toBeInTheDocument()
+      })
+
+      // Verify store was updated
+      const specs = useSpecificationsStore.getState().specifications
+      const sizeSpec = specs.find((s) => s.id === "spec-size")
+      expect(sizeSpec?.values[0].skuFragment).toBe("R")
+    })
+
+    it("clears error when skuFragment input changes", async () => {
+      const user = userEvent.setup()
+      const spec: Specification = {
+        id: "spec-color",
+        name: "Color",
+        order: 0,
+        values: [
+          { id: "v1", displayValue: "Red", skuFragment: "R" },
+          { id: "v2", displayValue: "Blue", skuFragment: "B" },
+        ],
+      }
+      useSpecificationsStore.setState({ specifications: [spec] })
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByText("Color"))
+      await waitFor(() => {
+        expect(screen.getAllByTestId("value-item")).toHaveLength(2)
+      })
+
+      const valueItems = screen.getAllByTestId("value-item")
+      await user.click(valueItems[1]) // Blue
+
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-sku-fragment")).toBeInTheDocument()
+      })
+
+      // Enter duplicate
+      const skuInput = screen.getByTestId("edit-sku-fragment")
+      await user.clear(skuInput)
+      await user.type(skuInput, "R")
+      await user.click(screen.getByTestId("save-edit"))
+
+      // Error should appear
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-error")).toBeInTheDocument()
+      })
+
+      // Change to a unique value
+      await user.clear(skuInput)
+      await user.type(skuInput, "BL")
+
+      // Error should be cleared
+      await waitFor(() => {
+        expect(screen.queryByTestId("edit-error")).not.toBeInTheDocument()
+      })
+    })
+  })
 })

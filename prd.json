@@ -99,7 +99,7 @@
       "Duplicate skuFragment within same spec shows error message",
       "Valid changes save to store and update affected SKUs"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "sidebar-ui-4",

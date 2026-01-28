@@ -1,14 +1,162 @@
-import { useState, useMemo, useEffect, useCallback } from "react"
-import { Plus, ChevronDown, GripVertical } from "lucide-react"
+import { useState, useMemo, useEffect, useCallback, useRef } from "react"
+import { Plus, ChevronDown, GripVertical, Check, X } from "lucide-react"
 import { AnimatePresence, motion, Reorder } from "framer-motion"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { useSpecificationsStore } from "@/store/specifications"
 import { useSheetsStore } from "@/store/sheets"
 import { useSettingsStore } from "@/store/settings"
 import { AddSpecDialog } from "@/components/AddSpecDialog"
 import { registerTourDialogOpeners, unregisterTourDialogOpeners } from "@/lib/guided-tour"
 import { updateRowSKU } from "@/lib/auto-sku"
-import type { Specification } from "@/types"
+import type { Specification, SpecValue } from "@/types"
+
+interface SpecValueItemProps {
+  specId: string
+  value: SpecValue
+}
+
+function SpecValueItem({ specId, value }: SpecValueItemProps) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [editDisplayValue, setEditDisplayValue] = useState(value.displayValue)
+  const [editSkuFragment, setEditSkuFragment] = useState(value.skuFragment)
+  const [error, setError] = useState<string | null>(null)
+  const displayInputRef = useRef<HTMLInputElement>(null)
+
+  const updateSpecValue = useSpecificationsStore((state) => state.updateSpecValue)
+  const validateSkuFragment = useSpecificationsStore((state) => state.validateSkuFragment)
+
+  // Reset local state when value changes (e.g., from another source)
+  useEffect(() => {
+    if (!isEditing) {
+      setEditDisplayValue(value.displayValue)
+      setEditSkuFragment(value.skuFragment)
+    }
+  }, [value.displayValue, value.skuFragment, isEditing])
+
+  const handleStartEdit = useCallback(() => {
+    setIsEditing(true)
+    setEditDisplayValue(value.displayValue)
+    setEditSkuFragment(value.skuFragment)
+    setError(null)
+    // Focus input after render
+    setTimeout(() => displayInputRef.current?.focus(), 0)
+  }, [value.displayValue, value.skuFragment])
+
+  const handleCancel = useCallback(() => {
+    setIsEditing(false)
+    setEditDisplayValue(value.displayValue)
+    setEditSkuFragment(value.skuFragment)
+    setError(null)
+  }, [value.displayValue, value.skuFragment])
+
+  const handleSave = useCallback(() => {
+    // Validate skuFragment uniqueness within spec
+    if (editSkuFragment !== value.skuFragment) {
+      const isUnique = validateSkuFragment(specId, editSkuFragment, value.id)
+      if (!isUnique) {
+        setError("SKU fragment must be unique within this specification")
+        return
+      }
+    }
+
+    // Check if anything changed
+    const displayValueChanged = editDisplayValue !== value.displayValue
+    const skuFragmentChanged = editSkuFragment !== value.skuFragment
+
+    if (displayValueChanged || skuFragmentChanged) {
+      const updates: Partial<Pick<SpecValue, 'displayValue' | 'skuFragment'>> = {}
+      if (displayValueChanged) updates.displayValue = editDisplayValue
+      if (skuFragmentChanged) updates.skuFragment = editSkuFragment
+
+      const success = updateSpecValue(specId, value.id, updates)
+      if (!success) {
+        setError("SKU fragment must be unique within this specification")
+        return
+      }
+    }
+
+    setIsEditing(false)
+    setError(null)
+  }, [specId, value.id, value.displayValue, value.skuFragment, editDisplayValue, editSkuFragment, updateSpecValue, validateSkuFragment])
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      handleSave()
+    } else if (e.key === "Escape") {
+      handleCancel()
+    }
+  }, [handleSave, handleCancel])
+
+  if (isEditing) {
+    return (
+      <div className="py-1 px-2 space-y-2" data-testid="value-edit-form">
+        <div className="flex items-center gap-2">
+          <Input
+            ref={displayInputRef}
+            value={editDisplayValue}
+            onChange={(e) => setEditDisplayValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Display value"
+            className="h-7 text-sm flex-1"
+            data-testid="edit-display-value"
+          />
+          <Input
+            value={editSkuFragment}
+            onChange={(e) => {
+              setEditSkuFragment(e.target.value)
+              setError(null) // Clear error on change
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder="SKU"
+            className="h-7 text-sm w-16 font-mono"
+            data-testid="edit-sku-fragment"
+          />
+          <button
+            onClick={handleSave}
+            className="p-1 text-green-600 hover:text-green-700 hover:bg-green-100 rounded"
+            title="Save"
+            data-testid="save-edit"
+          >
+            <Check className="h-4 w-4" />
+          </button>
+          <button
+            onClick={handleCancel}
+            className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded"
+            title="Cancel"
+            data-testid="cancel-edit"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        {error && (
+          <p className="text-xs text-destructive" data-testid="edit-error">
+            {error}
+          </p>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -10 }}
+      className="flex items-center gap-2 py-1 px-2 rounded hover:bg-muted/50 cursor-pointer"
+      onClick={handleStartEdit}
+      data-testid="value-item"
+    >
+      <span className="text-sm flex-1 truncate">
+        {value.displayValue}
+      </span>
+      <span className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
+        {value.skuFragment || "-"}
+      </span>
+    </motion.div>
+  )
+}
 
 interface SpecItemProps {
   spec: Specification
@@ -69,20 +217,11 @@ function SpecItem({ spec, isFirst }: SpecItemProps) {
                 ) : (
                   <AnimatePresence initial={false}>
                     {spec.values.map((value) => (
-                      <motion.div
+                      <SpecValueItem
                         key={value.id}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -10 }}
-                        className="flex items-center gap-2 py-1 px-2 rounded hover:bg-muted/50"
-                      >
-                        <span className="text-sm flex-1 truncate">
-                          {value.displayValue}
-                        </span>
-                        <span className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
-                          {value.skuFragment || "-"}
-                        </span>
-                      </motion.div>
+                        specId={spec.id}
+                        value={value}
+                      />
                     ))}
                   </AnimatePresence>
                 )}
