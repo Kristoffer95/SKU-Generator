@@ -64,7 +64,7 @@
       "Export offers Excel and CSV download options",
       "Add Row button appends new empty row to active sheet"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "migration-dependencies",

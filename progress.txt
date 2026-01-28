@@ -1,3 +1,26 @@
+## migration-toolbar - COMPLETED
+SpreadsheetToolbar component with basic actions for spreadsheet manipulation
+
+### Key decisions
+- Props: canUndo, canRedo, onUndo, onRedo, onImport, onExportExcel, onExportCSV, onAddRow
+- Undo/Redo buttons with disabled state based on canUndo/canRedo props
+- Import button triggers hidden file input accepting .xlsx, .xls, .csv
+- Export uses Radix UI DropdownMenu with Excel (.xlsx) and CSV (.csv) options
+- Add Row button calls onAddRow callback
+- Uses shadcn/ui Button component with ghost variant for toolbar styling
+- Lucide icons: Undo2, Redo2, Upload, Download, Plus, ChevronDown
+- data-testid attributes for testing
+
+### Files changed
+- src/components/spreadsheet/SpreadsheetToolbar.tsx (new)
+- src/components/spreadsheet/SpreadsheetToolbar.test.tsx (new, 26 tests)
+
+### Notes
+- Standalone component ready for SpreadsheetContainer integration
+- Actual undo/redo/add-row behavior to be implemented via parent callbacks
+- Tests cover: button states, callbacks, file input, dropdown behavior
+- Radix dropdown portal not tested directly (vitest limitation), tested via attributes
+
 ## migration-sheet-tabs - COMPLETED
 Custom SheetTabs component for multi-sheet navigation
 
