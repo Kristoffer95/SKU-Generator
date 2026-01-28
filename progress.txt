@@ -1,3 +1,13 @@
+## PRD-017: Documentation - COMPLETE
+- Created comprehensive GUIDE.md with 12 sections covering all app features
+- Sections: Getting Started, Config Sheet, Adding Specifications, Data Sheets, Column Headers, Using Dropdowns, SKU Generation, Settings, Import/Export, Multi-Sheet Workflow, Tips and Best Practices, Troubleshooting
+- Created README.md with project overview, features, quick start, and link to GUIDE.md
+- All feedback loops pass (232 tests, typecheck, lint)
+
+Files created:
+- GUIDE.md (comprehensive user guide)
+- README.md (project readme with link to guide)
+
 ## PRD-016: User Onboarding with Driver.js - COMPLETE
 - Installed driver.js package for interactive guided tours
 - Created src/lib/guided-tour.ts with 10 tour steps covering all features
