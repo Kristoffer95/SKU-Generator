@@ -4,8 +4,9 @@ import type { Sheet, Cell, CellMatrix } from "@fortune-sheet/core"
 import "@fortune-sheet/react/dist/index.css"
 import { useSheetsStore } from "@/store/sheets"
 import { useSettingsStore } from "@/store/settings"
+import { useSpecificationsStore } from "@/store/specifications"
 import { processAutoSKU } from "@/lib/auto-sku"
-import type { CellData } from "@/types"
+import type { CellData, Specification } from "@/types"
 
 /**
  * Deep comparison of CellData[][] arrays to detect actual changes
@@ -67,8 +68,65 @@ function convertFromFortuneSheetData(data: CellMatrix | undefined): CellData[][]
   )
 }
 
+/**
+ * Extract header names from the first row of sheet data
+ */
+function extractHeaders(data: CellData[][]): string[] {
+  if (data.length === 0 || !data[0]) return []
+  return data[0].map(cell => String(cell?.v ?? cell?.m ?? "").trim())
+}
+
+/**
+ * Build Fortune-Sheet dataVerification object for dropdown columns
+ * Maps column indices to specifications based on header names
+ *
+ * Format: { "row_col": { type: "dropdown", value1: "comma,separated,values", ... }, ... }
+ */
+function buildDataVerification(
+  data: CellData[][],
+  specifications: Specification[],
+  maxRows: number = 100
+): Record<string, unknown> {
+  const headers = extractHeaders(data)
+  const dataVerification: Record<string, unknown> = {}
+
+  // Build a map of spec name -> displayValues for quick lookup
+  const specMap = new Map<string, string[]>()
+  for (const spec of specifications) {
+    specMap.set(spec.name, spec.values.map(v => v.displayValue))
+  }
+
+  // For each column, check if the header matches a specification name
+  for (let col = 0; col < headers.length; col++) {
+    const headerName = headers[col]
+    const displayValues = specMap.get(headerName)
+
+    if (displayValues && displayValues.length > 0) {
+      // Apply dropdown to all data rows (row 1 to maxRows)
+      // Row 0 is the header row
+      for (let row = 1; row < maxRows; row++) {
+        const key = `${row}_${col}`
+        dataVerification[key] = {
+          type: "dropdown",
+          type2: "",
+          value1: displayValues.join(","),
+          value2: "",
+          validity: "",
+          remote: false,
+          prohibitInput: false,
+          hintShow: false,
+          hintValue: "",
+        }
+      }
+    }
+  }
+
+  return dataVerification
+}
+
 export function SpreadsheetContainer() {
   const { sheets, activeSheetId, setActiveSheet, setSheetData, addSheetWithId, removeSheet, updateSheet } = useSheetsStore()
+  const specifications = useSpecificationsStore((state) => state.specifications)
   const delimiter = useSettingsStore((state) => state.delimiter)
   const prefix = useSettingsStore((state) => state.prefix)
   const suffix = useSettingsStore((state) => state.suffix)
@@ -133,7 +191,7 @@ export function SpreadsheetContainer() {
     })
   }, [setSheetData, settings])
 
-  // Convert sheets to Fortune-Sheet format with hooks
+  // Convert sheets to Fortune-Sheet format with hooks and dataVerification for dropdowns
   const fortuneSheetData: Sheet[] = useMemo(() => {
     return sheets.map((sheet, index) => {
       const sheetData: Sheet = {
@@ -142,13 +200,13 @@ export function SpreadsheetContainer() {
         order: index,
         status: sheet.id === activeSheetId ? 1 : 0,
         data: convertToFortuneSheetData(sheet.data),
+        // Add dropdown validation for columns that match specification names
+        dataVerification: buildDataVerification(sheet.data, specifications),
       }
-
-      // TODO: Add dropdowns for data sheets based on specifications store (remove-config-3)
 
       return sheetData
     })
-  }, [sheets, activeSheetId])
+  }, [sheets, activeSheetId, specifications])
 
   // Hooks for Fortune-Sheet events
   const hooks = useMemo(() => ({

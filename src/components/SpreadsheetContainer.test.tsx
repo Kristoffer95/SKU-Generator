@@ -1,17 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { useSheetsStore } from '@/store/sheets'
+import { useSpecificationsStore } from '@/store/specifications'
 
 // Track hooks and onChange passed to Workbook for testing
 let capturedHooks: Record<string, (...args: unknown[]) => unknown> = {}
 let capturedOnChange: ((data: unknown[]) => void) | null = null
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let capturedData: any[] = []
 
 // Mock Fortune-Sheet Workbook since it uses canvas
 vi.mock('@fortune-sheet/react', () => ({
   Workbook: vi.fn(({ data, showSheetTabs, hooks, onChange }) => {
-    // Capture hooks and onChange for testing
+    // Capture hooks, onChange, and data for testing
     capturedHooks = hooks || {}
     capturedOnChange = onChange || null
+    capturedData = data || []
     return (
       <div data-testid="mock-workbook">
         <span data-testid="sheet-count">{data?.length || 0} sheets</span>
@@ -35,8 +39,10 @@ describe('SpreadsheetContainer', () => {
     localStorage.clear()
     // Reset store state
     useSheetsStore.setState({ sheets: [], activeSheetId: null })
-    // Reset captured hooks
+    useSpecificationsStore.setState({ specifications: [] })
+    // Reset captured values
     capturedHooks = {}
+    capturedData = []
   })
 
   it('shows empty state when no sheets exist', () => {
@@ -96,9 +102,10 @@ describe('SpreadsheetContainer data sheets', () => {
   beforeEach(() => {
     localStorage.clear()
     useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+    capturedData = []
   })
 
-  // Dropdown building now handled via specifications store (see remove-config-3)
   it('renders data sheets without errors', () => {
     useSheetsStore.getState().initializeWithSampleData()
 
@@ -109,12 +116,220 @@ describe('SpreadsheetContainer data sheets', () => {
   })
 })
 
+describe('SpreadsheetContainer dropdown building', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+    capturedData = []
+  })
+
+  it('builds dataVerification with dropdown options from specifications store', () => {
+    // Set up specifications in store
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-1',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+          ],
+        },
+      ],
+    })
+
+    // Set up sheet with Color column header
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: '' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Check that dataVerification was built for the Color column
+    const sheet = capturedData.find((s: { id: string }) => s.id === sheetId)
+    expect(sheet.dataVerification).toBeDefined()
+
+    // Row 1, Column 1 (Color column) should have dropdown
+    const key = '1_1'
+    expect(sheet.dataVerification[key]).toBeDefined()
+    expect(sheet.dataVerification[key].type).toBe('dropdown')
+    expect(sheet.dataVerification[key].value1).toBe('Red,Blue')
+  })
+
+  it('does not add dropdown for columns that do not match spec names', () => {
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-1',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Description' }], // Description doesn't match any spec
+      [{ v: '' }, { v: '' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    const sheet = capturedData.find((s: { id: string }) => s.id === sheetId)
+
+    // SKU column (col 0) should not have dropdown
+    expect(sheet.dataVerification['1_0']).toBeUndefined()
+    // Description column (col 1) should not have dropdown
+    expect(sheet.dataVerification['1_1']).toBeUndefined()
+  })
+
+  it('applies dropdowns to multiple columns matching different specs', () => {
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-1',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+          ],
+        },
+        {
+          id: 'spec-2',
+          name: 'Size',
+          order: 1,
+          values: [
+            { id: 'v3', displayValue: 'Small', skuFragment: 'S' },
+            { id: 'v4', displayValue: 'Large', skuFragment: 'L' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+      [{ v: '' }, { v: '' }, { v: '' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    const sheet = capturedData.find((s: { id: string }) => s.id === sheetId)
+
+    // Color column (col 1) should have Color values
+    expect(sheet.dataVerification['1_1'].value1).toBe('Red,Blue')
+    // Size column (col 2) should have Size values
+    expect(sheet.dataVerification['1_2'].value1).toBe('Small,Large')
+  })
+
+  it('updates dropdowns when specifications change', () => {
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-1',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: '' }],
+    ])
+
+    const { rerender } = render(<SpreadsheetContainer />)
+
+    // Initial state: only Red
+    let sheet = capturedData.find((s: { id: string }) => s.id === sheetId)
+    expect(sheet.dataVerification['1_1'].value1).toBe('Red')
+
+    // Add Blue to the specification
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-1',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+          ],
+        },
+      ],
+    })
+
+    rerender(<SpreadsheetContainer />)
+
+    // Updated: Red,Blue
+    sheet = capturedData.find((s: { id: string }) => s.id === sheetId)
+    expect(sheet.dataVerification['1_1'].value1).toBe('Red,Blue')
+  })
+
+  it('handles empty specifications gracefully', () => {
+    useSpecificationsStore.setState({ specifications: [] })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: '' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    const sheet = capturedData.find((s: { id: string }) => s.id === sheetId)
+
+    // No dropdowns when no specifications
+    expect(Object.keys(sheet.dataVerification).length).toBe(0)
+  })
+
+  it('handles specifications with no values gracefully', () => {
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-1',
+          name: 'Color',
+          order: 0,
+          values: [], // Empty values array
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: '' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    const sheet = capturedData.find((s: { id: string }) => s.id === sheetId)
+
+    // No dropdown for specs with no values
+    expect(sheet.dataVerification['1_1']).toBeUndefined()
+  })
+})
+
 describe('SpreadsheetContainer onChange handler', () => {
   beforeEach(() => {
     localStorage.clear()
     useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
     capturedHooks = {}
     capturedOnChange = null
+    capturedData = []
   })
 
   it('processes data sheet changes via onChange', () => {
@@ -171,7 +386,9 @@ describe('SpreadsheetContainer hooks', () => {
   beforeEach(() => {
     localStorage.clear()
     useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
     capturedHooks = {}
+    capturedData = []
   })
 
   it('does not provide beforeDeleteSheet hook (no protected sheets)', () => {

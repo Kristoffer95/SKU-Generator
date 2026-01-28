@@ -1,3 +1,22 @@
+## remove-config-3: Update dropdown building to use specifications store
+
+**Completed**: Dropdowns now built from useSpecificationsStore instead of Config sheet
+
+**Key decisions**:
+- Added extractHeaders() helper to get column names from first row
+- Added buildDataVerification() to create Fortune-Sheet dropdown config
+- dataVerification keyed by "{row}_{col}", applies dropdown to rows 1-99 in matching columns
+- Column matched by header name === specification.name
+- Dropdown value1 = comma-separated displayValues from spec
+- Empty specs or specs with no values gracefully handled (no dropdown)
+- Component re-renders when specifications change (specs in dependency array)
+
+**Files changed**:
+- src/components/SpreadsheetContainer.tsx: Added buildDataVerification, extractHeaders, useSpecificationsStore
+- src/components/SpreadsheetContainer.test.tsx: Added 6 tests for dropdown building behavior
+
+---
+
 ## remove-config-2: Remove Config sheet handling from SpreadsheetContainer
 
 **Completed**: SpreadsheetContainer no longer references config-sheet.ts or Config sheet type

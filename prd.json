@@ -64,7 +64,7 @@
       "Dropdown options match specification values from store",
       "Adding a new spec value immediately appears in column dropdowns"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "sidebar-ui-1",
