@@ -111,7 +111,7 @@
       "New spec appears at bottom of sidebar list",
       "New spec column appears in data sheets with dropdown"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "sku-gen-1",

@@ -1,3 +1,22 @@
+## sidebar-ui-4: Update AddSpecDialog to work with specifications store
+
+**Completed**: AddSpecDialog now writes to useSpecificationsStore instead of Config sheet
+
+**Key decisions**:
+- Replaced getConfigSheet/parseConfigSheet with useSpecificationsStore hook
+- Calls addSpecification(name) then addSpecValue() for each value
+- Store auto-assigns order = max existing order + 1 for new specs
+- Updated internal ValueEntry type: label→displayValue, skuCode→skuFragment
+- Removed Config sheet write logic, kept data sheet column addition
+- Updated dialog description text (no longer mentions Config sheet)
+- existingSpecNames validation now reads from specifications array
+
+**Files changed**:
+- src/components/AddSpecDialog.tsx: Replaced Config sheet with specifications store
+- src/components/AddSpecDialog.test.tsx: Rewrote 20 tests to use specifications store
+
+---
+
 ## sidebar-ui-1: Enhance SpecificationList to read from useSpecificationsStore
 
 **Completed**: SpecificationList now reads from useSpecificationsStore instead of Config sheet

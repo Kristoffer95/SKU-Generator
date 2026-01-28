@@ -12,8 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useSheetsStore } from "@/store/sheets"
-import { parseConfigSheet, getSpecNames } from "@/lib/config-sheet"
-import type { CellData } from "@/types"
+import { useSpecificationsStore } from "@/store/specifications"
 
 interface AddSpecDialogProps {
   open: boolean
@@ -22,30 +21,28 @@ interface AddSpecDialogProps {
 
 interface ValueEntry {
   id: string
-  label: string
-  skuCode: string
+  displayValue: string
+  skuFragment: string
 }
 
 const generateId = () => crypto.randomUUID()
 
 export function AddSpecDialog({ open, onOpenChange }: AddSpecDialogProps) {
-  const { getConfigSheet, getActiveSheet, setSheetData } = useSheetsStore()
+  const { getActiveSheet, setSheetData } = useSheetsStore()
+  const { specifications, addSpecification, addSpecValue } = useSpecificationsStore()
 
   const [specName, setSpecName] = useState("")
   const [values, setValues] = useState<ValueEntry[]>([
-    { id: generateId(), label: "", skuCode: "" },
+    { id: generateId(), displayValue: "", skuFragment: "" },
   ])
   const [error, setError] = useState<string | null>(null)
 
   // Get existing spec names for validation
-  const configSheet = getConfigSheet()
-  const existingSpecNames = configSheet
-    ? getSpecNames(parseConfigSheet(configSheet.data))
-    : []
+  const existingSpecNames = specifications.map((spec) => spec.name)
 
   const resetForm = () => {
     setSpecName("")
-    setValues([{ id: generateId(), label: "", skuCode: "" }])
+    setValues([{ id: generateId(), displayValue: "", skuFragment: "" }])
     setError(null)
   }
 
@@ -57,7 +54,7 @@ export function AddSpecDialog({ open, onOpenChange }: AddSpecDialogProps) {
   }
 
   const addValueEntry = () => {
-    setValues([...values, { id: generateId(), label: "", skuCode: "" }])
+    setValues([...values, { id: generateId(), displayValue: "", skuFragment: "" }])
   }
 
   const removeValueEntry = (id: string) => {
@@ -66,7 +63,7 @@ export function AddSpecDialog({ open, onOpenChange }: AddSpecDialogProps) {
     }
   }
 
-  const updateValueEntry = (id: string, field: "label" | "skuCode", value: string) => {
+  const updateValueEntry = (id: string, field: "displayValue" | "skuFragment", value: string) => {
     setValues(
       values.map((v) => (v.id === id ? { ...v, [field]: value } : v))
     )
@@ -86,8 +83,8 @@ export function AddSpecDialog({ open, onOpenChange }: AddSpecDialogProps) {
       return false
     }
 
-    // Check that at least one value has a label
-    const validValues = values.filter((v) => v.label.trim())
+    // Check that at least one value has a displayValue
+    const validValues = values.filter((v) => v.displayValue.trim())
     if (validValues.length === 0) {
       setError("At least one value with a label is required")
       return false
@@ -101,23 +98,15 @@ export function AddSpecDialog({ open, onOpenChange }: AddSpecDialogProps) {
     if (!validateForm()) return
 
     const trimmedName = specName.trim()
-    const validValues = values.filter((v) => v.label.trim())
+    const validValues = values.filter((v) => v.displayValue.trim())
 
-    // Add rows to Config sheet
-    if (configSheet) {
-      const newConfigData = [...configSheet.data]
+    // Add specification to store
+    const specId = addSpecification(trimmedName)
 
-      validValues.forEach((v) => {
-        const newRow: CellData[] = [
-          { v: trimmedName, m: trimmedName },
-          { v: v.label.trim(), m: v.label.trim() },
-          { v: v.skuCode.trim(), m: v.skuCode.trim() },
-        ]
-        newConfigData.push(newRow)
-      })
-
-      setSheetData(configSheet.id, newConfigData)
-    }
+    // Add values to the specification
+    validValues.forEach((v) => {
+      addSpecValue(specId, v.displayValue.trim(), v.skuFragment.trim())
+    })
 
     // Add column to active data sheet (if it's a data sheet)
     const activeSheet = getActiveSheet()
@@ -170,8 +159,8 @@ export function AddSpecDialog({ open, onOpenChange }: AddSpecDialogProps) {
         <DialogHeader>
           <DialogTitle>Add Specification</DialogTitle>
           <DialogDescription>
-            Create a new specification with values. This will add rows to the Config sheet
-            and a column to the active data sheet.
+            Create a new specification with values. This will add a column to the active
+            data sheet.
           </DialogDescription>
         </DialogHeader>
 
@@ -196,15 +185,15 @@ export function AddSpecDialog({ open, onOpenChange }: AddSpecDialogProps) {
               {values.map((entry, index) => (
                 <div key={entry.id} className="flex gap-2 items-center">
                   <Input
-                    value={entry.label}
-                    onChange={(e) => updateValueEntry(entry.id, "label", e.target.value)}
+                    value={entry.displayValue}
+                    onChange={(e) => updateValueEntry(entry.id, "displayValue", e.target.value)}
                     placeholder="Value label"
                     className="flex-1"
                     aria-label={`Value ${index + 1} label`}
                   />
                   <Input
-                    value={entry.skuCode}
-                    onChange={(e) => updateValueEntry(entry.id, "skuCode", e.target.value)}
+                    value={entry.skuFragment}
+                    onChange={(e) => updateValueEntry(entry.id, "skuFragment", e.target.value)}
                     placeholder="SKU code"
                     className="w-24"
                     aria-label={`Value ${index + 1} SKU code`}

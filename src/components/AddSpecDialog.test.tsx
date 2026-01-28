@@ -2,21 +2,23 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { AddSpecDialog } from './AddSpecDialog'
 import { useSheetsStore } from '@/store/sheets'
+import { useSpecificationsStore } from '@/store/specifications'
 
-// Reset store before each test
+// Reset stores before each test
 beforeEach(() => {
+  useSpecificationsStore.setState({
+    specifications: [],
+  })
   useSheetsStore.setState({
     sheets: [
       {
-        id: 'config-1',
-        name: 'Config',
-        type: 'config',
-        data: [
-          [{ v: 'Specification' }, { v: 'Value' }, { v: 'SKU Code' }],
-        ],
+        id: 'data-1',
+        name: 'Sheet 1',
+        type: 'data',
+        data: [],
       },
     ],
-    activeSheetId: 'config-1',
+    activeSheetId: 'data-1',
   })
 })
 
@@ -92,20 +94,11 @@ describe('AddSpecDialog', () => {
   })
 
   it('shows error when specification name already exists', () => {
-    // Add existing spec to Config
-    useSheetsStore.setState({
-      sheets: [
-        {
-          id: 'config-1',
-          name: 'Config',
-          type: 'config',
-          data: [
-            [{ v: 'Specification' }, { v: 'Value' }, { v: 'SKU Code' }],
-            [{ v: 'Color' }, { v: 'Red' }, { v: 'R' }],
-          ],
-        },
+    // Add existing spec to specifications store
+    useSpecificationsStore.setState({
+      specifications: [
+        { id: 'spec-1', name: 'Color', order: 0, values: [{ id: 'v-1', displayValue: 'Red', skuFragment: 'R' }] },
       ],
-      activeSheetId: 'config-1',
     })
 
     render(<AddSpecDialog open={true} onOpenChange={() => {}} />)
@@ -118,19 +111,10 @@ describe('AddSpecDialog', () => {
   })
 
   it('validates spec name case-insensitively', () => {
-    useSheetsStore.setState({
-      sheets: [
-        {
-          id: 'config-1',
-          name: 'Config',
-          type: 'config',
-          data: [
-            [{ v: 'Specification' }, { v: 'Value' }, { v: 'SKU Code' }],
-            [{ v: 'Color' }, { v: 'Red' }, { v: 'R' }],
-          ],
-        },
+    useSpecificationsStore.setState({
+      specifications: [
+        { id: 'spec-1', name: 'Color', order: 0, values: [{ id: 'v-1', displayValue: 'Red', skuFragment: 'R' }] },
       ],
-      activeSheetId: 'config-1',
     })
 
     render(<AddSpecDialog open={true} onOpenChange={() => {}} />)
@@ -142,7 +126,7 @@ describe('AddSpecDialog', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Specification "COLOR" already exists')
   })
 
-  it('adds rows to Config sheet on submit', () => {
+  it('adds specification to store on submit', () => {
     const onOpenChange = vi.fn()
     render(<AddSpecDialog open={true} onOpenChange={onOpenChange} />)
 
@@ -157,28 +141,40 @@ describe('AddSpecDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Specification' }))
 
-    const configSheet = useSheetsStore.getState().sheets.find(s => s.type === 'config')
-    expect(configSheet?.data).toHaveLength(3) // Header + 2 values
-    expect(configSheet?.data[1][0].v).toBe('Size')
-    expect(configSheet?.data[1][1].v).toBe('Small')
-    expect(configSheet?.data[1][2].v).toBe('S')
-    expect(configSheet?.data[2][0].v).toBe('Size')
-    expect(configSheet?.data[2][1].v).toBe('Large')
-    expect(configSheet?.data[2][2].v).toBe('L')
+    const specs = useSpecificationsStore.getState().specifications
+    expect(specs).toHaveLength(1)
+    expect(specs[0].name).toBe('Size')
+    expect(specs[0].values).toHaveLength(2)
+    expect(specs[0].values[0].displayValue).toBe('Small')
+    expect(specs[0].values[0].skuFragment).toBe('S')
+    expect(specs[0].values[1].displayValue).toBe('Large')
+    expect(specs[0].values[1].skuFragment).toBe('L')
     expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('assigns order = max + 1 to new specification', () => {
+    useSpecificationsStore.setState({
+      specifications: [
+        { id: 'spec-1', name: 'Color', order: 0, values: [] },
+        { id: 'spec-2', name: 'Size', order: 1, values: [] },
+      ],
+    })
+
+    render(<AddSpecDialog open={true} onOpenChange={() => {}} />)
+
+    fireEvent.change(screen.getByLabelText('Specification Name'), { target: { value: 'Material' } })
+    fireEvent.change(screen.getByLabelText('Value 1 label'), { target: { value: 'Cotton' } })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Specification' }))
+
+    const specs = useSpecificationsStore.getState().specifications
+    const materialSpec = specs.find((s) => s.name === 'Material')
+    expect(materialSpec?.order).toBe(2)
   })
 
   it('adds column to active data sheet on submit', () => {
     useSheetsStore.setState({
       sheets: [
-        {
-          id: 'config-1',
-          name: 'Config',
-          type: 'config',
-          data: [
-            [{ v: 'Specification' }, { v: 'Value' }, { v: 'SKU Code' }],
-          ],
-        },
         {
           id: 'data-1',
           name: 'Sheet 1',
@@ -200,25 +196,11 @@ describe('AddSpecDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Specification' }))
 
-    const dataSheet = useSheetsStore.getState().sheets.find(s => s.id === 'data-1')
+    const dataSheet = useSheetsStore.getState().sheets.find((s) => s.id === 'data-1')
     // Column should be inserted before SKU
     expect(dataSheet?.data[0][0].v).toBe('Color')
     expect(dataSheet?.data[0][1].v).toBe('Size')
     expect(dataSheet?.data[0][2].v).toBe('SKU')
-  })
-
-  it('does not add column to Config sheet when active', () => {
-    render(<AddSpecDialog open={true} onOpenChange={() => {}} />)
-
-    fireEvent.change(screen.getByLabelText('Specification Name'), { target: { value: 'Size' } })
-    fireEvent.change(screen.getByLabelText('Value 1 label'), { target: { value: 'Small' } })
-
-    fireEvent.click(screen.getByRole('button', { name: 'Add Specification' }))
-
-    const configSheet = useSheetsStore.getState().sheets.find(s => s.type === 'config')
-    // Config sheet should only have header columns (no new column added)
-    expect(configSheet?.data[0]).toHaveLength(3)
-    expect(configSheet?.data[0][0].v).toBe('Specification')
   })
 
   it('calls onOpenChange(false) when cancel is clicked', () => {
@@ -254,14 +236,6 @@ describe('AddSpecDialog', () => {
     useSheetsStore.setState({
       sheets: [
         {
-          id: 'config-1',
-          name: 'Config',
-          type: 'config',
-          data: [
-            [{ v: 'Specification' }, { v: 'Value' }, { v: 'SKU Code' }],
-          ],
-        },
-        {
           id: 'data-1',
           name: 'Sheet 1',
           type: 'data',
@@ -278,7 +252,7 @@ describe('AddSpecDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Specification' }))
 
-    const dataSheet = useSheetsStore.getState().sheets.find(s => s.id === 'data-1')
+    const dataSheet = useSheetsStore.getState().sheets.find((s) => s.id === 'data-1')
     // Should create header row with spec name and SKU
     expect(dataSheet?.data[0][0].v).toBe('Color')
     expect(dataSheet?.data[0][1].v).toBe('SKU')
@@ -297,9 +271,10 @@ describe('AddSpecDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Specification' }))
 
-    const configSheet = useSheetsStore.getState().sheets.find(s => s.type === 'config')
+    const specs = useSpecificationsStore.getState().specifications
     // Only one value should be added (the one with a label)
-    expect(configSheet?.data).toHaveLength(2) // Header + 1 value
+    expect(specs[0].values).toHaveLength(1)
+    expect(specs[0].values[0].displayValue).toBe('Small')
   })
 
   it('trims whitespace from spec name and values', () => {
@@ -311,9 +286,30 @@ describe('AddSpecDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Specification' }))
 
-    const configSheet = useSheetsStore.getState().sheets.find(s => s.type === 'config')
-    expect(configSheet?.data[1][0].v).toBe('Size')
-    expect(configSheet?.data[1][1].v).toBe('Small')
-    expect(configSheet?.data[1][2].v).toBe('S')
+    const specs = useSpecificationsStore.getState().specifications
+    expect(specs[0].name).toBe('Size')
+    expect(specs[0].values[0].displayValue).toBe('Small')
+    expect(specs[0].values[0].skuFragment).toBe('S')
+  })
+
+  it('new spec appears at bottom of sidebar list', () => {
+    useSpecificationsStore.setState({
+      specifications: [
+        { id: 'spec-1', name: 'Color', order: 0, values: [] },
+      ],
+    })
+
+    render(<AddSpecDialog open={true} onOpenChange={() => {}} />)
+
+    fireEvent.change(screen.getByLabelText('Specification Name'), { target: { value: 'Size' } })
+    fireEvent.change(screen.getByLabelText('Value 1 label'), { target: { value: 'Small' } })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Specification' }))
+
+    const specs = useSpecificationsStore.getState().specifications
+    // New spec should have higher order than existing
+    const sizeSpec = specs.find((s) => s.name === 'Size')
+    const colorSpec = specs.find((s) => s.name === 'Color')
+    expect(sizeSpec?.order).toBeGreaterThan(colorSpec!.order)
   })
 })
