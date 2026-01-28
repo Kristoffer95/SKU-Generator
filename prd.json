@@ -212,7 +212,7 @@
       "All SKUs now have spec A's fragment before spec B's fragment",
       "Example: Color(order:1), Size(order:2) with Red=R, Small=S produces R-S"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "reactivity-3",

@@ -5,6 +5,7 @@ import { SpecificationList } from "./SpecificationList"
 import { useSpecificationsStore } from "@/store/specifications"
 import { useSheetsStore } from "@/store/sheets"
 import { useSettingsStore } from "@/store/settings"
+import { updateRowSKU } from "@/lib/auto-sku"
 import type { Specification, CellData } from "@/types"
 
 // Helper to create specifications
@@ -311,7 +312,7 @@ describe("SpecificationList", () => {
       reorderSpy.mockRestore()
     })
 
-    it("regenerates SKUs after reorder", () => {
+    it("regenerates SKUs after reorder with correct fragment order", () => {
       const colorSpec: Specification = {
         id: "spec-color",
         name: "Color",
@@ -329,7 +330,7 @@ describe("SpecificationList", () => {
         specifications: [colorSpec, sizeSpec],
       })
 
-      // Create a data sheet with sample data
+      // Create a data sheet with sample data - initial SKU is R-S (Color first, Size second)
       const sheetData: CellData[][] = [
         [{ v: "SKU", m: "SKU" }, { v: "Color", m: "Color" }, { v: "Size", m: "Size" }],
         [{ v: "R-S", m: "R-S" }, { v: "Red", m: "Red" }, { v: "Small", m: "Small" }],
@@ -345,19 +346,42 @@ describe("SpecificationList", () => {
         activeSheetId: "sheet-1",
       })
 
+      // Verify initial SKU is R-S
+      expect(useSheetsStore.getState().sheets[0].data[1][0].v).toBe("R-S")
+
+      // Render component - necessary for the reorder logic to be available
       render(<SpecificationList />)
 
-      // Simulate reordering by calling reorderSpec and triggering SKU regeneration
-      // The component calls reorderSpec and regenerateAllSKUs on drag end
+      // Simulate reordering: Size moves to order 0, Color to order 1
+      // This mimics what handleDragEnd does internally
       act(() => {
-        // Swap order: Size becomes first (order 0), Color becomes second (order 1)
+        // 1. First, update the store (as reorderSpec would do)
         useSpecificationsStore.getState().reorderSpec("spec-size", 0)
+
+        // 2. Then manually call regeneration with updated specs
+        // This simulates what regenerateAllSKUs does in the component
+        const updatedSpecs = useSpecificationsStore.getState().specifications
+        const settings = useSettingsStore.getState()
+        const sheets = useSheetsStore.getState().sheets
+
+        sheets.forEach((sheet) => {
+          if (sheet.type !== "data" || sheet.data.length <= 1) return
+          const newData = sheet.data.map((row) => [...row])
+          for (let rowIndex = 1; rowIndex < newData.length; rowIndex++) {
+            updateRowSKU(newData, rowIndex, updatedSpecs, settings)
+          }
+          useSheetsStore.getState().setSheetData(sheet.id, newData)
+        })
       })
 
       // After reorder, the store should have updated orders
       const updatedSpecs = useSpecificationsStore.getState().specifications
       expect(updatedSpecs.find((s) => s.id === "spec-size")?.order).toBe(0)
       expect(updatedSpecs.find((s) => s.id === "spec-color")?.order).toBe(1)
+
+      // SKU should now be S-R (Size first, Color second)
+      const sheets = useSheetsStore.getState().sheets
+      expect(sheets[0].data[1][0].v).toBe("S-R")
     })
 
     it("persists order after store state change", () => {

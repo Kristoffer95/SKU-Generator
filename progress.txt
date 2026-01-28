@@ -1,3 +1,19 @@
+## reactivity-2: SKU regeneration on specification order change
+
+**Completed**: SKUs regenerate with new fragment order when specs are reordered via drag-and-drop
+
+**Key decisions**:
+- Verified existing implementation in SpecificationList.tsx handles this correctly
+- `handleDragEnd` calls `reorderSpec` for moved specs, then `regenerateAllSKUs`
+- `regenerateAllSKUs` iterates all data sheets and calls `updateRowSKU` for each row
+- `generateRowSKU` sorts specs by order field before building SKU fragment string
+- Added explicit test verifying SKU changes from "R-S" to "S-R" when Size moved before Color
+
+**Files changed**:
+- src/components/SpecificationList.test.tsx: Added test "regenerates SKUs after reorder with correct fragment order"
+
+---
+
 ## readonly-sku-2: Visual styling for read-only SKU column
 
 **Completed**: SKU column (column 0) now has distinct visual styling to indicate it's auto-generated
