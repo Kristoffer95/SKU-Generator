@@ -13,28 +13,28 @@ const testSpecs: Specification[] = [
   {
     id: 'temp',
     name: 'Temperature',
-    columnIndex: 0,
+    order: 0,
     values: [
-      { id: 'v1', label: '29deg C', skuCode: '29C' },
-      { id: 'v2', label: '30deg C', skuCode: '30C' },
+      { id: 'v1', displayValue: '29deg C', skuFragment: '29C' },
+      { id: 'v2', displayValue: '30deg C', skuFragment: '30C' },
     ],
   },
   {
     id: 'color',
     name: 'Color',
-    columnIndex: 1,
+    order: 1,
     values: [
-      { id: 'v3', label: 'Red', skuCode: 'R' },
-      { id: 'v4', label: 'Blue', skuCode: 'B' },
+      { id: 'v3', displayValue: 'Red', skuFragment: 'R' },
+      { id: 'v4', displayValue: 'Blue', skuFragment: 'B' },
     ],
   },
   {
     id: 'type',
     name: 'Type',
-    columnIndex: 2,
+    order: 2,
     values: [
-      { id: 'v5', label: 'Standard', skuCode: 'STD' },
-      { id: 'v6', label: 'Premium', skuCode: 'PRM' },
+      { id: 'v5', displayValue: 'Standard', skuFragment: 'STD' },
+      { id: 'v6', displayValue: 'Premium', skuFragment: 'PRM' },
     ],
   },
 ];
@@ -61,8 +61,8 @@ describe('generateSKU', () => {
     expect(result).toBe('29C-R-STD');
   });
 
-  it('respects column order when generating SKU', () => {
-    // Select values in different order than columnIndex
+  it('respects order field when generating SKU', () => {
+    // Select values in different order than spec order
     const selected: SelectedValues = new Map([
       ['type', 'Premium'],
       ['temp', '30deg C'],
@@ -70,7 +70,7 @@ describe('generateSKU', () => {
     ]);
 
     const result = generateSKU(selected, testSpecs, defaultSettings);
-    // Should be ordered by columnIndex: temp(0), color(1), type(2)
+    // Should be ordered by order field: temp(0), color(1), type(2)
     expect(result).toBe('30C-B-PRM');
   });
 
@@ -125,7 +125,7 @@ describe('generateSKU', () => {
 
   it('returns empty string when no values are selected', () => {
     const selected: SelectedValues = new Map();
-    const result = generateSKU(selected, testSpecs, defaultSettings);
+    const result = generateSKU(selected, [], defaultSettings);
     expect(result).toBe('');
   });
 
@@ -135,14 +135,14 @@ describe('generateSKU', () => {
     expect(result).toBe('');
   });
 
-  it('skips spec when selected label not found in values', () => {
+  it('skips spec when selected displayValue not found in values', () => {
     const selected: SelectedValues = new Map([
       ['temp', '29deg C'],
       ['color', 'Green'], // Not in spec values
     ]);
 
     const result = generateSKU(selected, testSpecs, defaultSettings);
-    expect(result).toBe('29C'); // Only temp code included
+    expect(result).toBe('29C'); // Only temp fragment included
   });
 
   it('skips spec when spec ID not in specifications', () => {

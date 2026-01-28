@@ -3,7 +3,7 @@ import type { Specification, SelectedValues, AppSettings } from '../types';
 /**
  * Generate a SKU code from selected specification values.
  *
- * @param selectedValues - Map of specification ID to selected label
+ * @param selectedValues - Map of specification ID to selected displayValue
  * @param specifications - Array of specifications with their values
  * @param settings - App settings for delimiter, prefix, suffix
  * @returns Generated SKU string, or empty string if no values selected
@@ -15,30 +15,28 @@ export function generateSKU(
 ): string {
   const { delimiter, prefix, suffix } = settings;
 
-  // Sort specifications by columnIndex to ensure consistent SKU order
-  const sortedSpecs = [...specifications].sort(
-    (a, b) => a.columnIndex - b.columnIndex
-  );
+  // Sort specifications by order field to ensure consistent SKU composition
+  const sortedSpecs = [...specifications].sort((a, b) => a.order - b.order);
 
-  const skuCodes: string[] = [];
+  const skuFragments: string[] = [];
 
   for (const spec of sortedSpecs) {
-    const selectedLabel = selectedValues.get(spec.id);
-    if (selectedLabel === undefined) {
+    const selectedDisplayValue = selectedValues.get(spec.id);
+    if (selectedDisplayValue === undefined) {
       continue;
     }
 
-    // Find the value with matching label
-    const specValue = spec.values.find((v) => v.label === selectedLabel);
+    // Find the value with matching displayValue
+    const specValue = spec.values.find((v) => v.displayValue === selectedDisplayValue);
     if (specValue) {
-      skuCodes.push(specValue.skuCode);
+      skuFragments.push(specValue.skuFragment);
     }
   }
 
-  if (skuCodes.length === 0) {
+  if (skuFragments.length === 0) {
     return '';
   }
 
-  const joined = skuCodes.join(delimiter);
+  const joined = skuFragments.join(delimiter);
   return `${prefix}${joined}${suffix}`;
 }

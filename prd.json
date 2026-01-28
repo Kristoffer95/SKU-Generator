@@ -1,333 +1,251 @@
-{
-  "project": "SKU Generator",
-  "description": "A React application using a Config sheet as single source of truth for specification definitions, with auto-generation of SKU codes in a spreadsheet interface",
-  "items": [
-    {
-      "id": "PRD-001",
-      "category": "Project Setup",
-      "description": "Initialize React project with Vite, TypeScript, Tailwind CSS, shadcn/ui, Framer Motion, Zustand, and Fortune-Sheet",
-      "stepsToVerify": [
-        "Run 'npm create vite@latest' with react-ts template",
-        "Install all dependencies: zustand, framer-motion, @fortune-sheet/react, tailwindcss",
-        "Configure Tailwind CSS with tailwind.config.js and postcss.config.js",
-        "Initialize shadcn/ui and add required components (button, card, dialog, sidebar, tabs, input)",
-        "Verify 'npm run dev' starts the development server without errors"
-      ],
-      "passes": true
-    },
-    {
-      "id": "PRD-002",
-      "category": "Data Model",
-      "description": "Define TypeScript interfaces for Config sheet-based specification management",
-      "stepsToVerify": [
-        "Create src/types/index.ts with ConfigRow interface (specification, value, skuCode)",
-        "Create ParsedSpec interface (name, values array with label and skuCode)",
-        "Create SheetConfig interface for multi-sheet support including Config sheet",
-        "Create AppSettings interface for SKU delimiter and prefix/suffix options",
-        "Create CellData interface matching Fortune-Sheet cell format",
-        "Verify TypeScript compiles without errors"
-      ],
-      "passes": true
-    },
-    {
-      "id": "PRD-003",
-      "category": "State Management",
-      "description": "Implement Zustand stores for sheets and settings with Config sheet as spec source of truth",
-      "stepsToVerify": [
-        "Create src/store/sheets.ts for multi-sheet management with Config sheet always first",
-        "Initialize sheets store with default Config sheet containing headers (Specification, Value, SKU Code)",
-        "Create src/store/settings.ts for app configuration (delimiter, prefix, suffix)",
-        "Remove or deprecate src/store/specifications.ts (specs now live in Config sheet)",
-        "Verify stores persist to localStorage on changes",
-        "Verify Config sheet cannot be deleted"
-      ],
-      "passes": true
-    },
-    {
-      "id": "PRD-004",
-      "category": "SKU Generation Logic",
-      "description": "Implement SKU generation that looks up codes from Config sheet data",
-      "stepsToVerify": [
-        "Create src/lib/config-sheet.ts with parseConfigSheet function to extract specs from Config data",
-        "Create getSpecValues function to get all values for a specification name",
-        "Create src/lib/sheet-sku.ts with generateRowSKU function",
-        "Function takes row values, column headers, parsed config, and settings",
-        "Function looks up skuCode from Config for each cell value",
-        "Function joins codes with configurable delimiter and adds prefix/suffix",
-        "Test: Row with 'Red', 'Small' lookups from Config -> 'R-S'"
-      ],
-      "passes": true
-    },
-    {
-      "id": "PRD-005",
-      "category": "Sidebar Specification View",
-      "description": "Create sidebar UI that displays specifications parsed from Config sheet",
-      "stepsToVerify": [
-        "Update SpecificationList to parse and display specs from Config sheet data",
-        "Show each specification name with count of defined values",
-        "Add 'Add Specification' button that opens AddSpecDialog",
-        "Clicking a specification jumps to or highlights it in Config sheet",
-        "Remove direct editing in sidebar (specs are edited in Config sheet)",
-        "Sidebar updates automatically when Config sheet changes"
-      ],
-      "passes": true
-    },
-    {
-      "id": "PRD-006",
-      "category": "Spreadsheet Integration",
-      "description": "Integrate Fortune-Sheet with dropdowns populated from Config sheet",
-      "stepsToVerify": [
-        "Create SpreadsheetContainer component wrapping Fortune-Sheet Workbook",
-        "Parse Config sheet to get all spec names and their allowed values",
-        "For data sheets: column headers define which spec applies to that column",
-        "Generate dataVerification (dropdown) for cells based on column header matching Config spec",
-        "Verify clicking a cell in data sheet shows dropdown with values from Config",
-        "Last column is reserved for auto-generated SKU"
-      ],
-      "passes": true
-    },
-    {
-      "id": "PRD-007",
-      "category": "Auto SKU Generation",
-      "description": "Automatically update SKU column when values are selected in data sheet rows",
-      "stepsToVerify": [
-        "Listen to onChange callback from Fortune-Sheet",
-        "When a cell value changes in a data sheet, identify the row",
-        "Collect all values in that row and their column headers",
-        "Look up SKU codes from Config sheet for each value",
-        "Generate SKU and update the SKU column cell",
-        "Test: Select 'Red' (R), 'Small' (S) in row -> SKU shows 'R-S'"
-      ],
-      "passes": true
-    },
-    {
-      "id": "PRD-008",
-      "category": "Multiple Sheets",
-      "description": "Support Config sheet plus multiple data sheets with independent data",
-      "stepsToVerify": [
-        "Create SheetTabs component showing tab bar at bottom of spreadsheet",
-        "Config sheet is always the first tab and cannot be deleted or renamed",
-        "Style Config tab distinctly (different color or icon)",
-        "Support adding new data sheets via '+' button",
-        "Support renaming data sheets (double-click tab)",
-        "Support deleting data sheets (X button on tab, not Config)",
-        "Each data sheet maintains independent row data but shares Config specs"
-      ],
-      "passes": true
-    },
-    {
-      "id": "PRD-009",
-      "category": "App Layout",
-      "description": "Create main application layout with header actions for import/export/settings",
-      "stepsToVerify": [
-        "Create AppLayout component with shadcn/ui SidebarProvider",
-        "Left sidebar contains specification view (read from Config)",
-        "Main area contains spreadsheet with sheet tabs below",
-        "Header with app title, sidebar toggle, Import button, Export dropdown, Settings button",
-        "Sidebar should be collapsible/expandable"
-      ],
-      "passes": true
-    },
-    {
-      "id": "PRD-010",
-      "category": "Import/Export",
-      "description": "Support importing and exporting spreadsheet data including Config sheet",
-      "stepsToVerify": [
-        "Create src/lib/import-export.ts with exportToExcel function",
-        "Export includes all sheets (Config + data sheets) in one workbook",
-        "Create exportToCSV function for current sheet only",
-        "Create importFromExcel function that loads all sheets including Config",
-        "Importing a workbook with Config sheet replaces current specs",
-        "Verify exported Excel opens correctly in Excel/Google Sheets",
-        "Verify importing an Excel file loads Config and data correctly"
-      ],
-      "passes": true
-    },
-    {
-      "id": "PRD-011",
-      "category": "Settings",
-      "description": "Allow users to configure SKU generation settings (delimiter, prefix, suffix)",
-      "stepsToVerify": [
-        "Create SettingsDialog component accessible from header",
-        "Setting: SKU delimiter (default '-', options: '-', '_', '', custom)",
-        "Setting: SKU prefix (optional string prepended to all SKUs)",
-        "Setting: SKU suffix (optional string appended to all SKUs)",
-        "Settings persist to localStorage via Zustand",
-        "Changing settings triggers SKU recalculation for all rows in all data sheets"
-      ],
-      "passes": true
-    },
-    {
-      "id": "PRD-012",
-      "category": "End-to-End Verification",
-      "description": "Complete workflow test using Config sheet for spec definitions",
-      "stepsToVerify": [
-        "In Config sheet, add rows: Temperature/29deg C/29C, Temperature/30deg C/30C",
-        "In Config sheet, add rows: Color/Red/R, Color/Blue/B",
-        "In Config sheet, add rows: Type/Standard/STD, Type/Premium/PRM",
-        "Create new data sheet, add columns: Temperature, Color, Type, SKU",
-        "Verify dropdowns in Temperature column show '29deg C', '30deg C'",
-        "Select '29deg C', 'Red', 'Standard' in row 2",
-        "Verify SKU column auto-generates '29C-R-STD'",
-        "Change Color to 'Blue' -> SKU updates to '29C-B-STD'",
-        "Export to Excel and verify Config sheet and data are included"
-      ],
-      "passes": true
-    },
-    {
-      "id": "PRD-013",
-      "category": "Add Specification Dialog",
-      "description": "Dialog for adding new specifications to Config sheet and data sheet columns",
-      "stepsToVerify": [
-        "Create AddSpecDialog component accessible from sidebar",
-        "Form fields: specification name, initial values (label + SKU code pairs)",
-        "On submit: add rows to Config sheet for each value",
-        "On submit: add column with spec name as header to active data sheet",
-        "Validate specification name is unique (not already in Config)",
-        "Verify new dropdown appears in the new column with defined values"
-      ],
-      "passes": true
-    },
-    {
-      "id": "PRD-014",
-      "category": "Bug Fix",
-      "description": "Fix infinite re-render loop in SpreadsheetContainer causing app crash with 'Maximum update depth exceeded' error",
-      "stepsToVerify": [
-        "Add useRef and useEffect to imports in SpreadsheetContainer.tsx",
-        "Create isDataEqual helper function for deep comparison of CellData[][] arrays",
-        "Replace sheetsRef useMemo with useRef (previousDataRef) to track previous data without triggering re-renders",
-        "Add sheetsSnapshotRef useRef synced via useEffect to access current sheets without dependency",
-        "Memoize configSheet with useMemo instead of calling getConfigSheet() directly",
-        "Rewrite handleChange callback: remove sheets/sheetsRef from dependencies, add isDataEqual check to skip unchanged data",
-        "Update handleBeforeDeleteSheet and handleBeforeUpdateSheetName to use sheetsSnapshotRef instead of sheets dependency",
-        "Verify app loads without blank white page",
-        "Verify browser console has no 'Maximum update depth exceeded' errors",
-        "Verify editing cells in data sheet auto-generates SKU correctly",
-        "Verify switching between sheets works without crashes",
-        "Run npm run typecheck with no errors",
-        "Run npm run lint with no errors",
-        "Run npm run test with all tests passing"
-      ],
-      "passes": true
-    },
-    {
-      "id": "PRD-015",
-      "category": "Feature Enhancement",
-      "description": "Move SKU column from last column to Column A (index 0) in data sheets for improved visibility and workflow",
-      "stepsToVerify": [
-        "Update src/lib/sheet-sku.ts extractColumnHeaders() to skip first column (index 0) instead of last column",
-        "Update src/lib/sheet-sku.ts getRowValuesWithoutSKU() to use row.slice(1) instead of row.slice(0, -1)",
-        "Update src/lib/auto-sku.ts updateRowSKU() to write SKU to row[0] instead of row[headers.length]",
-        "Update src/lib/auto-sku.ts findChangedRows() to compare columns starting from index 1 (skip SKU column)",
-        "Update src/components/SpreadsheetContainer.tsx extractHeaders() to skip first column instead of last",
-        "Update src/components/SpreadsheetContainer.tsx buildDataVerification() to apply dropdowns to columns 1+ (colIndex = headerIndex + 1)",
-        "Update test file src/lib/sheet-sku.test.ts with new column order (SKU first)",
-        "Update test file src/lib/auto-sku.test.ts with new column order (SKU first)",
-        "Update test file src/lib/e2e-workflow.test.ts with new column order (SKU first)",
-        "Verify npm run typecheck passes with no errors",
-        "Verify npm run lint passes with no errors",
-        "Verify npm run test passes with all tests passing",
-        "Manual test: Create new data sheet, verify Column A header is 'SKU'",
-        "Manual test: Add spec columns (Color, Size) starting from Column B",
-        "Manual test: Select values from dropdowns in spec columns",
-        "Manual test: Verify SKU auto-generates in Column A when values are selected"
-      ],
-      "passes": true
-    },
-    {
-      "id": "PRD-016",
-      "category": "User Onboarding",
-      "description": "Implement comprehensive 24-step Driver.js guided tutorial organized into 3 phases (Foundation, Create SKU, Advanced) that teaches users how to use the app step-by-step with auto-opening dialogs at relevant steps",
-      "stepsToVerify": [
-        "BUG FIX: Sample data not appearing due to localStorage hydration race condition - Zustand persist middleware writes empty sheets before initializeWithSampleData() runs",
-        "Fix: Add onRehydrateStorage callback to persist middleware in src/store/sheets.ts to initialize sample data AFTER hydration completes",
-        "Fix: Use separate localStorage key 'sku-has-data' for first-launch detection instead of checking 'sku-sheets' (used by persist)",
-        "Fix: Move sample data initialization logic into onRehydrateStorage callback, remove initializeWithSampleData() from App.tsx useEffect",
-        "Create src/lib/sample-data.ts with getSampleConfigData() returning sample Config rows: Color (Red/R, Blue/B, Green/G), Size (Small/S, Medium/M, Large/L), Material (Cotton/COT, Polyester/POL, Wool/WOL)",
-        "Create getSampleProductData() returning 5 sample products with pre-filled values and auto-generated SKUs",
-        "Create createSampleSheets() that returns Config sheet + Sample Products sheet objects",
-        "Sample products should demonstrate: R-S-COT, B-M-POL, G-L-WOL, R-L-COT, B-S-POL as SKU examples",
-        "Auto-start tour on first page load: In App.tsx useEffect, check hasTourCompleted() and call startGuidedTour() if false",
-        "Add small delay (500-1000ms) before auto-starting tour to ensure all elements are rendered",
-        "Phase 1 - Foundation (Steps 1-7): Welcome, Config tab intro, Config structure explanation, row mapping demo, sidebar overview, spec cards explanation, foundation checkpoint",
-        "Phase 2 - Create SKU (Steps 8-17): Add spec button, add spec dialog overview, spec name field, values section, create data sheet, column headers setup, SKU column explanation, dropdown usage, SKU generation explanation, create SKU checkpoint",
-        "Phase 3 - Advanced (Steps 18-24): Settings button, settings dialog, import button, export button, multi-sheet overview, tour restart button, completion",
-        "Rewrite src/lib/guided-tour.ts with 24 detailed tutorial steps replacing existing 10 generic steps",
-        "Add dialog opener registry: registerTourDialogOpeners() function to coordinate auto-opening dialogs during tour",
-        "Implement onHighlightStarted hook to auto-open AddSpecDialog at steps 8-11 and SettingsDialog at step 18-19",
-        "Implement onDeselected hook to close dialogs when leaving dialog steps",
-        "Add data-tour='add-spec-dialog' attribute to DialogContent in src/components/AddSpecDialog.tsx",
-        "Add data-tour='spec-name-input' attribute to spec name Input in src/components/AddSpecDialog.tsx",
-        "Add data-tour='spec-values-section' attribute to values container div in src/components/AddSpecDialog.tsx",
-        "Add data-tour='settings-dialog' attribute to DialogContent in src/components/SettingsDialog.tsx",
-        "Add data-tour='spec-item' attribute to first SpecItem card in src/components/SpecificationList.tsx",
-        "Register addSpec dialog opener in SpecificationList.tsx via useEffect calling registerTourDialogOpeners()",
-        "Register settings dialog opener in AppLayout.tsx via useEffect calling registerTourDialogOpeners()",
-        "Register closeAll callback to close all dialogs when tour ends or leaves dialog steps",
-        "Each step must have descriptive title and detailed description explaining WHAT to do and WHY",
-        "Verify tour starts when clicking Tour button in header",
-        "Verify all 24 steps highlight correct elements",
-        "Verify AddSpecDialog auto-opens at steps 8-11",
-        "Verify SettingsDialog auto-opens at steps 18-19",
-        "Verify dialogs close when navigating away from dialog steps",
-        "Verify Previous/Next navigation works correctly through all 24 steps",
-        "Verify tour can be dismissed at any point",
-        "Verify tour completion state persists to localStorage",
-        "Verify tour auto-starts on first page load (clear localStorage, refresh page)",
-        "Verify tour does NOT auto-start on subsequent visits (after completion)",
-        "Verify sample data appears on first page load: Config sheet has 9 spec entries (3 Colors, 3 Sizes, 3 Materials)",
-        "Verify sample data includes 'Sample Products' data sheet with 5 products showing SKU generation examples",
-        "Verify sidebar shows Color, Size, Material specs parsed from sample Config data",
-        "Verify sample data appears IMMEDIATELY in spreadsheet on first page load (no delay or missing data)",
-        "Verify clearing localStorage and refreshing page shows sample data in spreadsheet right away",
-        "Run npm run typecheck with no errors",
-        "Run npm run lint with no errors",
-        "Run npm run test with all tests passing"
-      ],
-      "passes": true
-    },
-    {
-      "id": "PRD-017",
-      "category": "Documentation",
-      "description": "Create comprehensive GUIDE.md documentation covering all app features, workflows, and best practices for SKU generation",
-      "stepsToVerify": [
-        "Create GUIDE.md in project root",
-        "Section: Getting Started - app overview and initial setup",
-        "Section: Config Sheet - how to define specifications with value-to-SKU mappings",
-        "Section: Adding Specifications - step-by-step for adding new specs",
-        "Section: Data Sheets - creating and managing multiple data sheets",
-        "Section: Column Headers - how headers link to Config specs for dropdowns",
-        "Section: Dropdowns - how to use dropdowns to select values",
-        "Section: SKU Generation - how SKU is auto-generated in Column A",
-        "Section: Settings - configuring delimiter, prefix, and suffix",
-        "Section: Import/Export - exporting to Excel/CSV and importing data",
-        "Section: Multi-Sheet Workflow - working with multiple data sheets",
-        "Section: Tips and Best Practices - common patterns and recommendations",
-        "Section: Troubleshooting - common issues and solutions",
-        "Include screenshots or diagrams for key workflows (optional)",
-        "Verify GUIDE.md renders correctly in GitHub markdown preview",
-        "Link GUIDE.md from README.md for easy discoverability"
-      ],
-      "passes": true
-    },
-    {
-      "id": "PRD-018",
-      "category": "Bug Fix",
-      "description": "Fix bug where specifications disappear when editing any cell - Config sheet is being overwritten by Fortune-Sheet onChange handler",
-      "stepsToVerify": [
-        "In src/components/SpreadsheetContainer.tsx handleChange callback, add early return for Config sheets",
-        "Add check: if (sheetConfig?.type === 'config') { return } before setSheetData call",
-        "This ensures Config sheet data is only modified through explicit spec operations (AddSpecDialog), not Fortune-Sheet onChange",
-        "Verify: Add specifications to Config sheet via AddSpecDialog",
-        "Verify: Edit a cell in a data sheet",
-        "Verify: Specifications remain intact in Config sheet after editing",
-        "Verify: Specifications remain intact after switching between sheets",
-        "Verify: SKU auto-generation still works correctly for data sheets",
-        "Run npm run typecheck with no errors",
-        "Run npm run lint with no errors",
-        "Run npm run test with all tests passing"
-      ],
-      "passes": true
-    }
-  ]
-}
+[
+  {
+    "id": "spec-store-1",
+    "category": "Data Model",
+    "description": "Update Specification type with order field. Each specification must have id, name, order (number), and values array. SpecValue must have id, displayValue, and skuFragment.",
+    "stepsToVerify": [
+      "src/types/index.ts contains Specification interface with order: number field",
+      "src/types/index.ts contains SpecValue interface with id, displayValue, skuFragment fields",
+      "TypeScript compiles without errors: npm run typecheck"
+    ],
+    "passes": true
+  },
+  {
+    "id": "spec-store-2",
+    "category": "Data Model",
+    "description": "Revive useSpecificationsStore as the single source of truth for specifications. Remove deprecated status. Add reorderSpec(specId, newOrder) action. Add CRUD operations that maintain order consistency.",
+    "stepsToVerify": [
+      "src/store/specifications.ts exports useSpecificationsStore with addSpecification, updateSpecification, removeSpecification, reorderSpec actions",
+      "reorderSpec updates the order field and adjusts other specs' orders accordingly",
+      "Store persists to localStorage with key 'sku-specifications'",
+      "npm run test passes for specification store tests"
+    ],
+    "passes": false
+  },
+  {
+    "id": "spec-store-3",
+    "category": "Data Model",
+    "description": "Add skuFragment uniqueness validation to specifications store. skuFragment must be unique within its specification (not globally).",
+    "stepsToVerify": [
+      "Store has validateSkuFragment(specId, skuFragment) selector that returns boolean",
+      "Adding a value with duplicate skuFragment within same spec is prevented or returns error",
+      "Different specs can have same skuFragment (e.g., Color:R and Size:R is allowed)"
+    ],
+    "passes": false
+  },
+  {
+    "id": "remove-config-1",
+    "category": "Remove Config Sheet",
+    "description": "Remove Config sheet creation from initialization. Only data sheets should be created on first launch.",
+    "stepsToVerify": [
+      "initializeWithSampleData() in src/store/sheets.ts does not create Config sheet",
+      "Sample specifications are added to useSpecificationsStore instead",
+      "Fresh app load shows only data sheet(s), no Config tab"
+    ],
+    "passes": false
+  },
+  {
+    "id": "remove-config-2",
+    "category": "Remove Config Sheet",
+    "description": "Remove all Config sheet handling from SpreadsheetContainer. Remove parseConfigSheet usage, Config sheet type checks, and Config sheet protection logic.",
+    "stepsToVerify": [
+      "src/components/SpreadsheetContainer.tsx has no imports from config-sheet.ts",
+      "No references to sheet.type === 'config' in SpreadsheetContainer",
+      "App renders without errors when Config sheet doesn't exist"
+    ],
+    "passes": false
+  },
+  {
+    "id": "remove-config-3",
+    "category": "Remove Config Sheet",
+    "description": "Update dropdown building to use specifications store instead of Config sheet. Dropdowns should show displayValue options from each specification.",
+    "stepsToVerify": [
+      "SpreadsheetContainer reads from useSpecificationsStore for dropdown values",
+      "Dropdown options match specification values from store",
+      "Adding a new spec value immediately appears in column dropdowns"
+    ],
+    "passes": false
+  },
+  {
+    "id": "sidebar-ui-1",
+    "category": "Specification Management UI",
+    "description": "Enhance SpecificationList to read from useSpecificationsStore instead of parsing Config sheet. Display specs sorted by order field.",
+    "stepsToVerify": [
+      "SpecificationList uses useSpecificationsStore hook",
+      "Specs display in order of their order field (lowest first)",
+      "Each spec shows name, value count, and individual values with skuFragments"
+    ],
+    "passes": false
+  },
+  {
+    "id": "sidebar-ui-2",
+    "category": "Specification Management UI",
+    "description": "Add drag-and-drop reordering to SpecificationList. When user drags a spec to a new position, update order field and regenerate all SKUs.",
+    "stepsToVerify": [
+      "Spec items can be dragged and dropped to reorder",
+      "After reorder, spec order fields are updated in store",
+      "After reorder, all SKUs in all data sheets are regenerated",
+      "Order persists after page reload"
+    ],
+    "passes": false
+  },
+  {
+    "id": "sidebar-ui-3",
+    "category": "Specification Management UI",
+    "description": "Add inline editing for specification values in sidebar. Users can edit displayValue and skuFragment directly. Show validation error if skuFragment is not unique within spec.",
+    "stepsToVerify": [
+      "Click on a value shows edit inputs for displayValue and skuFragment",
+      "Changing skuFragment triggers validation",
+      "Duplicate skuFragment within same spec shows error message",
+      "Valid changes save to store and update affected SKUs"
+    ],
+    "passes": false
+  },
+  {
+    "id": "sidebar-ui-4",
+    "category": "Specification Management UI",
+    "description": "Update AddSpecDialog to work with specifications store. Add order field (defaults to max existing order + 1).",
+    "stepsToVerify": [
+      "AddSpecDialog writes new specifications to useSpecificationsStore",
+      "New specs get order = max existing order + 1",
+      "New spec appears at bottom of sidebar list",
+      "New spec column appears in data sheets with dropdown"
+    ],
+    "passes": false
+  },
+  {
+    "id": "sku-gen-1",
+    "category": "SKU Generation",
+    "description": "Modify generateRowSKU to accept Specification[] from store and sort by order field before concatenating skuFragments. Column order in data sheet should not affect SKU composition.",
+    "stepsToVerify": [
+      "generateRowSKU accepts Specification[] parameter",
+      "Specs are sorted by order field before building SKU",
+      "SKU is built as: prefix + fragments.join(delimiter) + suffix",
+      "Reordering columns in data sheet does not change SKU"
+    ],
+    "passes": false
+  },
+  {
+    "id": "sku-gen-2",
+    "category": "SKU Generation",
+    "description": "Update auto-SKU logic to use specifications from store. When any cell changes in a data row, regenerate that row's SKU.",
+    "stepsToVerify": [
+      "processAutoSKU reads specifications from useSpecificationsStore",
+      "Changing a value in data sheet updates SKU in column 0",
+      "SKU uses skuFragments from store, sorted by spec order"
+    ],
+    "passes": false
+  },
+  {
+    "id": "readonly-sku-1",
+    "category": "Read-Only SKU Column",
+    "description": "Make SKU column (column 0) read-only in data sheets. Users should not be able to manually edit SKU values.",
+    "stepsToVerify": [
+      "Clicking on SKU cell does not allow text input",
+      "Double-clicking SKU cell does not enable edit mode",
+      "Copy from SKU cell still works",
+      "Auto-generated SKU values still update correctly"
+    ],
+    "passes": false
+  },
+  {
+    "id": "readonly-sku-2",
+    "category": "Read-Only SKU Column",
+    "description": "Add visual styling to indicate SKU column is read-only. Use subtle background color or other visual indicator.",
+    "stepsToVerify": [
+      "SKU column has visually distinct appearance from editable columns",
+      "Styling clearly indicates the column is auto-generated"
+    ],
+    "passes": false
+  },
+  {
+    "id": "validation-1",
+    "category": "Validation",
+    "description": "Create validation module to detect deleted values. When a cell contains a displayValue that no longer exists in its specification, mark it as an error.",
+    "stepsToVerify": [
+      "src/lib/validation.ts exports validateDataSheet function",
+      "Deleting a spec value from sidebar marks affected cells as errors",
+      "Error includes row, column, and message about missing value"
+    ],
+    "passes": false
+  },
+  {
+    "id": "validation-2",
+    "category": "Validation",
+    "description": "Add duplicate SKU detection. When multiple rows have the same SKU value, show a warning.",
+    "stepsToVerify": [
+      "Validation detects when 2+ rows have identical SKU",
+      "Warning includes which rows have duplicates",
+      "Duplicate SKUs are highlighted in the spreadsheet"
+    ],
+    "passes": false
+  },
+  {
+    "id": "validation-3",
+    "category": "Validation",
+    "description": "Create ValidationPanel component to display validation errors below the spreadsheet. Errors should be clickable to jump to the affected cell.",
+    "stepsToVerify": [
+      "ValidationPanel appears below spreadsheet when errors exist",
+      "Panel shows count and list of errors",
+      "Clicking an error scrolls to and selects the affected cell",
+      "Panel hides when no errors exist"
+    ],
+    "passes": false
+  },
+  {
+    "id": "reactivity-1",
+    "category": "Reactivity",
+    "description": "When a skuFragment changes in the specifications store, automatically regenerate all affected SKUs in all data sheets.",
+    "stepsToVerify": [
+      "Edit skuFragment in sidebar",
+      "All rows using that value have their SKU regenerated",
+      "Changes reflect immediately without manual refresh"
+    ],
+    "passes": false
+  },
+  {
+    "id": "reactivity-2",
+    "category": "Reactivity",
+    "description": "When specification order changes (via drag-and-drop), regenerate all SKUs in all data sheets to reflect new composition order.",
+    "stepsToVerify": [
+      "Drag spec A above spec B in sidebar",
+      "All SKUs now have spec A's fragment before spec B's fragment",
+      "Example: Color(order:1), Size(order:2) with Red=R, Small=S produces R-S"
+    ],
+    "passes": false
+  },
+  {
+    "id": "reactivity-3",
+    "category": "Reactivity",
+    "description": "When a displayValue is renamed in specifications store, update all cells showing that value to show the new name. SKUs should remain unchanged (only displayValue changes, not skuFragment).",
+    "stepsToVerify": [
+      "Rename 'Red' to 'Crimson' in sidebar",
+      "All cells showing 'Red' now show 'Crimson'",
+      "SKUs remain unchanged (still use skuFragment 'R')"
+    ],
+    "passes": false
+  },
+  {
+    "id": "cleanup-1",
+    "category": "Cleanup",
+    "description": "Remove or deprecate config-sheet.ts and related utilities that are no longer needed after Config sheet removal.",
+    "stepsToVerify": [
+      "src/lib/config-sheet.ts is deleted or clearly marked deprecated",
+      "No active imports of parseConfigSheet in codebase",
+      "npm run build succeeds without config-sheet dependencies"
+    ],
+    "passes": false
+  },
+  {
+    "id": "migration-1",
+    "category": "Migration",
+    "description": "Add migration logic for existing users who have Config sheet data. On app load, if Config sheet exists, migrate specs to store format and remove Config sheet.",
+    "stepsToVerify": [
+      "User with existing Config sheet data loads app",
+      "Specs from Config sheet are imported to specifications store",
+      "Config sheet is removed after successful migration",
+      "Data sheets remain intact with correct values"
+    ],
+    "passes": false
+  }
+]

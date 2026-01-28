@@ -63,24 +63,23 @@ export interface AppSettings {
  */
 export type SelectedValues = Map<string, string>;
 
-// Legacy interfaces kept for backwards compatibility during migration
-// TODO: Remove after migration to Config sheet approach
-
 /**
- * @deprecated Use ConfigRow and ParsedSpec instead
+ * A single value within a specification
+ * Maps a user-facing display value to its SKU fragment code
  */
 export interface SpecValue {
   id: string;
-  label: string;
-  skuCode: string;
+  displayValue: string;
+  skuFragment: string;
 }
 
 /**
- * @deprecated Use ParsedSpec instead - specs now live in Config sheet
+ * A specification that defines a product attribute with its possible values
+ * order field determines the position in SKU generation (lower = earlier in SKU)
  */
 export interface Specification {
   id: string;
   name: string;
+  order: number;
   values: SpecValue[];
-  columnIndex: number;
 }

@@ -1,8 +1,3 @@
-/**
- * @deprecated This store is deprecated. Specifications now live in the Config sheet.
- * Use useSheetsStore.getConfigSheet() and parse the Config sheet data instead.
- * This file is kept for backwards compatibility during migration.
- */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Specification, SpecValue } from '../types';
@@ -10,11 +5,11 @@ import type { Specification, SpecValue } from '../types';
 interface SpecificationsState {
   specifications: Specification[];
   addSpecification: (name: string) => string;
-  updateSpecification: (id: string, updates: Partial<Pick<Specification, 'name' | 'columnIndex'>>) => void;
+  updateSpecification: (id: string, updates: Partial<Pick<Specification, 'name'>>) => void;
   removeSpecification: (id: string) => void;
-  reorderSpecifications: (fromIndex: number, toIndex: number) => void;
-  addSpecValue: (specId: string, label: string, skuCode: string) => string;
-  updateSpecValue: (specId: string, valueId: string, updates: Partial<Pick<SpecValue, 'label' | 'skuCode'>>) => void;
+  reorderSpec: (specId: string, newOrder: number) => void;
+  addSpecValue: (specId: string, displayValue: string, skuFragment: string) => string;
+  updateSpecValue: (specId: string, valueId: string, updates: Partial<Pick<SpecValue, 'displayValue' | 'skuFragment'>>) => void;
   removeSpecValue: (specId: string, valueId: string) => void;
   getSpecificationById: (id: string) => Specification | undefined;
 }
@@ -29,19 +24,21 @@ export const useSpecificationsStore = create<SpecificationsState>()(
       addSpecification: (name: string) => {
         const id = generateId();
         const { specifications } = get();
-        const columnIndex = specifications.length;
+        // New specs get order = max existing order + 1 (or 0 if none exist)
+        const maxOrder = specifications.reduce((max, spec) => Math.max(max, spec.order), -1);
+        const order = maxOrder + 1;
 
         set({
           specifications: [
             ...specifications,
-            { id, name, values: [], columnIndex },
+            { id, name, order, values: [] },
           ],
         });
 
         return id;
       },
 
-      updateSpecification: (id: string, updates: Partial<Pick<Specification, 'name' | 'columnIndex'>>) => {
+      updateSpecification: (id: string, updates: Partial<Pick<Specification, 'name'>>) => {
         set((state) => ({
           specifications: state.specifications.map((spec) =>
             spec.id === id ? { ...spec, ...updates } : spec
@@ -52,38 +49,55 @@ export const useSpecificationsStore = create<SpecificationsState>()(
       removeSpecification: (id: string) => {
         set((state) => {
           const filtered = state.specifications.filter((spec) => spec.id !== id);
-          // Recalculate column indices
+          // Recalculate order values to be contiguous
+          const sorted = [...filtered].sort((a, b) => a.order - b.order);
           return {
-            specifications: filtered.map((spec, index) => ({
+            specifications: sorted.map((spec, index) => ({
               ...spec,
-              columnIndex: index,
+              order: index,
             })),
           };
         });
       },
 
-      reorderSpecifications: (fromIndex: number, toIndex: number) => {
+      reorderSpec: (specId: string, newOrder: number) => {
         set((state) => {
           const specs = [...state.specifications];
-          const [moved] = specs.splice(fromIndex, 1);
-          specs.splice(toIndex, 0, moved);
-          // Recalculate column indices
-          return {
-            specifications: specs.map((spec, index) => ({
-              ...spec,
-              columnIndex: index,
-            })),
-          };
+          const specIndex = specs.findIndex((s) => s.id === specId);
+          if (specIndex === -1) return state;
+
+          const spec = specs[specIndex];
+          const oldOrder = spec.order;
+
+          if (oldOrder === newOrder) return state;
+
+          // Update orders: shift other specs to make room
+          const updatedSpecs = specs.map((s) => {
+            if (s.id === specId) {
+              return { ...s, order: newOrder };
+            }
+            // If moving down (oldOrder < newOrder), shift specs in between up
+            if (oldOrder < newOrder && s.order > oldOrder && s.order <= newOrder) {
+              return { ...s, order: s.order - 1 };
+            }
+            // If moving up (oldOrder > newOrder), shift specs in between down
+            if (oldOrder > newOrder && s.order >= newOrder && s.order < oldOrder) {
+              return { ...s, order: s.order + 1 };
+            }
+            return s;
+          });
+
+          return { specifications: updatedSpecs };
         });
       },
 
-      addSpecValue: (specId: string, label: string, skuCode: string) => {
+      addSpecValue: (specId: string, displayValue: string, skuFragment: string) => {
         const valueId = generateId();
 
         set((state) => ({
           specifications: state.specifications.map((spec) =>
             spec.id === specId
-              ? { ...spec, values: [...spec.values, { id: valueId, label, skuCode }] }
+              ? { ...spec, values: [...spec.values, { id: valueId, displayValue, skuFragment }] }
               : spec
           ),
         }));
@@ -91,7 +105,7 @@ export const useSpecificationsStore = create<SpecificationsState>()(
         return valueId;
       },
 
-      updateSpecValue: (specId: string, valueId: string, updates: Partial<Pick<SpecValue, 'label' | 'skuCode'>>) => {
+      updateSpecValue: (specId: string, valueId: string, updates: Partial<Pick<SpecValue, 'displayValue' | 'skuFragment'>>) => {
         set((state) => ({
           specifications: state.specifications.map((spec) =>
             spec.id === specId
