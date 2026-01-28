@@ -167,7 +167,7 @@
       "Deleting a spec value from sidebar marks affected cells as errors",
       "Error includes row, column, and message about missing value"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "validation-2",

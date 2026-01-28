@@ -1,3 +1,21 @@
+## validation-1: Create validation module to detect deleted values
+
+**Completed**: validateDataSheet function detects cells with values no longer in their specification
+
+**Key decisions**:
+- Created ValidationError interface with row, column, message, type fields
+- type field is 'missing-value' for now (other validation types will be added later)
+- Function maps column headers to specification names to determine which spec governs each column
+- Columns not matching any spec name are ignored (non-spec columns like "Notes" won't error)
+- Empty cells are always valid (no value to validate)
+- Whitespace is trimmed from cell values before comparison
+
+**Files changed**:
+- src/lib/validation.ts: New module with validateDataSheet function, ValidationError type
+- src/lib/validation.test.ts: 13 tests covering all validation scenarios
+
+---
+
 ## reactivity-2: SKU regeneration on specification order change
 
 **Completed**: SKUs regenerate with new fragment order when specs are reordered via drag-and-drop
