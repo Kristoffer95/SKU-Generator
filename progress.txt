@@ -1,3 +1,29 @@
+## PRD-016: User Onboarding with Driver.js - COMPLETE
+- Installed driver.js package for interactive guided tours
+- Created src/lib/guided-tour.ts with 10 tour steps covering all features
+- Tour steps: Welcome, Sidebar, Sheet tabs, Add specs, Spreadsheet, Dropdowns, Import, Export, Settings, Completion
+- Created hasTourCompleted(), markTourCompleted(), resetTourStatus() for localStorage persistence
+- Created GuidedTourButton component with HelpCircle icon
+- Added Tour button to app header between title and Import button
+- Added data-tour attributes to: sidebar, add-spec-button, spreadsheet, import-button, export-button, settings-button
+- Tour targets Fortune-Sheet CSS classes for tab container and cell area
+- Added custom CSS styling for tour popover matching app theme
+- 7 tests for guided-tour.ts, 6 tests for GuidedTourButton.tsx
+- All feedback loops pass (232 tests, typecheck, lint)
+
+Files created:
+- src/lib/guided-tour.ts
+- src/lib/guided-tour.test.ts
+- src/components/GuidedTourButton.tsx
+- src/components/GuidedTourButton.test.tsx
+
+Files changed:
+- src/components/AppLayout.tsx (added GuidedTourButton, data-tour attributes)
+- src/components/SpreadsheetContainer.tsx (added data-tour attribute)
+- src/components/SpecificationList.tsx (added data-tour attribute)
+- src/index.css (driver.js popover styling)
+- package.json (driver.js dependency)
+
 ## PRD-015: Move SKU Column to Column A - COMPLETE
 - Moved SKU column from last position to first position (index 0)
 - Updated extractColumnHeaders() in sheet-sku.ts to skip first column instead of last

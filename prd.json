@@ -260,7 +260,7 @@
         "Verify tour can be dismissed at any point",
         "Verify tour remembers completion state (optional localStorage flag)"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "PRD-017",

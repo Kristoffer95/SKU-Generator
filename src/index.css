@@ -83,3 +83,67 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Driver.js tour customization */
+.driver-popover.sku-tour-popover {
+  --font-family: inherit;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  border-radius: 0.5rem;
+  max-width: 320px;
+}
+
+.driver-popover.sku-tour-popover .driver-popover-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: hsl(var(--foreground));
+}
+
+.driver-popover.sku-tour-popover .driver-popover-description {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.driver-popover.sku-tour-popover .driver-popover-progress-text {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+}
+
+.driver-popover.sku-tour-popover .driver-popover-footer button {
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  transition: all 0.15s ease;
+}
+
+.driver-popover.sku-tour-popover .driver-popover-prev-btn {
+  background-color: transparent;
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+}
+
+.driver-popover.sku-tour-popover .driver-popover-prev-btn:hover {
+  background-color: hsl(var(--accent));
+}
+
+.driver-popover.sku-tour-popover .driver-popover-next-btn,
+.driver-popover.sku-tour-popover .driver-popover-close-btn {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border: none;
+}
+
+.driver-popover.sku-tour-popover .driver-popover-next-btn:hover,
+.driver-popover.sku-tour-popover .driver-popover-close-btn:hover {
+  opacity: 0.9;
+}
+
+.driver-popover.sku-tour-popover .driver-popover-arrow-side-left.driver-popover-arrow,
+.driver-popover.sku-tour-popover .driver-popover-arrow-side-right.driver-popover-arrow,
+.driver-popover.sku-tour-popover .driver-popover-arrow-side-top.driver-popover-arrow,
+.driver-popover.sku-tour-popover .driver-popover-arrow-side-bottom.driver-popover-arrow {
+  border-color: hsl(var(--border));
+}

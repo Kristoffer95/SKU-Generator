@@ -270,7 +270,7 @@ export function SpreadsheetContainer() {
   }
 
   return (
-    <div className="h-full w-full" data-testid="spreadsheet-container">
+    <div className="h-full w-full" data-testid="spreadsheet-container" data-tour="spreadsheet">
       <Workbook
         data={fortuneSheetData}
         onChange={handleChange}

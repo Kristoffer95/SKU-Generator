@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { SettingsDialog } from "@/components/SettingsDialog"
+import { GuidedTourButton } from "@/components/GuidedTourButton"
 import { exportToExcel, exportToCSV, importFromExcel } from "@/lib/import-export"
 import { useSheetsStore } from "@/store/sheets"
 
@@ -82,13 +83,14 @@ export function AppLayout({ sidebar, children }: AppLayoutProps) {
               onChange={handleFileChange}
               data-testid="file-input"
             />
-            <Button variant="outline" size="sm" onClick={handleImportClick}>
+            <GuidedTourButton />
+            <Button variant="outline" size="sm" onClick={handleImportClick} data-tour="import-button">
               <Upload className="h-4 w-4 mr-1" />
               Import
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" data-tour="export-button">
                   <Download className="h-4 w-4 mr-1" />
                   Export
                 </Button>
@@ -120,7 +122,7 @@ interface AppSidebarProps {
 
 function AppSidebar({ children, onSettingsClick }: AppSidebarProps) {
   return (
-    <Sidebar collapsible="offcanvas">
+    <Sidebar collapsible="offcanvas" data-tour="sidebar">
       <SidebarHeader className="border-b">
         <div className="flex items-center gap-2 px-2 py-1">
           <PanelLeft className="h-5 w-5" />
@@ -129,7 +131,7 @@ function AppSidebar({ children, onSettingsClick }: AppSidebarProps) {
       </SidebarHeader>
       <SidebarContent>{children}</SidebarContent>
       <SidebarFooter className="border-t">
-        <Button variant="ghost" className="w-full justify-start gap-2" onClick={onSettingsClick}>
+        <Button variant="ghost" className="w-full justify-start gap-2" onClick={onSettingsClick} data-tour="settings-button">
           <Settings className="h-4 w-4" />
           <span>Settings</span>
         </Button>

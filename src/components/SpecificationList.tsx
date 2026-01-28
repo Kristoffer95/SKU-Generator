@@ -148,6 +148,7 @@ export function SpecificationList() {
           size="sm"
           className="w-full gap-2"
           onClick={() => setIsAddDialogOpen(true)}
+          data-tour="add-spec-button"
         >
           <Plus className="h-4 w-4" />
           Add Specification
