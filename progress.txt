@@ -1,3 +1,32 @@
+## column-context-menu - COMPLETED
+Add right-click context menu on column headers with Insert/Delete options
+
+### Key decisions
+- Created ColumnHeaderContextMenu component with fixed positioning at mouse coordinates
+- Menu options: "Insert column before", "Insert column after", "Delete column"
+- Delete option hidden for SKU column (type='sku') since it cannot be deleted
+- Created DeleteColumnConfirmDialog for confirming column deletion with data loss warning
+- Spec columns show enhanced warning about specification column data loss
+- Context menu detects header row (row 0 in tbody) and column index from DOM traversal
+- Insert before/after opens AddColumnDialog with defaultPosition prop pre-set
+- Delete confirmation updates both columns array and removes column data from all rows atomically
+
+### Files changed
+- src/components/spreadsheet/ColumnHeaderContextMenu.tsx (new, ~135 lines)
+- src/components/spreadsheet/ColumnHeaderContextMenu.test.tsx (new, 15 tests)
+- src/components/DeleteColumnConfirmDialog.tsx (new, ~60 lines)
+- src/components/DeleteColumnConfirmDialog.test.tsx (new, 10 tests)
+- src/components/SpreadsheetContainer.tsx (added context menu state, handlers, and rendering)
+- src/components/SpreadsheetContainer.test.tsx (added 10 tests for context menu integration)
+
+### Notes
+- All 7 stepsToVerify criteria verified via unit tests
+- Tests cover: menu rendering, options display, SKU column protection, dialog integration, column deletion
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (679 tests, +35 new)
+- npm run build passes
+
 ## add-column-dialog - COMPLETED
 Create AddColumnDialog component for inserting columns at any position
 

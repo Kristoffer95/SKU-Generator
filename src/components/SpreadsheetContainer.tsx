@@ -8,6 +8,9 @@ import { ValidationPanel } from "@/components/ValidationPanel"
 import { SheetTabs } from "@/components/spreadsheet/SheetTabs"
 import { SpreadsheetToolbar } from "@/components/spreadsheet/SpreadsheetToolbar"
 import { DropdownEditor } from "@/components/spreadsheet/DropdownEditor"
+import { ColumnHeaderContextMenu, ContextMenuPosition } from "@/components/spreadsheet/ColumnHeaderContextMenu"
+import { AddColumnDialog } from "@/components/AddColumnDialog"
+import { DeleteColumnConfirmDialog } from "@/components/DeleteColumnConfirmDialog"
 import { convertToSpreadsheetData, convertFromSpreadsheetData } from "@/lib/spreadsheet-adapter"
 import { importFromExcel, importFromCSV, exportToExcel, exportToCSV } from "@/lib/import-export"
 import type { CellData, ColumnDef } from "@/types"
@@ -99,6 +102,19 @@ export function SpreadsheetContainer() {
   const [selected, setSelected] = useState<Selection | undefined>(undefined)
   // Ref for the spreadsheet scroll container
   const spreadsheetContainerRef = useRef<HTMLDivElement>(null)
+
+  // Context menu state
+  const [contextMenuPosition, setContextMenuPosition] = useState<ContextMenuPosition | null>(null)
+  const [contextMenuColumn, setContextMenuColumn] = useState<ColumnDef | null>(null)
+  const [contextMenuColumnIndex, setContextMenuColumnIndex] = useState<number>(0)
+
+  // Add column dialog state
+  const [addColumnDialogOpen, setAddColumnDialogOpen] = useState(false)
+  const [addColumnDefaultPosition, setAddColumnDefaultPosition] = useState<number | undefined>(undefined)
+
+  // Delete column confirmation dialog state
+  const [deleteColumnDialogOpen, setDeleteColumnDialogOpen] = useState(false)
+  const [columnToDelete, setColumnToDelete] = useState<{ index: number; column: ColumnDef } | null>(null)
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -331,6 +347,94 @@ export function SpreadsheetContainer() {
     }, 0)
   }, [])
 
+  // Handle right-click on column headers to show context menu
+  const handleContextMenu = useCallback((event: React.MouseEvent) => {
+    // Find if the click target is within the header row (row 0)
+    const target = event.target as HTMLElement
+    const cell = target.closest("td, th")
+    if (!cell) return
+
+    // Find the row and column indices
+    const row = cell.closest("tr")
+    if (!row) return
+
+    // Check if this is in the first row (header row) - tbody row 0
+    const tbody = row.closest("tbody")
+    if (!tbody) return
+
+    const rowIndex = Array.from(tbody.querySelectorAll("tr")).indexOf(row)
+    if (rowIndex !== 0) return // Only show context menu for header row
+
+    // Get column index (subtract 1 for row indicator column)
+    const cells = Array.from(row.querySelectorAll("th, td"))
+    const cellIndex = cells.indexOf(cell)
+    if (cellIndex <= 0) return // Skip row indicator column (index 0)
+
+    const columnIndex = cellIndex - 1 // Adjust for row indicator column
+    if (columnIndex < 0 || columnIndex >= columns.length) return
+
+    event.preventDefault()
+    const column = columns[columnIndex]
+    setContextMenuPosition({ x: event.clientX, y: event.clientY })
+    setContextMenuColumn(column)
+    setContextMenuColumnIndex(columnIndex)
+  }, [columns])
+
+  // Close context menu
+  const handleContextMenuClose = useCallback(() => {
+    setContextMenuPosition(null)
+    setContextMenuColumn(null)
+  }, [])
+
+  // Handle insert column before
+  const handleInsertColumnBefore = useCallback((columnIndex: number) => {
+    setAddColumnDefaultPosition(columnIndex)
+    setAddColumnDialogOpen(true)
+  }, [])
+
+  // Handle insert column after
+  const handleInsertColumnAfter = useCallback((columnIndex: number) => {
+    // Insert after = insert before the next column, or at end if last column
+    const insertPosition = columnIndex + 1 < columns.length ? columnIndex + 1 : undefined
+    setAddColumnDefaultPosition(insertPosition)
+    setAddColumnDialogOpen(true)
+  }, [columns.length])
+
+  // Handle delete column request (opens confirmation dialog)
+  const handleDeleteColumnRequest = useCallback((columnIndex: number, column: ColumnDef) => {
+    setColumnToDelete({ index: columnIndex, column })
+    setDeleteColumnDialogOpen(true)
+  }, [])
+
+  // Handle delete column confirmation
+  const handleDeleteColumnConfirm = useCallback(() => {
+    if (!activeSheet || !columnToDelete) return
+
+    const { index: columnIndex } = columnToDelete
+
+    // Remove column from columns array
+    const newColumns = columns.filter((_, i) => i !== columnIndex)
+
+    // Remove column data from all rows
+    const newData = activeSheet.data.map(row => {
+      const newRow = [...row]
+      newRow.splice(columnIndex, 1)
+      return newRow
+    })
+
+    // Update the sheet with new columns and data
+    useSheetsStore.setState(state => ({
+      sheets: state.sheets.map(sheet =>
+        sheet.id === activeSheet.id
+          ? { ...sheet, columns: newColumns, data: newData }
+          : sheet
+      )
+    }))
+
+    // Clear the column to delete state
+    setColumnToDelete(null)
+  }, [activeSheet, columnToDelete, columns])
+
   // Compute validation errors for the active sheet
   const validationErrors = useMemo((): ValidationError[] => {
     if (!activeSheet) return []
@@ -388,7 +492,11 @@ export function SpreadsheetContainer() {
         onExportCSV={handleExportCSV}
         onAddRow={handleAddRow}
       />
-      <div ref={spreadsheetContainerRef} className="flex-1 min-h-0 overflow-auto sku-spreadsheet">
+      <div
+        ref={spreadsheetContainerRef}
+        className="flex-1 min-h-0 overflow-auto sku-spreadsheet"
+        onContextMenu={handleContextMenu}
+      >
         <Spreadsheet
           data={spreadsheetData as Matrix<CellBase<string | number | null>>}
           onChange={handleDataChange}
@@ -408,6 +516,32 @@ export function SpreadsheetContainer() {
       <ValidationPanel
         errors={validationErrors}
         onErrorClick={handleErrorClick}
+      />
+
+      {/* Column header context menu */}
+      <ColumnHeaderContextMenu
+        position={contextMenuPosition}
+        column={contextMenuColumn}
+        columnIndex={contextMenuColumnIndex}
+        onClose={handleContextMenuClose}
+        onInsertBefore={handleInsertColumnBefore}
+        onInsertAfter={handleInsertColumnAfter}
+        onDelete={handleDeleteColumnRequest}
+      />
+
+      {/* Add column dialog */}
+      <AddColumnDialog
+        open={addColumnDialogOpen}
+        onOpenChange={setAddColumnDialogOpen}
+        defaultPosition={addColumnDefaultPosition}
+      />
+
+      {/* Delete column confirmation dialog */}
+      <DeleteColumnConfirmDialog
+        open={deleteColumnDialogOpen}
+        onOpenChange={setDeleteColumnDialogOpen}
+        column={columnToDelete?.column ?? null}
+        onConfirm={handleDeleteColumnConfirm}
       />
     </div>
   )

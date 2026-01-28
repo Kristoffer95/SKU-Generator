@@ -290,7 +290,7 @@
       "Delete column removes column from columns array and all row data",
       "SKU column context menu does not show delete option"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "delete-spec-confirmation",

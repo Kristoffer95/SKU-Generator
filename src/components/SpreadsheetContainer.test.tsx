@@ -2119,3 +2119,276 @@ describe('SpreadsheetContainer import/export (migration-import-export)', () => {
     expect(fileInput.accept).toBe('.xlsx,.xls,.csv')
   })
 })
+
+describe('SpreadsheetContainer column context menu', () => {
+  const colorSpec: Specification = {
+    id: 'color-spec',
+    name: 'Color',
+    order: 0,
+    values: [
+      { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+      { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+    ],
+  }
+
+  const sizeSpec: Specification = {
+    id: 'size-spec',
+    name: 'Size',
+    order: 1,
+    values: [
+      { id: 'v3', displayValue: 'Small', skuFragment: 'S' },
+      { id: 'v4', displayValue: 'Large', skuFragment: 'L' },
+    ],
+  }
+
+  beforeEach(() => {
+    localStorage.clear()
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+    capturedOnChange = null
+    capturedOnSelect = null
+    capturedData = []
+    capturedSelected = null
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('does not show context menu initially', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{}, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    expect(screen.queryByTestId('column-context-menu')).not.toBeInTheDocument()
+  })
+
+  it('shows context menu on right-click header row cell', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{}, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Right-click on the Color header cell (row 0, col 1)
+    const headerCell = screen.getByTestId('cell-0-1')
+    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
+
+    expect(screen.getByTestId('column-context-menu')).toBeInTheDocument()
+    expect(screen.getByTestId('context-menu-insert-before')).toBeInTheDocument()
+    expect(screen.getByTestId('context-menu-insert-after')).toBeInTheDocument()
+  })
+
+  it('shows delete option for spec columns', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{}, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Right-click on the Color header cell (row 0, col 1)
+    const headerCell = screen.getByTestId('cell-0-1')
+    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
+
+    expect(screen.getByTestId('context-menu-delete')).toBeInTheDocument()
+  })
+
+  it('does NOT show delete option for SKU column', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{}, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Right-click on the SKU header cell (row 0, col 0)
+    const headerCell = screen.getByTestId('cell-0-0')
+    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
+
+    expect(screen.getByTestId('column-context-menu')).toBeInTheDocument()
+    expect(screen.queryByTestId('context-menu-delete')).not.toBeInTheDocument()
+  })
+
+  it('does not show context menu when right-clicking data rows', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{}, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Right-click on a data cell (row 1, col 1)
+    const dataCell = screen.getByTestId('cell-1-1')
+    fireEvent.contextMenu(dataCell, { clientX: 100, clientY: 100 })
+
+    expect(screen.queryByTestId('column-context-menu')).not.toBeInTheDocument()
+  })
+
+  it('opens AddColumnDialog when "Insert column before" clicked', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{}, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Right-click on the Color header cell
+    const headerCell = screen.getByTestId('cell-0-1')
+    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
+
+    // Click "Insert column before"
+    fireEvent.click(screen.getByTestId('context-menu-insert-before'))
+
+    // AddColumnDialog should be open
+    expect(screen.getByTestId('add-column-dialog')).toBeInTheDocument()
+  })
+
+  it('opens AddColumnDialog when "Insert column after" clicked', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{}, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Right-click on the Color header cell
+    const headerCell = screen.getByTestId('cell-0-1')
+    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
+
+    // Click "Insert column after"
+    fireEvent.click(screen.getByTestId('context-menu-insert-after'))
+
+    // AddColumnDialog should be open
+    expect(screen.getByTestId('add-column-dialog')).toBeInTheDocument()
+  })
+
+  it('opens delete confirmation dialog when "Delete column" clicked', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{}, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Right-click on the Color header cell
+    const headerCell = screen.getByTestId('cell-0-1')
+    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
+
+    // Click "Delete column"
+    fireEvent.click(screen.getByTestId('context-menu-delete'))
+
+    // Delete confirmation dialog should be open
+    expect(screen.getByTestId('delete-column-dialog')).toBeInTheDocument()
+  })
+
+  it('deletes column when confirming deletion', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+      { id: 'col-2', type: 'spec', header: 'Size', specId: 'size-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }, { v: 'Size', m: 'Size' }],
+      [{ v: 'SKU1', m: 'SKU1' }, { v: 'Red', m: 'Red' }, { v: 'Small', m: 'Small' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec, sizeSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Right-click on the Color header cell (column index 1)
+    const headerCell = screen.getByTestId('cell-0-1')
+    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
+
+    // Click "Delete column"
+    fireEvent.click(screen.getByTestId('context-menu-delete'))
+
+    // Confirm deletion
+    fireEvent.click(screen.getByTestId('delete-column-confirm'))
+
+    // Verify column was deleted from store
+    const activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet).toBeDefined()
+    expect(activeSheet!.columns.length).toBe(2) // SKU and Size remain
+    expect(activeSheet!.columns[0].header).toBe('SKU')
+    expect(activeSheet!.columns[1].header).toBe('Size')
+
+    // Verify data was updated
+    expect(activeSheet!.data[0].length).toBe(2) // SKU and Size columns
+    expect(activeSheet!.data[1].length).toBe(2)
+  })
+
+  it('cancels deletion when clicking cancel', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{}, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Right-click on the Color header cell
+    const headerCell = screen.getByTestId('cell-0-1')
+    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
+
+    // Click "Delete column"
+    fireEvent.click(screen.getByTestId('context-menu-delete'))
+
+    // Cancel deletion
+    fireEvent.click(screen.getByTestId('delete-column-cancel'))
+
+    // Verify column was NOT deleted
+    const activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet).toBeDefined()
+    expect(activeSheet!.columns.length).toBe(2) // SKU and Color remain
+    expect(activeSheet!.columns[1].header).toBe('Color')
+  })
+})
