@@ -32,19 +32,34 @@ function isDataEqual(a: CellData[][], b: CellData[][]): boolean {
 
 
 /**
+ * Background color for read-only SKU column (subtle gray-blue tint)
+ */
+const SKU_COLUMN_BG_COLOR = "#f1f5f9"
+
+/**
  * Convert our CellData[][] to Fortune-Sheet CellMatrix format
+ * Applies visual styling to indicate SKU column (column 0) is read-only
  */
 function convertToFortuneSheetData(data: CellData[][]): CellMatrix {
-  return data.map(row =>
-    row.map(cell => {
+  return data.map((row, rowIndex) =>
+    row.map((cell, colIndex) => {
       if (!cell || (cell.v === undefined && cell.m === undefined)) {
+        // For empty cells in SKU column (except header), still apply background
+        if (colIndex === 0 && rowIndex > 0) {
+          return { bg: SKU_COLUMN_BG_COLOR } as Cell
+        }
         return null
       }
-      return {
-        v: cell.v,
+      const result: Cell = {
+        v: cell.v === null ? undefined : cell.v,
         m: cell.m ?? String(cell.v ?? ""),
         ct: cell.ct,
-      } as Cell
+      }
+      // Apply background color to SKU column (column 0), except header row
+      if (colIndex === 0 && rowIndex > 0) {
+        result.bg = SKU_COLUMN_BG_COLOR
+      }
+      return result
     })
   )
 }

@@ -673,3 +673,92 @@ describe('SpreadsheetContainer read-only SKU column', () => {
     expect(sheet.data[1][0]?.v).toBe('R')
   })
 })
+
+describe('SpreadsheetContainer SKU column visual styling', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+    capturedHooks = {}
+    capturedData = []
+  })
+
+  it('applies background color to SKU column data cells', () => {
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R-S' }, { v: 'Red' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    const sheet = capturedData.find((s: { id: string }) => s.id === sheetId)
+
+    // Row 1, Column 0 (SKU data cell) should have background color
+    expect(sheet.data[1][0].bg).toBe('#f1f5f9')
+  })
+
+  it('does not apply background color to header row', () => {
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R-S' }, { v: 'Red' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    const sheet = capturedData.find((s: { id: string }) => s.id === sheetId)
+
+    // Row 0, Column 0 (header) should NOT have background color
+    expect(sheet.data[0][0].bg).toBeUndefined()
+  })
+
+  it('does not apply background color to non-SKU columns', () => {
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R-S' }, { v: 'Red' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    const sheet = capturedData.find((s: { id: string }) => s.id === sheetId)
+
+    // Row 1, Column 1 (Color column) should NOT have background color
+    expect(sheet.data[1][1].bg).toBeUndefined()
+  })
+
+  it('applies background color to all SKU column data rows', () => {
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R' }, { v: 'Red' }],
+      [{ v: 'B' }, { v: 'Blue' }],
+      [{ v: 'G' }, { v: 'Green' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    const sheet = capturedData.find((s: { id: string }) => s.id === sheetId)
+
+    // All data rows in column 0 should have background color
+    expect(sheet.data[1][0].bg).toBe('#f1f5f9')
+    expect(sheet.data[2][0].bg).toBe('#f1f5f9')
+    expect(sheet.data[3][0].bg).toBe('#f1f5f9')
+  })
+
+  it('applies background color to empty SKU cells', () => {
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{}, { v: 'Red' }], // Empty SKU cell
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    const sheet = capturedData.find((s: { id: string }) => s.id === sheetId)
+
+    // Even empty cells in SKU column should have background color
+    expect(sheet.data[1][0].bg).toBe('#f1f5f9')
+  })
+})

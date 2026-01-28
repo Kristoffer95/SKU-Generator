@@ -32,6 +32,7 @@ export interface CellData {
   v?: string | number | null; // cell value
   m?: string; // display text
   ct?: { fa?: string; t?: string }; // cell type info
+  bg?: string; // background color (hex)
 }
 
 /**

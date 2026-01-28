@@ -156,7 +156,7 @@
       "SKU column has visually distinct appearance from editable columns",
       "Styling clearly indicates the column is auto-generated"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "validation-1",

@@ -1,3 +1,21 @@
+## readonly-sku-2: Visual styling for read-only SKU column
+
+**Completed**: SKU column (column 0) now has distinct visual styling to indicate it's auto-generated
+
+**Key decisions**:
+- Added subtle gray-blue background color (#f1f5f9) to SKU column data cells
+- Header row (row 0) remains unstyled to maintain visual hierarchy
+- Background color applied via Fortune-Sheet's cell `bg` property
+- Empty cells in SKU column also get background color for consistency
+- Color matches app's secondary/muted color scheme for cohesive design
+
+**Files changed**:
+- src/types/index.ts: Added `bg` property to CellData interface
+- src/components/SpreadsheetContainer.tsx: Added SKU_COLUMN_BG_COLOR constant, updated convertToFortuneSheetData to apply bg to column 0 data cells
+- src/components/SpreadsheetContainer.test.tsx: Added 5 tests for SKU column visual styling
+
+---
+
 ## sidebar-ui-3: Inline editing for specification values in sidebar
 
 **Completed**: Users can click on spec values to edit displayValue and skuFragment inline
