@@ -116,7 +116,7 @@
       "SKU in column A regenerates with new skuFragment",
       "Tab/Enter moves to next cell after selection"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "migration-duplicate-highlight",

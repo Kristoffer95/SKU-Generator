@@ -1248,3 +1248,202 @@ describe('SpreadsheetContainer toolbar interactions', () => {
     expect(redoButton).toBeDisabled()
   })
 })
+
+/**
+ * Tests for migration-dropdowns PRD task
+ * Verify dropdown selection works in spec columns
+ */
+describe('SpreadsheetContainer dropdown selection (migration-dropdowns)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+    capturedOnChange = null
+    capturedData = []
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('spec column cells have dropdownOptions with displayValues from specifications', () => {
+    // stepsToVerify 1 & 2: Click/Enter on spec column cell shows dropdown with spec values
+    // and dropdown options match displayValues from specification store
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-color',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+            { id: 'v3', displayValue: 'Green', skuFragment: 'G' },
+          ],
+        },
+        {
+          id: 'spec-size',
+          name: 'Size',
+          order: 1,
+          values: [
+            { id: 'v4', displayValue: 'Small', skuFragment: 'S' },
+            { id: 'v5', displayValue: 'Large', skuFragment: 'L' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+      [{ v: '' }, { v: '' }, { v: '' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Verify capturedData has dropdownOptions on spec columns
+    const dataRow = capturedData[1] as Array<{ dropdownOptions?: string[]; value?: unknown }>
+
+    // SKU column (col 0) should NOT have dropdownOptions
+    expect(dataRow[0]?.dropdownOptions).toBeUndefined()
+
+    // Color column (col 1) should have Color spec displayValues
+    expect(dataRow[1]?.dropdownOptions).toEqual(['Red', 'Blue', 'Green'])
+
+    // Size column (col 2) should have Size spec displayValues
+    expect(dataRow[2]?.dropdownOptions).toEqual(['Small', 'Large'])
+  })
+
+  it('selecting a value from dropdown updates cell content', () => {
+    // stepsToVerify 3: Selecting a value updates cell content
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-color',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+
+    render(<SpreadsheetContainer />)
+
+    // Simulate selecting 'Blue' from the dropdown
+    capturedOnChange?.([
+      [{ value: 'SKU' }, { value: 'Color' }],
+      [{ value: '' }, { value: 'Blue' }],
+    ])
+
+    // Verify the cell content was updated in the store
+    const sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Blue')
+  })
+
+  it('SKU in column A regenerates when dropdown value is selected', () => {
+    // stepsToVerify 4: SKU in column A regenerates with new skuFragment
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-color',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+          ],
+        },
+        {
+          id: 'spec-size',
+          name: 'Size',
+          order: 1,
+          values: [
+            { id: 'v3', displayValue: 'Small', skuFragment: 'S' },
+            { id: 'v4', displayValue: 'Large', skuFragment: 'L' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+
+    render(<SpreadsheetContainer />)
+
+    // Select Red and Small
+    capturedOnChange?.([
+      [{ value: 'SKU' }, { value: 'Color' }, { value: 'Size' }],
+      [{ value: '' }, { value: 'Red' }, { value: 'Small' }],
+    ])
+
+    // SKU should be 'R-S'
+    let sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][0]?.v).toBe('R-S')
+
+    // Change Color to Blue - SKU should update to 'B-S'
+    capturedOnChange?.([
+      [{ value: 'SKU' }, { value: 'Color' }, { value: 'Size' }],
+      [{ value: 'R-S' }, { value: 'Blue' }, { value: 'Small' }],
+    ])
+
+    sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][0]?.v).toBe('B-S')
+  })
+
+  it('dropdown options are populated for each spec column independently', () => {
+    // Verify dropdown options match the correct specification for each column
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-material',
+          name: 'Material',
+          order: 2,  // Different order to test sorting
+          values: [
+            { id: 'v1', displayValue: 'Cotton', skuFragment: 'CT' },
+            { id: 'v2', displayValue: 'Polyester', skuFragment: 'PO' },
+          ],
+        },
+        {
+          id: 'spec-color',
+          name: 'Color',
+          order: 0,  // First in order
+          values: [
+            { id: 'v3', displayValue: 'Red', skuFragment: 'R' },
+          ],
+        },
+        {
+          id: 'spec-size',
+          name: 'Size',
+          order: 1,  // Second in order
+          values: [
+            { id: 'v4', displayValue: 'Small', skuFragment: 'S' },
+            { id: 'v5', displayValue: 'Medium', skuFragment: 'M' },
+            { id: 'v6', displayValue: 'Large', skuFragment: 'L' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }, { v: 'Material' }],
+      [{ v: '' }, { v: '' }, { v: '' }, { v: '' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    const dataRow = capturedData[1] as Array<{ dropdownOptions?: string[] }>
+
+    // Column order is based on spec.order, not array order
+    // Col 1 (Color, order 0) -> ['Red']
+    expect(dataRow[1]?.dropdownOptions).toEqual(['Red'])
+    // Col 2 (Size, order 1) -> ['Small', 'Medium', 'Large']
+    expect(dataRow[2]?.dropdownOptions).toEqual(['Small', 'Medium', 'Large'])
+    // Col 3 (Material, order 2) -> ['Cotton', 'Polyester']
+    expect(dataRow[3]?.dropdownOptions).toEqual(['Cotton', 'Polyester'])
+  })
+})
