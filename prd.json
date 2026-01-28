@@ -205,6 +205,6 @@
       "Spec cells in new row have dropdown functionality",
       "Selecting values in new row generates SKU"
     ],
-    "passes": false
+    "passes": true
   }
 ]

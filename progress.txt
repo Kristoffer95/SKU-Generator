@@ -1,3 +1,22 @@
+## migration-add-row - COMPLETED
+Implement Add Row functionality in toolbar
+
+### Key decisions
+- handleAddRow already implemented in SpreadsheetContainer (lines 191-197)
+- Creates new row with empty cells ({}) matching column count
+- convertToSpreadsheetData adds dropdownOptions to empty spec cells (lines 58-63)
+- processAutoSKU auto-generates SKU when spec values selected in new row
+
+### Files changed
+- src/components/SpreadsheetContainer.test.tsx (added 3 tests for Add Row feature)
+
+### Notes
+- All 5 stepsToVerify criteria verified via unit tests
+- Tests verify: row count increases, empty cells match column count, dropdownOptions applied, SKU generated
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (542 tests total, +3 new)
+
 ## migration-tests-update - COMPLETED
 Update SpreadsheetContainer tests for react-spreadsheet
 

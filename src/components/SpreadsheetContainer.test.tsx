@@ -1128,6 +1128,108 @@ describe('SpreadsheetContainer toolbar interactions', () => {
     expect(newRowCount).toBe(initialRowCount + 1)
   })
 
+  it('new row from Add Row has empty cells matching column count', () => {
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+      [{ v: 'R-S' }, { v: 'Red' }, { v: 'Small' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    const addRowButton = screen.getByTestId('spreadsheet-toolbar-add-row')
+    fireEvent.click(addRowButton)
+
+    const sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    const newRow = sheet.data[sheet.data.length - 1]
+
+    // New row should have same number of columns as header
+    expect(newRow.length).toBe(3)
+    // All cells should be empty (no v value)
+    newRow.forEach(cell => {
+      expect(cell.v).toBeUndefined()
+    })
+  })
+
+  it('new row cells get dropdownOptions from specifications', () => {
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'color',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R' }, { v: 'Red' }],
+    ])
+
+    const { rerender } = render(<SpreadsheetContainer />)
+
+    // Add new row
+    const addRowButton = screen.getByTestId('spreadsheet-toolbar-add-row')
+    fireEvent.click(addRowButton)
+
+    // Rerender to see the new row in the spreadsheet data
+    rerender(<SpreadsheetContainer />)
+
+    // Check that the new row (row 2) has dropdownOptions on spec column
+    const newRowData = capturedData[2] as Array<{ dropdownOptions?: string[]; value?: unknown }>
+
+    // SKU column (col 0) should not have dropdownOptions
+    expect(newRowData[0]?.dropdownOptions).toBeUndefined()
+    // Color column (col 1) should have dropdown options
+    expect(newRowData[1]?.dropdownOptions).toEqual(['Red', 'Blue'])
+  })
+
+  it('selecting values in new row generates SKU via onChange', () => {
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'color',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Add new row
+    const addRowButton = screen.getByTestId('spreadsheet-toolbar-add-row')
+    fireEvent.click(addRowButton)
+
+    // Simulate selecting a value in the new row
+    // This triggers onChange which should auto-generate SKU
+    if (capturedOnChange) {
+      capturedOnChange([
+        [{ value: 'SKU' }, { value: 'Color' }],
+        [{ value: null }, { value: 'Red' }],  // Select Red in new row
+      ])
+    }
+
+    // Check that SKU was generated for the new row
+    const sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][0].v).toBe('R')
+  })
+
   it('undo button is disabled initially', () => {
     useSheetsStore.getState().addSheet('Products')
 
