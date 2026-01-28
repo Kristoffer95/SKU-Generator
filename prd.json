@@ -190,7 +190,7 @@
       "Clicking an error scrolls to and selects the affected cell",
       "Panel hides when no errors exist"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "reactivity-1",

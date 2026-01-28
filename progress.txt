@@ -1,3 +1,24 @@
+## validation-3: ValidationPanel component for error display
+
+**Completed**: ValidationPanel component displays validation errors below spreadsheet with click-to-navigate
+
+**Key decisions**:
+- Created ValidationPanel component that shows error count, type summary, and list of errors
+- Panel uses amber color scheme for duplicate SKU warnings, red for missing value errors
+- Error items are clickable and trigger navigation to affected cell in spreadsheet
+- Uses Fortune-Sheet's WorkbookInstance ref with setSelection() and scroll() APIs for cell navigation
+- Panel hides automatically when no errors exist
+- Computes errors from active sheet only (via activeSheetId)
+- Both validateDataSheet and findDuplicateSKUs results combined for comprehensive error list
+
+**Files changed**:
+- src/components/ValidationPanel.tsx: New component with error display, click handlers, animations
+- src/components/ValidationPanel.test.tsx: 17 tests covering all functionality
+- src/components/SpreadsheetContainer.tsx: Integrated ValidationPanel, added workbookRef, handleErrorClick
+- src/components/SpreadsheetContainer.test.tsx: Added 6 tests for ValidationPanel integration
+
+---
+
 ## validation-2: Duplicate SKU detection
 
 **Completed**: findDuplicateSKUs function detects rows with duplicate SKU values and highlights them

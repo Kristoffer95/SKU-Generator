@@ -913,3 +913,195 @@ describe('SpreadsheetContainer duplicate SKU highlighting', () => {
     expect(sheet.data[2][0].bg).toBe('#f1f5f9')
   })
 })
+
+describe('SpreadsheetContainer ValidationPanel integration', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+    capturedHooks = {}
+    capturedData = []
+  })
+
+  it('does not render ValidationPanel when there are no errors', () => {
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-1',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R' }, { v: 'Red' }], // Valid value
+    ])
+    useSheetsStore.getState().setActiveSheet(sheetId)
+
+    render(<SpreadsheetContainer />)
+
+    // ValidationPanel should not be rendered
+    expect(screen.queryByTestId('validation-panel')).not.toBeInTheDocument()
+  })
+
+  it('renders ValidationPanel when there are missing value errors', () => {
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-1',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'Y' }, { v: 'Yellow' }], // Invalid value (Yellow not in Color spec)
+    ])
+    useSheetsStore.getState().setActiveSheet(sheetId)
+
+    render(<SpreadsheetContainer />)
+
+    // ValidationPanel should be rendered with the error
+    expect(screen.getByTestId('validation-panel')).toBeInTheDocument()
+    expect(screen.getByText('1 issue found')).toBeInTheDocument()
+    expect(screen.getByText('Value "Yellow" does not exist in specification "Color"')).toBeInTheDocument()
+  })
+
+  it('renders ValidationPanel when there are duplicate SKU errors', () => {
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R-S' }, { v: 'Red' }],
+      [{ v: 'R-S' }, { v: 'Red' }], // Duplicate SKU
+    ])
+    useSheetsStore.getState().setActiveSheet(sheetId)
+
+    render(<SpreadsheetContainer />)
+
+    // ValidationPanel should be rendered with duplicate SKU errors
+    expect(screen.getByTestId('validation-panel')).toBeInTheDocument()
+    expect(screen.getByText('2 issues found')).toBeInTheDocument()
+    expect(screen.getByText('2 duplicate SKUs')).toBeInTheDocument()
+  })
+
+  it('displays both missing value and duplicate SKU errors', () => {
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-1',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R' }, { v: 'Red' }],
+      [{ v: 'R' }, { v: 'Red' }], // Duplicate SKU
+      [{ v: 'Y' }, { v: 'Yellow' }], // Invalid value
+    ])
+    useSheetsStore.getState().setActiveSheet(sheetId)
+
+    render(<SpreadsheetContainer />)
+
+    // ValidationPanel should show both types of errors
+    expect(screen.getByTestId('validation-panel')).toBeInTheDocument()
+    expect(screen.getByText('3 issues found')).toBeInTheDocument()
+    expect(screen.getByText('1 invalid value')).toBeInTheDocument()
+    expect(screen.getByText('2 duplicate SKUs')).toBeInTheDocument()
+  })
+
+  it('shows only errors for the active sheet', () => {
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-1',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          ],
+        },
+      ],
+    })
+
+    // Create two sheets - one with errors, one without
+    const sheet1Id = useSheetsStore.getState().addSheet('Sheet 1')
+    useSheetsStore.getState().setSheetData(sheet1Id, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R' }, { v: 'Red' }], // Valid
+    ])
+
+    const sheet2Id = useSheetsStore.getState().addSheet('Sheet 2')
+    useSheetsStore.getState().setSheetData(sheet2Id, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'Y' }, { v: 'Yellow' }], // Invalid
+    ])
+
+    // Set Sheet 1 (no errors) as active
+    useSheetsStore.getState().setActiveSheet(sheet1Id)
+
+    render(<SpreadsheetContainer />)
+
+    // No validation panel when active sheet has no errors
+    expect(screen.queryByTestId('validation-panel')).not.toBeInTheDocument()
+  })
+
+  it('updates validation errors when active sheet changes', () => {
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-1',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          ],
+        },
+      ],
+    })
+
+    const sheet1Id = useSheetsStore.getState().addSheet('Sheet 1')
+    useSheetsStore.getState().setSheetData(sheet1Id, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R' }, { v: 'Red' }],
+    ])
+
+    const sheet2Id = useSheetsStore.getState().addSheet('Sheet 2')
+    useSheetsStore.getState().setSheetData(sheet2Id, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'Y' }, { v: 'Yellow' }],
+    ])
+
+    // Start with sheet 1 (no errors)
+    useSheetsStore.getState().setActiveSheet(sheet1Id)
+
+    const { rerender } = render(<SpreadsheetContainer />)
+    expect(screen.queryByTestId('validation-panel')).not.toBeInTheDocument()
+
+    // Switch to sheet 2 (has errors)
+    useSheetsStore.getState().setActiveSheet(sheet2Id)
+    rerender(<SpreadsheetContainer />)
+
+    // Now validation panel should appear
+    expect(screen.getByTestId('validation-panel')).toBeInTheDocument()
+    expect(screen.getByText(/Yellow/)).toBeInTheDocument()
+  })
+})

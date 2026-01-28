@@ -1,12 +1,13 @@
 import { useMemo, useCallback, useRef, useEffect } from "react"
-import { Workbook } from "@fortune-sheet/react"
+import { Workbook, WorkbookInstance } from "@fortune-sheet/react"
 import type { Sheet, Cell, CellMatrix } from "@fortune-sheet/core"
 import "@fortune-sheet/react/dist/index.css"
 import { useSheetsStore } from "@/store/sheets"
 import { useSettingsStore } from "@/store/settings"
 import { useSpecificationsStore } from "@/store/specifications"
 import { processAutoSKU } from "@/lib/auto-sku"
-import { findDuplicateSKUs } from "@/lib/validation"
+import { validateDataSheet, findDuplicateSKUs, ValidationError } from "@/lib/validation"
+import { ValidationPanel } from "@/components/ValidationPanel"
 import type { CellData, Specification } from "@/types"
 
 /**
@@ -155,6 +156,9 @@ export function SpreadsheetContainer() {
   const suffix = useSettingsStore((state) => state.suffix)
   const settings = useMemo(() => ({ delimiter, prefix, suffix }), [delimiter, prefix, suffix])
 
+  // Ref for Fortune-Sheet Workbook to enable programmatic cell selection
+  const workbookRef = useRef<WorkbookInstance>(null)
+
   // Use ref for previous sheet data to avoid triggering re-renders
   const previousDataRef = useRef<Map<string, CellData[][]>>(new Map())
 
@@ -213,6 +217,27 @@ export function SpreadsheetContainer() {
     })
   }, [setSheetData, settings, specifications])
 
+  // Compute validation errors for the active sheet
+  const activeSheet = sheets.find((s) => s.id === activeSheetId)
+  const validationErrors = useMemo((): ValidationError[] => {
+    if (!activeSheet) return []
+    const missingValueErrors = validateDataSheet(activeSheet.data, specifications)
+    const duplicateErrors = findDuplicateSKUs(activeSheet.data)
+    return [...missingValueErrors, ...duplicateErrors]
+  }, [activeSheet, specifications])
+
+  // Handle clicking a validation error to navigate to the affected cell
+  const handleErrorClick = useCallback((error: ValidationError) => {
+    if (!workbookRef.current) return
+    // Scroll to the cell and select it
+    workbookRef.current.scroll({ targetRow: error.row, targetColumn: error.column })
+    // setSelection expects Range (SingleRange[]) - array of single range objects
+    workbookRef.current.setSelection([{
+      row: [error.row, error.row],
+      column: [error.column, error.column],
+    }])
+  }, [])
+
   // Convert sheets to Fortune-Sheet format with hooks and dataVerification for dropdowns
   const fortuneSheetData: Sheet[] = useMemo(() => {
     return sheets.map((sheet, index) => {
@@ -265,17 +290,24 @@ export function SpreadsheetContainer() {
   }
 
   return (
-    <div className="h-full w-full" data-testid="spreadsheet-container" data-tour="spreadsheet">
-      <Workbook
-        data={fortuneSheetData}
-        onChange={handleChange}
-        hooks={hooks}
-        showSheetTabs={true}
-        showToolbar={true}
-        showFormulaBar={true}
-        allowEdit={true}
-        row={100}
-        column={26}
+    <div className="h-full w-full flex flex-col" data-testid="spreadsheet-container" data-tour="spreadsheet">
+      <div className="flex-1 min-h-0">
+        <Workbook
+          ref={workbookRef}
+          data={fortuneSheetData}
+          onChange={handleChange}
+          hooks={hooks}
+          showSheetTabs={true}
+          showToolbar={true}
+          showFormulaBar={true}
+          allowEdit={true}
+          row={100}
+          column={26}
+        />
+      </div>
+      <ValidationPanel
+        errors={validationErrors}
+        onErrorClick={handleErrorClick}
       />
     </div>
   )
