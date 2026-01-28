@@ -1,3 +1,37 @@
+## spec-name-editing - COMPLETED
+Add ability to edit specification names after creation
+
+### Key decisions
+- Added Pencil icon from lucide-react to SpecItem header
+- isEditingName, editName, nameError state in SpecItem for inline edit mode
+- handleStartEditName: enters edit mode, focuses+selects input
+- handleSaveEditName: validates (not empty, not duplicate), calls updateSpecification(), syncs column headers
+- handleCancelEditName: reverts to original, clears error
+- Enter key saves, Escape key cancels
+- Blur on input also triggers save (prevents accidental loss)
+- Case-insensitive duplicate check for spec names
+- Column headers updated atomically with spec name change (columns array + header row data)
+- Added allSpecifications prop to SpecItem for duplicate validation
+
+### Files changed
+- src/components/SpecificationList.tsx (added edit icon, inline edit form, handlers, validation, column header sync)
+- src/components/SpecificationList.test.tsx (added 12 tests for spec name editing)
+
+### Notes
+- All 9 stepsToVerify criteria met:
+  1. SpecItem shows pencil edit icon button next to spec name ✓
+  2. Clicking edit icon enters inline edit mode with Input field ✓
+  3. Input shows current spec name as initial value ✓
+  4. Save button (checkmark) commits the change ✓
+  5. Cancel button (X) reverts to original name ✓
+  6. Validation prevents empty name or duplicate name ✓
+  7. Saving updates spec name in store via updateSpecification() ✓
+  8. All columns with specId matching edited spec have their header updated ✓
+  9. npm run typecheck passes ✓
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (743 tests, +12 new)
+- npm run build passes
+
 ## toolbar-add-column-button - COMPLETED
 Add discoverable 'Add Column' button to SpreadsheetToolbar
 

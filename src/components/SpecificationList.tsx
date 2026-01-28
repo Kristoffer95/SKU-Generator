@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react"
-import { Plus, ChevronDown, GripVertical, Check, X, Trash2 } from "lucide-react"
+import { Plus, ChevronDown, GripVertical, Check, X, Trash2, Pencil } from "lucide-react"
 import { AnimatePresence, motion, Reorder } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -162,12 +162,113 @@ function SpecValueItem({ sheetId, specId, value }: SpecValueItemProps) {
 interface SpecItemProps {
   sheetId: string
   spec: Specification
+  allSpecifications: Specification[]
   isFirst?: boolean
   onDelete: () => void
 }
 
-function SpecItem({ sheetId, spec, isFirst, onDelete }: SpecItemProps) {
+function SpecItem({ sheetId, spec, allSpecifications, isFirst, onDelete }: SpecItemProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [editName, setEditName] = useState(spec.name)
+  const [nameError, setNameError] = useState<string | null>(null)
+  const nameInputRef = useRef<HTMLInputElement>(null)
+
+  const updateSpecification = useSheetsStore((state) => state.updateSpecification)
+
+  // Reset local state when spec name changes externally
+  useEffect(() => {
+    if (!isEditingName) {
+      setEditName(spec.name)
+    }
+  }, [spec.name, isEditingName])
+
+  const handleStartEditName = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent expanding/collapsing
+    setIsEditingName(true)
+    setEditName(spec.name)
+    setNameError(null)
+    setTimeout(() => {
+      nameInputRef.current?.focus()
+      nameInputRef.current?.select()
+    }, 0)
+  }, [spec.name])
+
+  const handleCancelEditName = useCallback(() => {
+    setIsEditingName(false)
+    setEditName(spec.name)
+    setNameError(null)
+  }, [spec.name])
+
+  const handleSaveEditName = useCallback(() => {
+    const trimmedName = editName.trim()
+
+    // Validate: not empty
+    if (!trimmedName) {
+      setNameError("Name cannot be empty")
+      return
+    }
+
+    // Validate: not duplicate (case-insensitive)
+    const isDuplicate = allSpecifications.some(
+      (s) => s.id !== spec.id && s.name.toLowerCase() === trimmedName.toLowerCase()
+    )
+    if (isDuplicate) {
+      setNameError("A specification with this name already exists")
+      return
+    }
+
+    // Skip update if name unchanged
+    if (trimmedName === spec.name) {
+      setIsEditingName(false)
+      setNameError(null)
+      return
+    }
+
+    // Update spec name in store
+    const success = updateSpecification(sheetId, spec.id, { name: trimmedName })
+    if (!success) {
+      setNameError("Failed to update specification name")
+      return
+    }
+
+    // Update column headers that reference this spec
+    useSheetsStore.setState((state) => ({
+      sheets: state.sheets.map((sheet) => {
+        if (sheet.id !== sheetId) return sheet
+
+        // Update columns that reference this spec
+        const updatedColumns = sheet.columns.map((col) =>
+          col.type === "spec" && col.specId === spec.id
+            ? { ...col, header: trimmedName }
+            : col
+        )
+
+        // Update header row (row 0) to match column headers
+        const updatedData = [...sheet.data]
+        if (updatedData.length > 0) {
+          updatedData[0] = updatedColumns.map((col) => ({
+            v: col.header,
+            m: col.header,
+          }))
+        }
+
+        return { ...sheet, columns: updatedColumns, data: updatedData }
+      }),
+    }))
+
+    setIsEditingName(false)
+    setNameError(null)
+  }, [sheetId, spec.id, spec.name, editName, allSpecifications, updateSpecification])
+
+  const handleNameKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      handleSaveEditName()
+    } else if (e.key === "Escape") {
+      handleCancelEditName()
+    }
+  }, [handleSaveEditName, handleCancelEditName])
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation() // Prevent expanding/collapsing
@@ -188,23 +289,75 @@ function SpecItem({ sheetId, spec, isFirst, onDelete }: SpecItemProps) {
           >
             <GripVertical className="h-4 w-4" />
           </div>
-          <button
-            className="flex flex-1 items-center gap-2 text-left"
-            onClick={() => setIsExpanded(!isExpanded)}
-          >
-            <motion.span
-              animate={{ rotate: isExpanded ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            </motion.span>
-            <span className="font-medium text-sm truncate flex-1">
-              {spec.name}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {spec.values.length} value{spec.values.length !== 1 ? "s" : ""}
-            </span>
-          </button>
+          {isEditingName ? (
+            <div className="flex flex-1 items-center gap-1" data-testid="spec-name-edit-form">
+              <Input
+                ref={nameInputRef}
+                value={editName}
+                onChange={(e) => {
+                  setEditName(e.target.value)
+                  setNameError(null)
+                }}
+                onKeyDown={handleNameKeyDown}
+                onBlur={handleSaveEditName}
+                placeholder="Specification name"
+                className="h-7 text-sm flex-1"
+                data-testid="edit-spec-name"
+              />
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  handleSaveEditName()
+                }}
+                onMouseDown={(e) => e.preventDefault()}
+                className="p-1 text-green-600 hover:text-green-700 hover:bg-green-100 rounded"
+                title="Save"
+                data-testid="save-spec-name"
+              >
+                <Check className="h-4 w-4" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  handleCancelEditName()
+                }}
+                onMouseDown={(e) => e.preventDefault()}
+                className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded"
+                title="Cancel"
+                data-testid="cancel-spec-name"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <button
+                className="flex flex-1 items-center gap-2 text-left"
+                onClick={() => setIsExpanded(!isExpanded)}
+              >
+                <motion.span
+                  animate={{ rotate: isExpanded ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                </motion.span>
+                <span className="font-medium text-sm truncate flex-1">
+                  {spec.name}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {spec.values.length} value{spec.values.length !== 1 ? "s" : ""}
+                </span>
+              </button>
+              <button
+                className="p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded"
+                onClick={handleStartEditName}
+                title="Edit specification name"
+                data-testid="edit-spec-name-button"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            </>
+          )}
           <button
             className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded"
             onClick={handleDeleteClick}
@@ -214,6 +367,11 @@ function SpecItem({ sheetId, spec, isFirst, onDelete }: SpecItemProps) {
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
+        {nameError && (
+          <p className="text-xs text-destructive px-2 pb-2" data-testid="spec-name-error">
+            {nameError}
+          </p>
+        )}
 
         {/* Expandable Content */}
         <AnimatePresence initial={false}>
@@ -447,6 +605,7 @@ export function SpecificationList() {
                 <SpecItem
                   sheetId={activeSheetId!}
                   spec={spec}
+                  allSpecifications={specifications}
                   isFirst={index === 0}
                   onDelete={() => handleDeleteClick(spec)}
                 />

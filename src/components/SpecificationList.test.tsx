@@ -772,6 +772,400 @@ describe("SpecificationList", () => {
     })
   })
 
+  describe("spec name editing", () => {
+    it("shows edit button next to spec name", () => {
+      const specs = [
+        createSpecification("Color", 0, [
+          { displayValue: "Red", skuFragment: "R" },
+        ]),
+      ]
+      createSheetWithSpecs("Test Sheet", [], specs)
+
+      render(<SpecificationList />)
+
+      expect(screen.getByTestId("edit-spec-name-button")).toBeInTheDocument()
+    })
+
+    it("enters edit mode when clicking edit button", async () => {
+      const user = userEvent.setup()
+      const specs = [
+        createSpecification("Color", 0, [
+          { displayValue: "Red", skuFragment: "R" },
+        ]),
+      ]
+      createSheetWithSpecs("Test Sheet", [], specs)
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByTestId("edit-spec-name-button"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("spec-name-edit-form")).toBeInTheDocument()
+        expect(screen.getByTestId("edit-spec-name")).toHaveValue("Color")
+      })
+    })
+
+    it("saves edited name when clicking save button", async () => {
+      const user = userEvent.setup()
+      const spec: Specification = {
+        id: "spec-color",
+        name: "Color",
+        order: 0,
+        values: [{ id: "v1", displayValue: "Red", skuFragment: "R" }],
+      }
+      createSheetWithSpecs("Test Sheet", [], [spec])
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByTestId("edit-spec-name-button"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-spec-name")).toBeInTheDocument()
+      })
+
+      const input = screen.getByTestId("edit-spec-name")
+      await user.clear(input)
+      await user.type(input, "Primary Color")
+
+      // Click save (use mouseDown to prevent blur from firing first)
+      const saveBtn = screen.getByTestId("save-spec-name")
+      await user.click(saveBtn)
+
+      // Verify spec name updated in store
+      await waitFor(() => {
+        const specs = getActiveSheetSpecs()
+        expect(specs[0].name).toBe("Primary Color")
+      })
+    })
+
+    it("saves edited name when pressing Enter", async () => {
+      const user = userEvent.setup()
+      const spec: Specification = {
+        id: "spec-color",
+        name: "Color",
+        order: 0,
+        values: [{ id: "v1", displayValue: "Red", skuFragment: "R" }],
+      }
+      createSheetWithSpecs("Test Sheet", [], [spec])
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByTestId("edit-spec-name-button"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-spec-name")).toBeInTheDocument()
+      })
+
+      const input = screen.getByTestId("edit-spec-name")
+      await user.clear(input)
+      await user.type(input, "Shade{Enter}")
+
+      await waitFor(() => {
+        const specs = getActiveSheetSpecs()
+        expect(specs[0].name).toBe("Shade")
+      })
+    })
+
+    it("cancels edit when pressing Escape", async () => {
+      const user = userEvent.setup()
+      const specs = [
+        createSpecification("Color", 0, [
+          { displayValue: "Red", skuFragment: "R" },
+        ]),
+      ]
+      createSheetWithSpecs("Test Sheet", [], specs)
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByTestId("edit-spec-name-button"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-spec-name")).toBeInTheDocument()
+      })
+
+      const input = screen.getByTestId("edit-spec-name")
+      await user.clear(input)
+      await user.type(input, "Changed Name")
+      await user.keyboard("{Escape}")
+
+      // Edit form should be closed
+      await waitFor(() => {
+        expect(screen.queryByTestId("spec-name-edit-form")).not.toBeInTheDocument()
+      })
+
+      // Name should not have changed
+      expect(screen.getByText("Color")).toBeInTheDocument()
+    })
+
+    it("cancels edit when clicking cancel button", async () => {
+      const user = userEvent.setup()
+      const specs = [
+        createSpecification("Color", 0, [
+          { displayValue: "Red", skuFragment: "R" },
+        ]),
+      ]
+      createSheetWithSpecs("Test Sheet", [], specs)
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByTestId("edit-spec-name-button"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-spec-name")).toBeInTheDocument()
+      })
+
+      const input = screen.getByTestId("edit-spec-name")
+      await user.clear(input)
+      await user.type(input, "Changed Name")
+
+      await user.click(screen.getByTestId("cancel-spec-name"))
+
+      // Edit form should be closed
+      await waitFor(() => {
+        expect(screen.queryByTestId("spec-name-edit-form")).not.toBeInTheDocument()
+      })
+
+      // Name should not have changed
+      const specs2 = getActiveSheetSpecs()
+      expect(specs2[0].name).toBe("Color")
+    })
+
+    it("shows error for empty name", async () => {
+      const user = userEvent.setup()
+      const specs = [
+        createSpecification("Color", 0, [
+          { displayValue: "Red", skuFragment: "R" },
+        ]),
+      ]
+      createSheetWithSpecs("Test Sheet", [], specs)
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByTestId("edit-spec-name-button"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-spec-name")).toBeInTheDocument()
+      })
+
+      const input = screen.getByTestId("edit-spec-name")
+      await user.clear(input)
+      await user.type(input, "{Enter}")
+
+      await waitFor(() => {
+        expect(screen.getByTestId("spec-name-error")).toBeInTheDocument()
+        expect(screen.getByTestId("spec-name-error")).toHaveTextContent(/cannot be empty/i)
+      })
+    })
+
+    it("shows error for duplicate name", async () => {
+      const user = userEvent.setup()
+      const specs: Specification[] = [
+        {
+          id: "spec-color",
+          name: "Color",
+          order: 0,
+          values: [{ id: "v1", displayValue: "Red", skuFragment: "R" }],
+        },
+        {
+          id: "spec-size",
+          name: "Size",
+          order: 1,
+          values: [{ id: "v2", displayValue: "Small", skuFragment: "S" }],
+        },
+      ]
+      createSheetWithSpecs("Test Sheet", [], specs)
+
+      render(<SpecificationList />)
+
+      // Find the edit button for the second spec (Size)
+      const editButtons = screen.getAllByTestId("edit-spec-name-button")
+      await user.click(editButtons[1])
+
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-spec-name")).toBeInTheDocument()
+      })
+
+      const input = screen.getByTestId("edit-spec-name")
+      await user.clear(input)
+      await user.type(input, "Color{Enter}")
+
+      await waitFor(() => {
+        expect(screen.getByTestId("spec-name-error")).toBeInTheDocument()
+        expect(screen.getByTestId("spec-name-error")).toHaveTextContent(/already exists/i)
+      })
+    })
+
+    it("is case-insensitive when checking for duplicate names", async () => {
+      const user = userEvent.setup()
+      const specs: Specification[] = [
+        {
+          id: "spec-color",
+          name: "Color",
+          order: 0,
+          values: [{ id: "v1", displayValue: "Red", skuFragment: "R" }],
+        },
+        {
+          id: "spec-size",
+          name: "Size",
+          order: 1,
+          values: [{ id: "v2", displayValue: "Small", skuFragment: "S" }],
+        },
+      ]
+      createSheetWithSpecs("Test Sheet", [], specs)
+
+      render(<SpecificationList />)
+
+      // Edit Size to "COLOR" (uppercase) - should fail
+      const editButtons = screen.getAllByTestId("edit-spec-name-button")
+      await user.click(editButtons[1])
+
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-spec-name")).toBeInTheDocument()
+      })
+
+      const input = screen.getByTestId("edit-spec-name")
+      await user.clear(input)
+      await user.type(input, "COLOR{Enter}")
+
+      await waitFor(() => {
+        expect(screen.getByTestId("spec-name-error")).toBeInTheDocument()
+        expect(screen.getByTestId("spec-name-error")).toHaveTextContent(/already exists/i)
+      })
+    })
+
+    it("updates column headers when spec name changes", async () => {
+      const user = userEvent.setup()
+      const spec: Specification = {
+        id: "spec-color",
+        name: "Color",
+        order: 0,
+        values: [{ id: "v1", displayValue: "Red", skuFragment: "R" }],
+      }
+      const columns: ColumnDef[] = [
+        { id: "col-sku", type: "sku", header: "SKU" },
+        { id: "col-color", type: "spec", header: "Color", specId: "spec-color" },
+      ]
+      const data: CellData[][] = [
+        [{ v: "SKU", m: "SKU" }, { v: "Color", m: "Color" }],
+        [{ v: "R", m: "R" }, { v: "Red", m: "Red" }],
+      ]
+
+      createSheetWithSpecs("Test Sheet", data, [spec], columns)
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByTestId("edit-spec-name-button"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-spec-name")).toBeInTheDocument()
+      })
+
+      const input = screen.getByTestId("edit-spec-name")
+      await user.clear(input)
+      await user.type(input, "Shade{Enter}")
+
+      // Verify column header was updated
+      await waitFor(() => {
+        const { sheets, activeSheetId } = useSheetsStore.getState()
+        const sheet = sheets.find((s) => s.id === activeSheetId)
+
+        // Column header should be updated
+        expect(sheet?.columns[1].header).toBe("Shade")
+
+        // Header row data should also be updated
+        expect(sheet?.data[0][1].v).toBe("Shade")
+      })
+    })
+
+    it("updates multiple columns with same specId", async () => {
+      const user = userEvent.setup()
+      const spec: Specification = {
+        id: "spec-color",
+        name: "Color",
+        order: 0,
+        values: [{ id: "v1", displayValue: "Red", skuFragment: "R" }],
+      }
+      const columns: ColumnDef[] = [
+        { id: "col-sku", type: "sku", header: "SKU" },
+        { id: "col-color1", type: "spec", header: "Color", specId: "spec-color" },
+        { id: "col-color2", type: "spec", header: "Color", specId: "spec-color" },
+      ]
+      const data: CellData[][] = [
+        [{ v: "SKU" }, { v: "Color" }, { v: "Color" }],
+      ]
+
+      createSheetWithSpecs("Test Sheet", data, [spec], columns)
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByTestId("edit-spec-name-button"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-spec-name")).toBeInTheDocument()
+      })
+
+      const input = screen.getByTestId("edit-spec-name")
+      await user.clear(input)
+      await user.type(input, "Hue{Enter}")
+
+      // Verify both columns updated
+      await waitFor(() => {
+        const { sheets, activeSheetId } = useSheetsStore.getState()
+        const sheet = sheets.find((s) => s.id === activeSheetId)
+
+        expect(sheet?.columns[1].header).toBe("Hue")
+        expect(sheet?.columns[2].header).toBe("Hue")
+        expect(sheet?.data[0][1].v).toBe("Hue")
+        expect(sheet?.data[0][2].v).toBe("Hue")
+      })
+    })
+
+    it("clears error when input changes", async () => {
+      const user = userEvent.setup()
+      const specs: Specification[] = [
+        {
+          id: "spec-color",
+          name: "Color",
+          order: 0,
+          values: [],
+        },
+        {
+          id: "spec-size",
+          name: "Size",
+          order: 1,
+          values: [],
+        },
+      ]
+      createSheetWithSpecs("Test Sheet", [], specs)
+
+      render(<SpecificationList />)
+
+      // Edit Size to "Color" - should fail
+      const editButtons = screen.getAllByTestId("edit-spec-name-button")
+      await user.click(editButtons[1])
+
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-spec-name")).toBeInTheDocument()
+      })
+
+      const input = screen.getByTestId("edit-spec-name")
+      await user.clear(input)
+      await user.type(input, "Color{Enter}")
+
+      // Error should appear
+      await waitFor(() => {
+        expect(screen.getByTestId("spec-name-error")).toBeInTheDocument()
+      })
+
+      // Type something else - error should clear
+      await user.type(input, "2")
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("spec-name-error")).not.toBeInTheDocument()
+      })
+    })
+  })
+
   describe("delete specification", () => {
     it("shows delete button on each specification", () => {
       const specs = [

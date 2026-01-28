@@ -353,7 +353,7 @@
       "All columns with specId matching edited spec have their header updated",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "sheet-tabs-fixed-layout",
