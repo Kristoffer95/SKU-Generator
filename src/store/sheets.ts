@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { SheetConfig, CellData } from '../types';
-import { createSampleSheets, isFirstLaunch } from '../lib/sample-data';
+import { createSampleSheets, isFirstLaunch, markAsInitialized } from '../lib/sample-data';
 
 interface SheetsState {
   sheets: SheetConfig[];
@@ -70,6 +70,7 @@ export const useSheetsStore = create<SheetsState>()(
             sheets: [configSheet, productSheet],
             activeSheetId: configSheet.id,
           });
+          markAsInitialized();
         } else {
           // Fall back to normal init if sheets exist
           const hasConfigSheet = sheets.some((s) => s.type === 'config');
@@ -79,6 +80,10 @@ export const useSheetsStore = create<SheetsState>()(
               sheets: [configSheet, ...sheets],
               activeSheetId: configSheet.id,
             });
+          }
+          // Mark as initialized if we have any sheets
+          if (sheets.length > 0) {
+            markAsInitialized();
           }
         }
       },
@@ -192,6 +197,18 @@ export const useSheetsStore = create<SheetsState>()(
     }),
     {
       name: 'sku-sheets',
+      onRehydrateStorage: () => (state) => {
+        // Called AFTER hydration completes - this is the right time to init sample data
+        if (state && isFirstLaunch()) {
+          const { configSheet, productSheet } = createSampleSheets();
+          state.sheets = [configSheet, productSheet];
+          state.activeSheetId = configSheet.id;
+          markAsInitialized();
+        } else if (state && state.sheets.length > 0) {
+          // Mark as initialized if we already have data
+          markAsInitialized();
+        }
+      },
     }
   )
 );

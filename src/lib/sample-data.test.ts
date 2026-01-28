@@ -4,6 +4,7 @@ import {
   getSampleProductData,
   createSampleSheets,
   isFirstLaunch,
+  markAsInitialized,
 } from './sample-data';
 
 describe('sample-data', () => {
@@ -140,17 +141,23 @@ describe('sample-data', () => {
       expect(isFirstLaunch()).toBe(true);
     });
 
-    it('returns true when sku-sheets key does not exist', () => {
+    it('returns true when sku-has-data key does not exist', () => {
       localStorage.setItem('other-key', 'value');
       expect(isFirstLaunch()).toBe(true);
     });
 
-    it('returns true when stored sheets array is empty', () => {
-      localStorage.setItem('sku-sheets', JSON.stringify({ state: { sheets: [] } }));
+    it('returns true when sku-has-data is not "true"', () => {
+      localStorage.setItem('sku-has-data', 'false');
       expect(isFirstLaunch()).toBe(true);
     });
 
-    it('returns false when sheets exist in localStorage', () => {
+    it('returns false when sku-has-data is "true"', () => {
+      localStorage.setItem('sku-has-data', 'true');
+      expect(isFirstLaunch()).toBe(false);
+    });
+
+    it('ignores sku-sheets key (avoids race condition)', () => {
+      // Even if sku-sheets has data, we use sku-has-data for detection
       localStorage.setItem(
         'sku-sheets',
         JSON.stringify({
@@ -159,12 +166,21 @@ describe('sample-data', () => {
           },
         })
       );
-      expect(isFirstLaunch()).toBe(false);
+      expect(isFirstLaunch()).toBe(true); // Because sku-has-data not set
+    });
+  });
+
+  describe('markAsInitialized', () => {
+    it('sets sku-has-data to "true"', () => {
+      expect(localStorage.getItem('sku-has-data')).toBeNull();
+      markAsInitialized();
+      expect(localStorage.getItem('sku-has-data')).toBe('true');
     });
 
-    it('returns true on malformed JSON', () => {
-      localStorage.setItem('sku-sheets', 'not-valid-json');
+    it('causes isFirstLaunch to return false', () => {
       expect(isFirstLaunch()).toBe(true);
+      markAsInitialized();
+      expect(isFirstLaunch()).toBe(false);
     });
   });
 });

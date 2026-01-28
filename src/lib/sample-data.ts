@@ -111,18 +111,21 @@ export function createSampleSheets(): { configSheet: SheetConfig; productSheet: 
   return { configSheet, productSheet };
 }
 
+const HAS_DATA_KEY = 'sku-has-data';
+
 /**
- * Checks if the app has been launched before by checking localStorage for existing sheets.
- * Returns true if this is the first launch (no sheets in localStorage).
+ * Checks if the app has been launched before by checking a separate localStorage key.
+ * Uses 'sku-has-data' instead of 'sku-sheets' to avoid race conditions with Zustand persist.
+ * Returns true if this is the first launch (key not set).
  */
 export function isFirstLaunch(): boolean {
-  try {
-    const stored = localStorage.getItem('sku-sheets');
-    if (!stored) return true;
-    const parsed = JSON.parse(stored);
-    // Check if there are any sheets
-    return !parsed.state?.sheets || parsed.state.sheets.length === 0;
-  } catch {
-    return true;
-  }
+  return localStorage.getItem(HAS_DATA_KEY) !== 'true';
+}
+
+/**
+ * Marks the app as having been initialized with data.
+ * Called after sample data or user data has been loaded.
+ */
+export function markAsInitialized(): void {
+  localStorage.setItem(HAS_DATA_KEY, 'true');
 }

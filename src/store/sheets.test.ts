@@ -67,6 +67,15 @@ describe('useSheetsStore', () => {
       expect(activeSheetId).toBe(sheets[0].id);
     });
 
+    it('should mark app as initialized after creating sample data', () => {
+      const { initializeWithSampleData } = useSheetsStore.getState();
+      expect(localStorage.getItem('sku-has-data')).toBeNull();
+
+      initializeWithSampleData();
+
+      expect(localStorage.getItem('sku-has-data')).toBe('true');
+    });
+
     it('should include Color, Size, Material specs in Config', () => {
       const { initializeWithSampleData, getConfigSheet } = useSheetsStore.getState();
       initializeWithSampleData();

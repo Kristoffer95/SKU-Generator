@@ -1,3 +1,19 @@
+## PRD-016: Sample Data Race Condition Bug Fix - COMPLETE
+- Fixed race condition where Zustand persist middleware writes empty sheets BEFORE initializeWithSampleData() runs
+- Changed isFirstLaunch() to use separate 'sku-has-data' localStorage key instead of checking 'sku-sheets'
+- Added markAsInitialized() function to set 'sku-has-data' = 'true' after data is loaded
+- Added onRehydrateStorage callback in persist middleware to init sample data AFTER hydration
+- Sample data now appears IMMEDIATELY on first page load (no delay or missing data)
+- Updated 5 tests in sample-data.test.ts for new isFirstLaunch behavior + 2 new tests for markAsInitialized
+- Added 1 test in sheets.test.ts verifying markAsInitialized is called after sample data creation
+- All feedback loops pass (276 tests, typecheck, lint)
+
+Files changed:
+- src/lib/sample-data.ts (isFirstLaunch now uses 'sku-has-data' key, added markAsInitialized)
+- src/lib/sample-data.test.ts (updated tests for new behavior)
+- src/store/sheets.ts (added onRehydrateStorage callback, calls markAsInitialized)
+- src/store/sheets.test.ts (+1 test for markAsInitialized)
+
 ## PRD-016: Sample Data on First Launch - COMPLETE
 - Created src/lib/sample-data.ts with sample Config data and sample products
 - getSampleConfigData(): Color (R/B/G), Size (S/M/L), Material (COT/POL/WOL) - 9 specs total
