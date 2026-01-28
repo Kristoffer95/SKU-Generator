@@ -1,306 +1,210 @@
 [
   {
-    "id": "spec-store-1",
-    "category": "Data Model",
-    "description": "Update Specification type with order field. Each specification must have id, name, order (number), and values array. SpecValue must have id, displayValue, and skuFragment.",
+    "id": "migration-spreadsheet-types",
+    "category": "Spreadsheet Migration",
+    "description": "Create extended cell type for react-spreadsheet. Define SKUCell interface extending CellBase with value, readOnly, className, and dropdownOptions fields. Create SKUMatrix type alias for 2D array of SKUCell.",
     "stepsToVerify": [
-      "src/types/index.ts contains Specification interface with order: number field",
-      "src/types/index.ts contains SpecValue interface with id, displayValue, skuFragment fields",
-      "TypeScript compiles without errors: npm run typecheck"
-    ],
-    "passes": true
-  },
-  {
-    "id": "spec-store-2",
-    "category": "Data Model",
-    "description": "Revive useSpecificationsStore as the single source of truth for specifications. Remove deprecated status. Add reorderSpec(specId, newOrder) action. Add CRUD operations that maintain order consistency.",
-    "stepsToVerify": [
-      "src/store/specifications.ts exports useSpecificationsStore with addSpecification, updateSpecification, removeSpecification, reorderSpec actions",
-      "reorderSpec updates the order field and adjusts other specs' orders accordingly",
-      "Store persists to localStorage with key 'sku-specifications'",
-      "npm run test passes for specification store tests"
-    ],
-    "passes": true
-  },
-  {
-    "id": "spec-store-3",
-    "category": "Data Model",
-    "description": "Add skuFragment uniqueness validation to specifications store. skuFragment must be unique within its specification (not globally).",
-    "stepsToVerify": [
-      "Store has validateSkuFragment(specId, skuFragment) selector that returns boolean",
-      "Adding a value with duplicate skuFragment within same spec is prevented or returns error",
-      "Different specs can have same skuFragment (e.g., Color:R and Size:R is allowed)"
-    ],
-    "passes": true
-  },
-  {
-    "id": "remove-config-1",
-    "category": "Remove Config Sheet",
-    "description": "Remove Config sheet creation from initialization. Only data sheets should be created on first launch.",
-    "stepsToVerify": [
-      "initializeWithSampleData() in src/store/sheets.ts does not create Config sheet",
-      "Sample specifications are added to useSpecificationsStore instead",
-      "Fresh app load shows only data sheet(s), no Config tab"
-    ],
-    "passes": true
-  },
-  {
-    "id": "remove-config-2",
-    "category": "Remove Config Sheet",
-    "description": "Remove all Config sheet handling from SpreadsheetContainer. Remove parseConfigSheet usage, Config sheet type checks, and Config sheet protection logic.",
-    "stepsToVerify": [
-      "src/components/SpreadsheetContainer.tsx has no imports from config-sheet.ts",
-      "No references to sheet.type === 'config' in SpreadsheetContainer",
-      "App renders without errors when Config sheet doesn't exist"
-    ],
-    "passes": true
-  },
-  {
-    "id": "remove-config-3",
-    "category": "Remove Config Sheet",
-    "description": "Update dropdown building to use specifications store instead of Config sheet. Dropdowns should show displayValue options from each specification.",
-    "stepsToVerify": [
-      "SpreadsheetContainer reads from useSpecificationsStore for dropdown values",
-      "Dropdown options match specification values from store",
-      "Adding a new spec value immediately appears in column dropdowns"
-    ],
-    "passes": true
-  },
-  {
-    "id": "sidebar-ui-1",
-    "category": "Specification Management UI",
-    "description": "Enhance SpecificationList to read from useSpecificationsStore instead of parsing Config sheet. Display specs sorted by order field.",
-    "stepsToVerify": [
-      "SpecificationList uses useSpecificationsStore hook",
-      "Specs display in order of their order field (lowest first)",
-      "Each spec shows name, value count, and individual values with skuFragments"
-    ],
-    "passes": true
-  },
-  {
-    "id": "sidebar-ui-2",
-    "category": "Specification Management UI",
-    "description": "Add drag-and-drop reordering to SpecificationList. When user drags a spec to a new position, update order field and regenerate all SKUs.",
-    "stepsToVerify": [
-      "Spec items can be dragged and dropped to reorder",
-      "After reorder, spec order fields are updated in store",
-      "After reorder, all SKUs in all data sheets are regenerated",
-      "Order persists after page reload"
-    ],
-    "passes": true
-  },
-  {
-    "id": "sidebar-ui-3",
-    "category": "Specification Management UI",
-    "description": "Add inline editing for specification values in sidebar. Users can edit displayValue and skuFragment directly. Show validation error if skuFragment is not unique within spec.",
-    "stepsToVerify": [
-      "Click on a value shows edit inputs for displayValue and skuFragment",
-      "Changing skuFragment triggers validation",
-      "Duplicate skuFragment within same spec shows error message",
-      "Valid changes save to store and update affected SKUs"
-    ],
-    "passes": true
-  },
-  {
-    "id": "sidebar-ui-4",
-    "category": "Specification Management UI",
-    "description": "Update AddSpecDialog to work with specifications store. Add order field (defaults to max existing order + 1).",
-    "stepsToVerify": [
-      "AddSpecDialog writes new specifications to useSpecificationsStore",
-      "New specs get order = max existing order + 1",
-      "New spec appears at bottom of sidebar list",
-      "New spec column appears in data sheets with dropdown"
-    ],
-    "passes": true
-  },
-  {
-    "id": "sku-gen-1",
-    "category": "SKU Generation",
-    "description": "Modify generateRowSKU to accept Specification[] from store and sort by order field before concatenating skuFragments. Column order in data sheet should not affect SKU composition.",
-    "stepsToVerify": [
-      "generateRowSKU accepts Specification[] parameter",
-      "Specs are sorted by order field before building SKU",
-      "SKU is built as: prefix + fragments.join(delimiter) + suffix",
-      "Reordering columns in data sheet does not change SKU"
-    ],
-    "passes": true
-  },
-  {
-    "id": "sku-gen-2",
-    "category": "SKU Generation",
-    "description": "Update auto-SKU logic to use specifications from store. When any cell changes in a data row, regenerate that row's SKU.",
-    "stepsToVerify": [
-      "processAutoSKU reads specifications from useSpecificationsStore",
-      "Changing a value in data sheet updates SKU in column 0",
-      "SKU uses skuFragments from store, sorted by spec order"
-    ],
-    "passes": true
-  },
-  {
-    "id": "readonly-sku-1",
-    "category": "Read-Only SKU Column",
-    "description": "Make SKU column (column 0) read-only in data sheets. Users should not be able to manually edit SKU values.",
-    "stepsToVerify": [
-      "Clicking on SKU cell does not allow text input",
-      "Double-clicking SKU cell does not enable edit mode",
-      "Copy from SKU cell still works",
-      "Auto-generated SKU values still update correctly"
-    ],
-    "passes": true
-  },
-  {
-    "id": "readonly-sku-2",
-    "category": "Read-Only SKU Column",
-    "description": "Add visual styling to indicate SKU column is read-only. Use subtle background color or other visual indicator.",
-    "stepsToVerify": [
-      "SKU column has visually distinct appearance from editable columns",
-      "Styling clearly indicates the column is auto-generated"
-    ],
-    "passes": true
-  },
-  {
-    "id": "validation-1",
-    "category": "Validation",
-    "description": "Create validation module to detect deleted values. When a cell contains a displayValue that no longer exists in its specification, mark it as an error.",
-    "stepsToVerify": [
-      "src/lib/validation.ts exports validateDataSheet function",
-      "Deleting a spec value from sidebar marks affected cells as errors",
-      "Error includes row, column, and message about missing value"
-    ],
-    "passes": true
-  },
-  {
-    "id": "validation-2",
-    "category": "Validation",
-    "description": "Add duplicate SKU detection. When multiple rows have the same SKU value, show a warning.",
-    "stepsToVerify": [
-      "Validation detects when 2+ rows have identical SKU",
-      "Warning includes which rows have duplicates",
-      "Duplicate SKUs are highlighted in the spreadsheet"
-    ],
-    "passes": true
-  },
-  {
-    "id": "validation-3",
-    "category": "Validation",
-    "description": "Create ValidationPanel component to display validation errors below the spreadsheet. Errors should be clickable to jump to the affected cell.",
-    "stepsToVerify": [
-      "ValidationPanel appears below spreadsheet when errors exist",
-      "Panel shows count and list of errors",
-      "Clicking an error scrolls to and selects the affected cell",
-      "Panel hides when no errors exist"
-    ],
-    "passes": true
-  },
-  {
-    "id": "reactivity-1",
-    "category": "Reactivity",
-    "description": "When a skuFragment changes in the specifications store, automatically regenerate all affected SKUs in all data sheets.",
-    "stepsToVerify": [
-      "Edit skuFragment in sidebar",
-      "All rows using that value have their SKU regenerated",
-      "Changes reflect immediately without manual refresh"
-    ],
-    "passes": true
-  },
-  {
-    "id": "reactivity-2",
-    "category": "Reactivity",
-    "description": "When specification order changes (via drag-and-drop), regenerate all SKUs in all data sheets to reflect new composition order.",
-    "stepsToVerify": [
-      "Drag spec A above spec B in sidebar",
-      "All SKUs now have spec A's fragment before spec B's fragment",
-      "Example: Color(order:1), Size(order:2) with Red=R, Small=S produces R-S"
-    ],
-    "passes": true
-  },
-  {
-    "id": "reactivity-3",
-    "category": "Reactivity",
-    "description": "When a displayValue is renamed in specifications store, update all cells showing that value to show the new name. SKUs should remain unchanged (only displayValue changes, not skuFragment).",
-    "stepsToVerify": [
-      "Rename 'Red' to 'Crimson' in sidebar",
-      "All cells showing 'Red' now show 'Crimson'",
-      "SKUs remain unchanged (still use skuFragment 'R')"
-    ],
-    "passes": true
-  },
-  {
-    "id": "cleanup-1",
-    "category": "Cleanup",
-    "description": "Remove or deprecate config-sheet.ts and related utilities that are no longer needed after Config sheet removal.",
-    "stepsToVerify": [
-      "src/lib/config-sheet.ts is deleted or clearly marked deprecated",
-      "No active imports of parseConfigSheet in codebase",
-      "npm run build succeeds without config-sheet dependencies"
-    ],
-    "passes": true
-  },
-  {
-    "id": "migration-1",
-    "category": "Migration",
-    "description": "Add migration logic for existing users who have Config sheet data. On app load, if Config sheet exists, migrate specs to store format and remove Config sheet.",
-    "stepsToVerify": [
-      "User with existing Config sheet data loads app",
-      "Specs from Config sheet are imported to specifications store",
-      "Config sheet is removed after successful migration",
-      "Data sheets remain intact with correct values"
-    ],
-    "passes": true
-  },
-  {
-    "id": "sheet-headers-1",
-    "category": "Sheet Initialization",
-    "description": "Fix new sheet creation to initialize with proper headers. When a new data sheet is created via addSheet() or addSheetWithId(), it must have 'SKU' in cell A1 (column 0) and existing specification names in B1, C1, etc. (columns 1+) sorted by spec order field.",
-    "stepsToVerify": [
-      "Create new sheet via + button in tab bar",
-      "Row 1 (index 0) has 'SKU' in column A",
-      "Row 1 has existing spec names in columns B, C, D, etc. matching spec order",
-      "Dropdowns appear in spec columns for data rows",
+      "src/types/spreadsheet.ts exists with SKUCell interface",
+      "SKUCell has: value (string|number|null), readOnly (boolean), className (string), dropdownOptions (string[])",
+      "SKUMatrix type is exported as (SKUCell | null)[][]",
       "npm run typecheck passes"
     ],
-    "passes": true
+    "passes": false
   },
   {
-    "id": "sheet-headers-2",
-    "category": "Sheet Initialization",
-    "description": "Fix AddSpecDialog column insertion logic. Currently inserts spec columns before SKU (treating SKU as last column), but SKU must be at column 0. New spec columns should be appended at the end after existing spec columns.",
+    "id": "migration-spreadsheet-adapter",
+    "category": "Spreadsheet Migration",
+    "description": "Create data conversion utilities for react-spreadsheet. Implement convertToSpreadsheetData() to transform CellData[][] to SKUMatrix with readOnly flags on SKU column and dropdownOptions on spec columns. Implement convertFromSpreadsheetData() to transform back.",
     "stepsToVerify": [
-      "Add new specification via Add Specification dialog",
-      "SKU remains in column A (index 0)",
-      "New spec column is appended at the end (after existing spec columns)",
-      "If sheet was empty, header row is created with SKU in A1 and new spec in B1",
-      "Existing data rows get empty cell added at the end for new spec",
+      "src/lib/spreadsheet-adapter.ts exports convertToSpreadsheetData and convertFromSpreadsheetData",
+      "convertToSpreadsheetData sets readOnly: true on col 0 cells (except row 0 header)",
+      "convertToSpreadsheetData populates dropdownOptions from specifications for spec columns",
+      "convertFromSpreadsheetData converts SKUMatrix back to CellData[][]",
       "npm run typecheck passes"
     ],
-    "passes": true
+    "passes": false
   },
   {
-    "id": "sku-autogen-1",
-    "category": "SKU Generation",
-    "description": "Verify SKU auto-generation works when selecting values from dropdowns. The SKU in column A should auto-generate when user selects spec values in a row. This depends on correct headers being in row 0 - if headers are missing or incorrect, SKU generation fails silently.",
+    "id": "migration-dropdown-editor",
+    "category": "Spreadsheet Migration",
+    "description": "Create custom DataEditor component for dropdown selection in spec columns. When cell has dropdownOptions, render <select> with options. When no dropdownOptions, render text input. Handle keyboard events (Enter, Tab, Escape) for UX.",
     "stepsToVerify": [
-      "Create new sheet (should have proper headers after sheet-headers-1 fix)",
-      "Select a value from dropdown in column B (first spec column)",
-      "SKU in column A updates with the selected value's skuFragment",
-      "Select values in additional spec columns",
-      "SKU in column A shows all fragments joined by delimiter",
-      "Example: selecting Red (R) and Small (S) produces 'R-S' in SKU column"
+      "src/components/spreadsheet/DropdownEditor.tsx exports DropdownEditor component",
+      "Component renders <select> when cell.dropdownOptions exists and has values",
+      "Component renders <input type='text'> as fallback when no dropdown options",
+      "Keyboard: Enter/Tab commits and exits edit, Escape cancels",
+      "Select auto-focuses on mount"
     ],
-    "passes": true
+    "passes": false
   },
   {
-    "id": "sheet-headers-repair",
-    "category": "Sheet Initialization",
-    "description": "Add header repair mechanism for existing sheets with missing headers. When app loads from localStorage, detect sheets with missing or malformed headers (no 'SKU' in column 0, missing spec names) and automatically insert a proper header row. This fixes data saved before the sheet-headers-1 and sheet-headers-2 fixes were applied.",
+    "id": "migration-sheet-tabs",
+    "category": "Spreadsheet Migration",
+    "description": "Create custom SheetTabs component for multi-sheet navigation. Support tab switching (click), tab renaming (double-click), tab deletion (X button with confirmation), and add new sheet (+ button). Style active tab distinctly.",
     "stepsToVerify": [
-      "Load app with existing localStorage data that has sheets without headers in row 0",
-      "App automatically detects missing headers on hydration",
-      "Header row is inserted with 'SKU' in A1 and spec names in B1, C1, etc.",
-      "Existing data rows are preserved (shifted down by 1 row if header was inserted)",
-      "SKU auto-generation works after repair",
+      "src/components/spreadsheet/SheetTabs.tsx exports SheetTabs component",
+      "Click on tab calls onActivate with sheet id",
+      "Double-click enables inline rename input",
+      "Rename commits on Enter/blur, cancels on Escape",
+      "X button calls onDelete (visible only when multiple sheets exist)",
+      "+ button calls onAdd",
+      "Active tab has distinct styling (border/background)"
+    ],
+    "passes": false
+  },
+  {
+    "id": "migration-toolbar",
+    "category": "Spreadsheet Migration",
+    "description": "Create SpreadsheetToolbar component with basic actions. Include Undo/Redo buttons, Import button (opens file picker for Excel/CSV), Export dropdown (Excel/CSV options), and Add Row button.",
+    "stepsToVerify": [
+      "src/components/spreadsheet/SpreadsheetToolbar.tsx exports SpreadsheetToolbar component",
+      "Undo button reverts last change (or is disabled when nothing to undo)",
+      "Redo button re-applies undone change (or is disabled when nothing to redo)",
+      "Import button triggers file input for .xlsx/.csv files",
+      "Export offers Excel and CSV download options",
+      "Add Row button appends new empty row to active sheet"
+    ],
+    "passes": false
+  },
+  {
+    "id": "migration-dependencies",
+    "category": "Spreadsheet Migration",
+    "description": "Swap spreadsheet library dependencies. Remove @fortune-sheet/react, add react-spreadsheet and scheduler peer dependency.",
+    "stepsToVerify": [
+      "package.json does not contain @fortune-sheet/react",
+      "package.json contains react-spreadsheet",
+      "package.json contains scheduler as dependency",
+      "npm install completes without errors",
+      "npm run build completes without errors"
+    ],
+    "passes": false
+  },
+  {
+    "id": "migration-container-rewrite",
+    "category": "Spreadsheet Migration",
+    "description": "Rewrite SpreadsheetContainer to use react-spreadsheet instead of Fortune-Sheet. Integrate custom DropdownEditor, SheetTabs, and SpreadsheetToolbar. Remove Fortune-Sheet imports, hooks, and data conversion. Use new spreadsheet-adapter functions for data transformation.",
+    "stepsToVerify": [
+      "SpreadsheetContainer imports from 'react-spreadsheet' not '@fortune-sheet/react'",
+      "Component renders <Spreadsheet> with data, onChange, DataEditor props",
+      "SheetTabs component renders below spreadsheet",
+      "SpreadsheetToolbar component renders above spreadsheet",
+      "ValidationPanel still renders and functions correctly",
       "npm run typecheck passes"
     ],
-    "passes": true
+    "passes": false
+  },
+  {
+    "id": "migration-readonly-sku",
+    "category": "Spreadsheet Migration",
+    "description": "Verify SKU column (column A) is read-only in the new react-spreadsheet implementation. Users cannot edit SKU cells except the header. Apply visual styling to indicate read-only status.",
+    "stepsToVerify": [
+      "Click on SKU cell (row > 0) does not enable editing",
+      "SKU column has distinct background color (#f1f5f9 gray-blue)",
+      "Header cell (row 0, col 0) IS editable for renaming column",
+      "Auto-generated SKU values still update when spec values change"
+    ],
+    "passes": false
+  },
+  {
+    "id": "migration-dropdowns",
+    "category": "Spreadsheet Migration",
+    "description": "Verify dropdown selection works in spec columns. When clicking/editing a spec column cell, dropdown appears with specification values. Selecting a value updates the cell and triggers SKU regeneration.",
+    "stepsToVerify": [
+      "Click/Enter on spec column cell shows dropdown with spec values",
+      "Dropdown options match displayValues from specification store",
+      "Selecting a value updates cell content",
+      "SKU in column A regenerates with new skuFragment",
+      "Tab/Enter moves to next cell after selection"
+    ],
+    "passes": false
+  },
+  {
+    "id": "migration-duplicate-highlight",
+    "category": "Spreadsheet Migration",
+    "description": "Verify duplicate SKU warning styling works. Rows with duplicate SKU values should have amber background highlighting on the SKU cell.",
+    "stepsToVerify": [
+      "Create two rows with same spec value combination",
+      "Both SKU cells show amber background (#fef3c7)",
+      "Changing one row to have different values removes amber from both",
+      "Validation panel shows duplicate SKU errors"
+    ],
+    "passes": false
+  },
+  {
+    "id": "migration-click-navigate",
+    "category": "Spreadsheet Migration",
+    "description": "Implement click-to-navigate for validation errors. When clicking an error in ValidationPanel, scroll to and select the affected cell in the spreadsheet.",
+    "stepsToVerify": [
+      "Click on validation error in panel",
+      "Spreadsheet scrolls to show the affected cell",
+      "Affected cell is selected/highlighted",
+      "Works for both missing-value and duplicate-sku error types"
+    ],
+    "passes": false
+  },
+  {
+    "id": "migration-css-styles",
+    "category": "Spreadsheet Migration",
+    "description": "Add CSS styles for react-spreadsheet customizations. Style read-only cells, duplicate warning cells, header row, dropdown editor, and toolbar.",
+    "stepsToVerify": [
+      "src/index.css (or dedicated file) has .sku-spreadsheet styles",
+      "Read-only cells have gray-blue background",
+      "Duplicate SKU cells have amber background",
+      "Header row (first row) has bold text and light background",
+      "Dropdown/select has proper focus outline styling",
+      "Toolbar buttons have consistent styling with app theme"
+    ],
+    "passes": false
+  },
+  {
+    "id": "migration-tests-update",
+    "category": "Spreadsheet Migration",
+    "description": "Update SpreadsheetContainer tests for react-spreadsheet. Mock react-spreadsheet instead of @fortune-sheet/react. Update test assertions for new component structure.",
+    "stepsToVerify": [
+      "SpreadsheetContainer.test.tsx mocks 'react-spreadsheet' not '@fortune-sheet/react'",
+      "Tests verify data transformation works correctly",
+      "Tests verify sheet tab interactions",
+      "npm run test passes for SpreadsheetContainer tests"
+    ],
+    "passes": false
+  },
+  {
+    "id": "migration-undo-redo",
+    "category": "Spreadsheet Migration",
+    "description": "Implement undo/redo functionality for spreadsheet edits. Track change history and allow reverting/reapplying changes via toolbar buttons.",
+    "stepsToVerify": [
+      "Edit a cell value, click Undo - value reverts to previous",
+      "After Undo, click Redo - value returns to edited state",
+      "Undo button disabled when no history",
+      "Redo button disabled when at latest state",
+      "History clears when switching sheets"
+    ],
+    "passes": false
+  },
+  {
+    "id": "migration-import-export",
+    "category": "Spreadsheet Migration",
+    "description": "Verify import/export functionality works with new spreadsheet. Toolbar import loads Excel/CSV files, export downloads current sheet data.",
+    "stepsToVerify": [
+      "Click Import, select .xlsx file - data loads into active sheet",
+      "Click Import, select .csv file - data loads into active sheet",
+      "Click Export > Excel - downloads .xlsx file with current data",
+      "Click Export > CSV - downloads .csv file with current data",
+      "Imported data triggers SKU regeneration"
+    ],
+    "passes": false
+  },
+  {
+    "id": "migration-add-row",
+    "category": "Spreadsheet Migration",
+    "description": "Implement Add Row functionality in toolbar. Button appends new empty row to active sheet with proper cell structure for spec columns.",
+    "stepsToVerify": [
+      "Click Add Row button in toolbar",
+      "New row appears at bottom of sheet",
+      "New row has empty SKU cell and empty spec cells",
+      "Spec cells in new row have dropdown functionality",
+      "Selecting values in new row generates SKU"
+    ],
+    "passes": false
   }
 ]

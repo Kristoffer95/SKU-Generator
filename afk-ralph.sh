@@ -41,7 +41,7 @@ IMPLEMENTATION:
 FEEDBACK LOOPS (run during development as needed):
 - vitest: Unit/integration tests, run frequently
 - storybook: Component development and visual verification
-- playwright: ONLY for UI-related tasks (user flows, interactions, visual regression)
+- playwright or agent-browser (prefer agent-browser if applicable): ONLY for UI-related tasks (user flows, interactions, visual regression)
   Skip playwright for backend, utils, hooks, or non-visual logic
 
 PRE-COMMIT CHECKLIST (ALL must pass):
