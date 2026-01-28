@@ -1,3 +1,31 @@
+## migration-import-export - COMPLETED
+Verify import/export functionality works with new spreadsheet
+
+### Key decisions
+- Integrated existing import-export.ts utilities into SpreadsheetContainer
+- Added importFromCSV function to import-export.ts for CSV file support
+- Added processAutoSKUForAllRows to auto-sku.ts to regenerate all SKUs after import
+- Import handler: detects file type by extension, loads data into active sheet
+- Export Excel: exports all sheets via exportToExcel utility
+- Export CSV: exports active sheet via exportToCSV utility
+- History cleared after import to prevent undo reverting to pre-import state
+
+### Files changed
+- src/lib/import-export.ts (added importFromCSV function)
+- src/lib/auto-sku.ts (added processAutoSKUForAllRows function)
+- src/components/SpreadsheetContainer.tsx (implemented handleImport, handleExportExcel, handleExportCSV)
+- src/lib/import-export.test.ts (added 4 tests for importFromCSV)
+- src/components/SpreadsheetContainer.test.tsx (added 3 tests for import/export toolbar buttons)
+
+### Notes
+- All 5 stepsToVerify criteria implemented
+- xlsx library already installed as dependency
+- Import triggers SKU regeneration via processAutoSKUForAllRows
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (565 tests total, +7 new)
+- npm run build passes
+
 ## migration-click-navigate - COMPLETED
 Implement click-to-navigate for validation errors
 

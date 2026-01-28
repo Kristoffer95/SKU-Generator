@@ -10,6 +10,8 @@ import { SheetTabs } from "@/components/spreadsheet/SheetTabs"
 import { SpreadsheetToolbar } from "@/components/spreadsheet/SpreadsheetToolbar"
 import { DropdownEditor } from "@/components/spreadsheet/DropdownEditor"
 import { convertToSpreadsheetData, convertFromSpreadsheetData } from "@/lib/spreadsheet-adapter"
+import { importFromExcel, importFromCSV, exportToExcel, exportToCSV } from "@/lib/import-export"
+import { processAutoSKUForAllRows } from "@/lib/auto-sku"
 import type { CellData } from "@/types"
 import type { SKUMatrix } from "@/types/spreadsheet"
 
@@ -236,22 +238,53 @@ export function SpreadsheetContainer() {
     setSheetData(activeSheet.id, [...currentData, newRow])
   }, [activeSheet, setSheetData, specifications.length])
 
-  // Import handler (placeholder - will be fully implemented in migration-import-export)
-  const handleImport = useCallback((file: File) => {
-    console.log("Import file:", file.name)
-    // TODO: Implement in migration-import-export task
-  }, [])
+  // Import handler - loads Excel/CSV files into active sheet
+  const handleImport = useCallback(async (file: File) => {
+    if (!activeSheetId) return
 
-  // Export handlers (placeholder - will be fully implemented in migration-import-export)
+    const isCSV = file.name.toLowerCase().endsWith('.csv')
+
+    try {
+      let importedData: CellData[][]
+
+      if (isCSV) {
+        // Import CSV directly into active sheet
+        importedData = await importFromCSV(file)
+      } else {
+        // Import Excel - use first data sheet (or first sheet if no data sheets)
+        const importedSheets = await importFromExcel(file)
+        const dataSheet = importedSheets.find(s => s.type === 'data') || importedSheets[0]
+        if (!dataSheet) {
+          console.error("No sheets found in imported file")
+          return
+        }
+        importedData = dataSheet.data
+      }
+
+      // Regenerate SKUs for all rows
+      processAutoSKUForAllRows(importedData, specifications, settings)
+
+      // Update the active sheet with imported data
+      setSheetData(activeSheetId, importedData)
+
+      // Clear history after import
+      setHistory([])
+      setHistoryIndex(-1)
+    } catch (error) {
+      console.error("Import failed:", error)
+    }
+  }, [activeSheetId, setSheetData, specifications, settings])
+
+  // Export all sheets to Excel
   const handleExportExcel = useCallback(() => {
-    console.log("Export Excel")
-    // TODO: Implement in migration-import-export task
-  }, [])
+    exportToExcel(sheets, 'sku-data.xlsx')
+  }, [sheets])
 
+  // Export current sheet to CSV
   const handleExportCSV = useCallback(() => {
-    console.log("Export CSV")
-    // TODO: Implement in migration-import-export task
-  }, [])
+    if (!activeSheet) return
+    exportToCSV(activeSheet, `${activeSheet.name}.csv`)
+  }, [activeSheet])
 
   // Handle clicking a validation error to navigate to the affected cell
   const handleErrorClick = useCallback((error: ValidationError) => {

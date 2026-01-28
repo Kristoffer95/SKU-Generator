@@ -77,3 +77,18 @@ export function processAutoSKU(
     updateRowSKU(newData, rowIndex, specifications, settings);
   });
 }
+
+/**
+ * Process all data rows in a sheet and regenerate their SKUs
+ * Used after import to ensure all SKUs are generated correctly
+ */
+export function processAutoSKUForAllRows(
+  data: CellData[][],
+  specifications: Specification[],
+  settings: AppSettings
+): void {
+  // Process all rows except header (row 0)
+  for (let rowIndex = 1; rowIndex < data.length; rowIndex++) {
+    updateRowSKU(data, rowIndex, specifications, settings);
+  }
+}

@@ -162,3 +162,32 @@ export function sheetToCSVString(sheet: SheetConfig): string {
   const worksheet = sheetConfigToWorksheet(sheet);
   return XLSX.utils.sheet_to_csv(worksheet);
 }
+
+/**
+ * Import CSV file and return CellData[][] for a single sheet
+ * CSV files always become data sheets (not config sheets)
+ */
+export async function importFromCSV(file: File): Promise<CellData[][]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        const workbook = XLSX.read(text, { type: 'string' });
+
+        // CSV files have only one sheet
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const sheetData = worksheetToSheetData(worksheet);
+
+        resolve(sheetData);
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file);
+  });
+}

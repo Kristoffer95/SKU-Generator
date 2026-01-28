@@ -4,6 +4,7 @@ import {
   exportToExcelBlob,
   sheetToCSVString,
   importFromExcel,
+  importFromCSV,
 } from './import-export';
 import type { SheetConfig } from '../types';
 
@@ -247,6 +248,56 @@ describe('import-export', () => {
       // Verify data sheet data
       expect(importedSheets[1].data[0][0].v).toBe('Color');
       expect(importedSheets[1].data[1][2].v).toBe('R-S');
+    });
+  });
+
+  describe('importFromCSV', () => {
+    it('imports CSV file to CellData array', async () => {
+      const csvContent = 'Name,Value\nTest,123';
+      const file = new File([csvContent], 'test.csv', { type: 'text/csv' });
+
+      const data = await importFromCSV(file);
+
+      expect(data).toHaveLength(2);
+      expect(data[0][0].v).toBe('Name');
+      expect(data[0][1].v).toBe('Value');
+      expect(data[1][0].v).toBe('Test');
+      expect(data[1][1].v).toBe(123);
+    });
+
+    it('handles empty cells in CSV', async () => {
+      const csvContent = 'A,,C\n1,2,3';
+      const file = new File([csvContent], 'test.csv', { type: 'text/csv' });
+
+      const data = await importFromCSV(file);
+
+      expect(data[0][0].v).toBe('A');
+      expect(data[0][1]).toEqual({}); // Empty cell
+      expect(data[0][2].v).toBe('C');
+    });
+
+    it('handles CSV with multiple rows', async () => {
+      const csvContent = 'SKU,Color,Size\nR-S,Red,Small\nB-L,Blue,Large\nG-M,Green,Medium';
+      const file = new File([csvContent], 'test.csv', { type: 'text/csv' });
+
+      const data = await importFromCSV(file);
+
+      expect(data).toHaveLength(4);
+      expect(data[1][0].v).toBe('R-S');
+      expect(data[2][1].v).toBe('Blue');
+      expect(data[3][2].v).toBe('Medium');
+    });
+
+    it('preserves numeric values as numbers', async () => {
+      const csvContent = 'ID,Price\n1,29.99\n2,49.99';
+      const file = new File([csvContent], 'test.csv', { type: 'text/csv' });
+
+      const data = await importFromCSV(file);
+
+      expect(typeof data[1][0].v).toBe('number');
+      expect(data[1][0].v).toBe(1);
+      expect(typeof data[1][1].v).toBe('number');
+      expect(data[1][1].v).toBe(29.99);
     });
   });
 });

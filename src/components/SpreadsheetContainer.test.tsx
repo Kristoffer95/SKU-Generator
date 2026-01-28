@@ -2017,3 +2017,47 @@ describe('SpreadsheetContainer undo/redo (migration-undo-redo)', () => {
     expect(sheet.data[1][1]?.v).toBe('Green')
   })
 })
+
+/**
+ * Tests for migration-import-export PRD task
+ * Verify import/export functionality works with new spreadsheet
+ */
+describe('SpreadsheetContainer import/export (migration-import-export)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+    capturedOnChange = null
+    capturedOnSelect = null
+    capturedData = []
+    capturedSelected = null
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('renders import button in toolbar', () => {
+    useSheetsStore.getState().addSheet('Products')
+    render(<SpreadsheetContainer />)
+
+    const importButton = screen.getByTestId('spreadsheet-toolbar-import')
+    expect(importButton).toBeInTheDocument()
+  })
+
+  it('renders export button in toolbar', () => {
+    useSheetsStore.getState().addSheet('Products')
+    render(<SpreadsheetContainer />)
+
+    const exportButton = screen.getByTestId('spreadsheet-toolbar-export')
+    expect(exportButton).toBeInTheDocument()
+  })
+
+  it('import accepts xlsx and csv files', () => {
+    useSheetsStore.getState().addSheet('Products')
+    render(<SpreadsheetContainer />)
+
+    const fileInput = screen.getByTestId('spreadsheet-toolbar-file-input') as HTMLInputElement
+    expect(fileInput.accept).toBe('.xlsx,.xls,.csv')
+  })
+})
