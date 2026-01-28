@@ -53,7 +53,7 @@
       "No references to sheet.type === 'config' in SpreadsheetContainer",
       "App renders without errors when Config sheet doesn't exist"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "remove-config-3",

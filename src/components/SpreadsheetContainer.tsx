@@ -4,9 +4,8 @@ import type { Sheet, Cell, CellMatrix } from "@fortune-sheet/core"
 import "@fortune-sheet/react/dist/index.css"
 import { useSheetsStore } from "@/store/sheets"
 import { useSettingsStore } from "@/store/settings"
-import { parseConfigSheet, getSpecValues } from "@/lib/config-sheet"
 import { processAutoSKU } from "@/lib/auto-sku"
-import type { CellData, ParsedSpec, SheetConfig } from "@/types"
+import type { CellData } from "@/types"
 
 /**
  * Deep comparison of CellData[][] arrays to detect actual changes
@@ -30,61 +29,6 @@ function isDataEqual(a: CellData[][], b: CellData[][]): boolean {
   return true
 }
 
-/**
- * Build dataVerification object for dropdown cells based on column headers
- * matching spec names from Config sheet
- */
-function buildDataVerification(
-  parsedSpecs: ParsedSpec[],
-  columnHeaders: string[],
-  rowCount: number
-): Record<string, { type: string; value1: string; prohibitInput: boolean }> {
-  const dataVerification: Record<string, { type: string; value1: string; prohibitInput: boolean }> = {}
-
-  // For each column header that matches a spec name
-  // Headers start from column 1 (index 0 is SKU column)
-  columnHeaders.forEach((header, headerIndex) => {
-    if (!header) return
-
-    const specValues = getSpecValues(parsedSpecs, header)
-    if (specValues.length === 0) return
-
-    // Create dropdown options (comma-separated labels)
-    const options = specValues.map(v => v.label).join(",")
-
-    // Actual column index is headerIndex + 1 (SKU is at column 0)
-    const colIndex = headerIndex + 1
-
-    // Apply to all data rows (skip header row 0)
-    for (let row = 1; row < rowCount; row++) {
-      const key = `${row}_${colIndex}`
-      dataVerification[key] = {
-        type: "dropdown",
-        value1: options,
-        prohibitInput: false,
-      }
-    }
-  })
-
-  return dataVerification
-}
-
-/**
- * Extract column headers from the first row of sheet data
- * Excludes first column (SKU column at index 0)
- */
-function extractHeaders(data: CellData[][]): string[] {
-  if (!data || data.length === 0 || !data[0]) return []
-
-  const firstRow = data[0]
-  // Exclude first column (SKU column at index 0)
-  const headers: string[] = []
-  for (let i = 1; i < firstRow.length; i++) {
-    const cell = firstRow[i]
-    headers.push(String(cell?.v ?? cell?.m ?? "").trim())
-  }
-  return headers
-}
 
 /**
  * Convert our CellData[][] to Fortune-Sheet CellMatrix format
@@ -130,17 +74,6 @@ export function SpreadsheetContainer() {
   const suffix = useSettingsStore((state) => state.suffix)
   const settings = useMemo(() => ({ delimiter, prefix, suffix }), [delimiter, prefix, suffix])
 
-  // Memoize configSheet - find the config type sheet from sheets array
-  const configSheet = useMemo(() => {
-    return sheets.find(s => s.type === "config") ?? null
-  }, [sheets])
-
-  // Parse Config sheet for spec definitions
-  const parsedSpecs = useMemo(() => {
-    if (!configSheet) return []
-    return parseConfigSheet(configSheet.data)
-  }, [configSheet])
-
   // Use ref for previous sheet data to avoid triggering re-renders
   const previousDataRef = useRef<Map<string, CellData[][]>>(new Map())
 
@@ -153,39 +86,15 @@ export function SpreadsheetContainer() {
     previousDataRef.current = map
   }, [sheets])
 
-  // Keep a snapshot ref for sheets to access current state without dependency
-  const sheetsSnapshotRef = useRef<SheetConfig[]>(sheets)
-  useEffect(() => {
-    sheetsSnapshotRef.current = sheets
-  }, [sheets])
-
   // Handle when user clicks a sheet tab in Fortune-Sheet
   const handleSheetActivate = useCallback((sheetId: string) => {
     setActiveSheet(sheetId)
   }, [setActiveSheet])
 
-  // Prevent deletion of Config sheet (uses ref to avoid sheets dependency)
-  const handleBeforeDeleteSheet = useCallback((id: string): boolean => {
-    const sheet = sheetsSnapshotRef.current.find(s => s.id === id)
-    if (sheet?.type === "config") {
-      return false // Prevent deletion
-    }
-    return true // Allow deletion of data sheets
-  }, [])
-
   // Sync sheet deletion to Zustand store
   const handleAfterDeleteSheet = useCallback((id: string) => {
     removeSheet(id)
   }, [removeSheet])
-
-  // Prevent renaming of Config sheet (uses ref to avoid sheets dependency)
-  const handleBeforeUpdateSheetName = useCallback((id: string): boolean => {
-    const sheet = sheetsSnapshotRef.current.find(s => s.id === id)
-    if (sheet?.type === "config") {
-      return false // Prevent rename
-    }
-    return true // Allow rename of data sheets
-  }, [])
 
   // Sync sheet rename to Zustand store
   // Fortune-Sheet hook signature: (id: string, oldName: string, newName: string)
@@ -216,23 +125,13 @@ export function SpreadsheetContainer() {
         return
       }
 
-      // Get sheet config from snapshot ref
-      const sheetConfig = sheetsSnapshotRef.current.find(s => s.id === sheet.id)
-
-      // Skip Config sheets - they should only be modified through explicit spec operations (AddSpecDialog)
-      // This prevents Fortune-Sheet onChange from overwriting spec definitions
-      if (sheetConfig?.type === "config") {
-        return
-      }
-
-      // For data sheets, auto-generate SKUs for changed rows
-      if (sheetConfig?.type === "data") {
-        processAutoSKU(oldData, newData, parsedSpecs, settings)
-      }
+      // Auto-generate SKUs for changed rows
+      // TODO: processAutoSKU needs to be updated to use specifications store (remove-config-3/sku-gen-2)
+      processAutoSKU(oldData, newData, [], settings)
 
       setSheetData(sheet.id, newData)
     })
-  }, [setSheetData, parsedSpecs, settings])
+  }, [setSheetData, settings])
 
   // Convert sheets to Fortune-Sheet format with hooks
   const fortuneSheetData: Sheet[] = useMemo(() => {
@@ -243,29 +142,21 @@ export function SpreadsheetContainer() {
         order: index,
         status: sheet.id === activeSheetId ? 1 : 0,
         data: convertToFortuneSheetData(sheet.data),
-        color: sheet.type === "config" ? "#f97316" : undefined, // Orange for Config sheet
       }
 
-      // Add dropdowns for data sheets based on column headers
-      if (sheet.type === "data" && sheet.data.length > 0) {
-        const headers = extractHeaders(sheet.data)
-        const rowCount = Math.max(sheet.data.length, 100) // At least 100 rows for new entries
-        sheetData.dataVerification = buildDataVerification(parsedSpecs, headers, rowCount)
-      }
+      // TODO: Add dropdowns for data sheets based on specifications store (remove-config-3)
 
       return sheetData
     })
-  }, [sheets, activeSheetId, parsedSpecs])
+  }, [sheets, activeSheetId])
 
   // Hooks for Fortune-Sheet events
   const hooks = useMemo(() => ({
     afterActivateSheet: handleSheetActivate,
-    beforeDeleteSheet: handleBeforeDeleteSheet,
     afterDeleteSheet: handleAfterDeleteSheet,
-    beforeUpdateSheetName: handleBeforeUpdateSheetName,
     afterUpdateSheetName: handleAfterUpdateSheetName,
     afterAddSheet: handleAfterAddSheet,
-  }), [handleSheetActivate, handleBeforeDeleteSheet, handleAfterDeleteSheet, handleBeforeUpdateSheetName, handleAfterUpdateSheetName, handleAfterAddSheet])
+  }), [handleSheetActivate, handleAfterDeleteSheet, handleAfterUpdateSheetName, handleAfterAddSheet])
 
   if (sheets.length === 0) {
     return (

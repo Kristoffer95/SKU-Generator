@@ -1,3 +1,23 @@
+## remove-config-2: Remove Config sheet handling from SpreadsheetContainer
+
+**Completed**: SpreadsheetContainer no longer references config-sheet.ts or Config sheet type
+
+**Key decisions**:
+- Removed imports: parseConfigSheet, getSpecValues from config-sheet.ts
+- Removed configSheet and parsedSpecs memos
+- Removed beforeDeleteSheet/beforeUpdateSheetName hooks (no more Config protection)
+- Removed sheet.type === 'config' checks in onChange handler
+- Removed orange color styling for Config sheet
+- Removed buildDataVerification and extractHeaders (dropdown building deferred to remove-config-3)
+- processAutoSKU now passes empty specs array (to be fixed in sku-gen-2)
+- Added TODO comments for remove-config-3 and sku-gen-2 follow-up tasks
+
+**Files changed**:
+- src/components/SpreadsheetContainer.tsx: Removed all Config sheet references
+- src/components/SpreadsheetContainer.test.tsx: Updated tests for new behavior
+
+---
+
 ## remove-config-1: Remove Config sheet from initialization
 
 **Completed**: Config sheet no longer created on first launch; specs go to store

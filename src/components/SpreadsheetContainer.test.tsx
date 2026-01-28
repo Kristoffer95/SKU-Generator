@@ -31,6 +31,8 @@ import { SpreadsheetContainer } from './SpreadsheetContainer'
 
 describe('SpreadsheetContainer', () => {
   beforeEach(() => {
+    // Reset localStorage for isFirstLaunch check
+    localStorage.clear()
     // Reset store state
     useSheetsStore.setState({ sheets: [], activeSheetId: null })
     // Reset captured hooks
@@ -43,37 +45,38 @@ describe('SpreadsheetContainer', () => {
   })
 
   it('renders workbook when sheets exist', () => {
-    useSheetsStore.getState().initializeWithConfigSheet()
+    useSheetsStore.getState().initializeWithSampleData()
 
     render(<SpreadsheetContainer />)
     expect(screen.getByTestId('mock-workbook')).toBeInTheDocument()
   })
 
-  it('displays Config sheet with orange color', () => {
-    useSheetsStore.getState().initializeWithConfigSheet()
+  it('renders sheets without special coloring', () => {
+    useSheetsStore.getState().initializeWithSampleData()
 
     render(<SpreadsheetContainer />)
-    const configSheet = screen.getByTestId('sheet-Config')
-    expect(configSheet).toHaveAttribute('data-color', '#f97316')
+    // All sheets have same styling (no Config sheet special treatment)
+    const sheet = screen.getByTestId('sheet-Sample Products')
+    expect(sheet).not.toHaveAttribute('data-color', '#f97316')
   })
 
   it('shows sheet tabs', () => {
-    useSheetsStore.getState().initializeWithConfigSheet()
+    useSheetsStore.getState().initializeWithSampleData()
 
     render(<SpreadsheetContainer />)
     expect(screen.getByTestId('sheet-tabs')).toBeInTheDocument()
   })
 
   it('includes multiple sheets in workbook data', () => {
-    useSheetsStore.getState().initializeWithConfigSheet()
+    useSheetsStore.getState().initializeWithSampleData()
     useSheetsStore.getState().addSheet('Sheet 1')
 
     render(<SpreadsheetContainer />)
     expect(screen.getByTestId('sheet-count')).toHaveTextContent('2 sheets')
   })
 
-  it('renders data sheets without orange color', () => {
-    useSheetsStore.getState().initializeWithConfigSheet()
+  it('renders all sheets without special coloring', () => {
+    useSheetsStore.getState().initializeWithSampleData()
     useSheetsStore.getState().addSheet('MyData')
 
     render(<SpreadsheetContainer />)
@@ -82,32 +85,22 @@ describe('SpreadsheetContainer', () => {
   })
 
   it('has spreadsheet-container test id wrapper', () => {
-    useSheetsStore.getState().initializeWithConfigSheet()
+    useSheetsStore.getState().initializeWithSampleData()
 
     render(<SpreadsheetContainer />)
     expect(screen.getByTestId('spreadsheet-container')).toBeInTheDocument()
   })
 })
 
-describe('buildDataVerification helper', () => {
-  // Test the dataVerification building logic indirectly through the mocked workbook
-  it('creates dropdowns for data sheets with headers matching spec names', () => {
-    useSheetsStore.getState().initializeWithConfigSheet()
+describe('SpreadsheetContainer data sheets', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+  })
 
-    // Add spec to Config sheet
-    const configSheet = useSheetsStore.getState().getConfigSheet()!
-    useSheetsStore.getState().setSheetData(configSheet.id, [
-      [{ v: 'Specification' }, { v: 'Value' }, { v: 'SKU Code' }],
-      [{ v: 'Color' }, { v: 'Red' }, { v: 'R' }],
-      [{ v: 'Color' }, { v: 'Blue' }, { v: 'B' }],
-    ])
-
-    // Add data sheet with Color column
-    const sheetId = useSheetsStore.getState().addSheet('Data')
-    useSheetsStore.getState().setSheetData(sheetId, [
-      [{ v: 'Color' }, { v: 'SKU' }],
-      [{ v: '' }, { v: '' }],
-    ])
+  // Dropdown building now handled via specifications store (see remove-config-3)
+  it('renders data sheets without errors', () => {
+    useSheetsStore.getState().initializeWithSampleData()
 
     render(<SpreadsheetContainer />)
 
@@ -118,39 +111,37 @@ describe('buildDataVerification helper', () => {
 
 describe('SpreadsheetContainer onChange handler', () => {
   beforeEach(() => {
+    localStorage.clear()
     useSheetsStore.setState({ sheets: [], activeSheetId: null })
     capturedHooks = {}
     capturedOnChange = null
   })
 
-  it('does not overwrite Config sheet data when onChange is triggered', () => {
-    // Initialize with Config sheet containing specs
-    useSheetsStore.getState().initializeWithConfigSheet()
-    const configSheet = useSheetsStore.getState().getConfigSheet()!
-    useSheetsStore.getState().setSheetData(configSheet.id, [
-      [{ v: 'Specification' }, { v: 'Value' }, { v: 'SKU Code' }],
-      [{ v: 'Color' }, { v: 'Red' }, { v: 'R' }],
-      [{ v: 'Color' }, { v: 'Blue' }, { v: 'B' }],
-    ])
+  it('processes data sheet changes via onChange', () => {
+    // Initialize with sample data
+    useSheetsStore.getState().initializeWithSampleData()
+    const sheets = useSheetsStore.getState().sheets
+    const dataSheet = sheets[0]
 
     render(<SpreadsheetContainer />)
 
-    // Simulate Fortune-Sheet onChange with modified Config data (e.g., empty data)
+    // Simulate Fortune-Sheet onChange with new data
     capturedOnChange?.([{
-      id: configSheet.id,
-      name: 'Config',
-      data: [[null, null, null]], // Empty/corrupted data
+      id: dataSheet.id,
+      name: dataSheet.name,
+      data: [
+        [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+        [{ v: '', m: '' }, { v: 'NewValue', m: 'NewValue' }],
+      ],
     }])
 
-    // Config sheet data should remain unchanged (specs preserved)
-    const updatedConfigSheet = useSheetsStore.getState().getConfigSheet()!
-    expect(updatedConfigSheet.data.length).toBe(3) // Header + 2 spec rows
-    expect(updatedConfigSheet.data[1][0]?.v).toBe('Color')
-    expect(updatedConfigSheet.data[1][1]?.v).toBe('Red')
+    // Data sheet should be updated
+    const updatedSheet = useSheetsStore.getState().sheets.find(s => s.id === dataSheet.id)!
+    expect(updatedSheet.data[1][1]?.v).toBe('NewValue')
   })
 
-  it('allows data sheet updates via onChange', () => {
-    useSheetsStore.getState().initializeWithConfigSheet()
+  it('allows sheet updates via onChange', () => {
+    useSheetsStore.getState().initializeWithSampleData()
     const dataSheetId = useSheetsStore.getState().addSheet('Data')
     useSheetsStore.getState().setSheetData(dataSheetId, [
       [{ v: 'SKU' }, { v: 'Color' }],
@@ -178,52 +169,31 @@ describe('SpreadsheetContainer onChange handler', () => {
 
 describe('SpreadsheetContainer hooks', () => {
   beforeEach(() => {
+    localStorage.clear()
     useSheetsStore.setState({ sheets: [], activeSheetId: null })
     capturedHooks = {}
   })
 
-  it('provides beforeDeleteSheet hook that blocks Config sheet deletion', () => {
-    useSheetsStore.getState().initializeWithConfigSheet()
-    const configSheet = useSheetsStore.getState().getConfigSheet()!
+  it('does not provide beforeDeleteSheet hook (no protected sheets)', () => {
+    useSheetsStore.getState().initializeWithSampleData()
 
     render(<SpreadsheetContainer />)
 
-    const result = capturedHooks.beforeDeleteSheet?.(configSheet.id)
-    expect(result).toBe(false)
+    // No beforeDeleteSheet hook - all sheets can be deleted
+    expect(capturedHooks.beforeDeleteSheet).toBeUndefined()
   })
 
-  it('provides beforeDeleteSheet hook that allows data sheet deletion', () => {
-    useSheetsStore.getState().initializeWithConfigSheet()
-    const dataSheetId = useSheetsStore.getState().addSheet('Data')
+  it('does not provide beforeUpdateSheetName hook (no protected sheets)', () => {
+    useSheetsStore.getState().initializeWithSampleData()
 
     render(<SpreadsheetContainer />)
 
-    const result = capturedHooks.beforeDeleteSheet?.(dataSheetId)
-    expect(result).toBe(true)
-  })
-
-  it('provides beforeUpdateSheetName hook that blocks Config sheet rename', () => {
-    useSheetsStore.getState().initializeWithConfigSheet()
-    const configSheet = useSheetsStore.getState().getConfigSheet()!
-
-    render(<SpreadsheetContainer />)
-
-    const result = capturedHooks.beforeUpdateSheetName?.(configSheet.id, 'Config', 'NewName')
-    expect(result).toBe(false)
-  })
-
-  it('provides beforeUpdateSheetName hook that allows data sheet rename', () => {
-    useSheetsStore.getState().initializeWithConfigSheet()
-    const dataSheetId = useSheetsStore.getState().addSheet('Data')
-
-    render(<SpreadsheetContainer />)
-
-    const result = capturedHooks.beforeUpdateSheetName?.(dataSheetId, 'Data', 'Renamed')
-    expect(result).toBe(true)
+    // No beforeUpdateSheetName hook - all sheets can be renamed
+    expect(capturedHooks.beforeUpdateSheetName).toBeUndefined()
   })
 
   it('provides afterUpdateSheetName hook that syncs rename to store', () => {
-    useSheetsStore.getState().initializeWithConfigSheet()
+    useSheetsStore.getState().initializeWithSampleData()
     const dataSheetId = useSheetsStore.getState().addSheet('Data')
 
     render(<SpreadsheetContainer />)
@@ -236,7 +206,7 @@ describe('SpreadsheetContainer hooks', () => {
   })
 
   it('provides afterAddSheet hook that syncs new sheet to store', () => {
-    useSheetsStore.getState().initializeWithConfigSheet()
+    useSheetsStore.getState().initializeWithSampleData()
 
     render(<SpreadsheetContainer />)
 
@@ -251,7 +221,7 @@ describe('SpreadsheetContainer hooks', () => {
   })
 
   it('provides afterDeleteSheet hook that syncs deletion to store', () => {
-    useSheetsStore.getState().initializeWithConfigSheet()
+    useSheetsStore.getState().initializeWithSampleData()
     const dataSheetId = useSheetsStore.getState().addSheet('Data')
 
     render(<SpreadsheetContainer />)
