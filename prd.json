@@ -172,7 +172,7 @@
         "Change Color to 'Blue' -> SKU updates to '29C-B-STD'",
         "Export to Excel and verify Config sheet and data are included"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "PRD-013",
