@@ -180,8 +180,7 @@
 }
 
 /* Read-only cell styling (SKU column) */
-.sku-spreadsheet .Spreadsheet__cell.cell-readonly,
-.sku-spreadsheet .Spreadsheet__cell[data-readonly="true"] {
+.sku-spreadsheet .Spreadsheet__cell--readonly {
   background-color: var(--spreadsheet-readonly-bg) !important;
   color: hsl(var(--muted-foreground));
   cursor: default;

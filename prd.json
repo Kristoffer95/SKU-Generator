@@ -103,7 +103,7 @@
       "Header cell (row 0, col 0) IS editable for renaming column",
       "Auto-generated SKU values still update when spec values change"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "migration-dropdowns",

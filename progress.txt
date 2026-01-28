@@ -1,3 +1,29 @@
+## migration-readonly-sku - COMPLETED
+Verify SKU column is read-only in react-spreadsheet implementation
+
+### Key decisions
+- react-spreadsheet respects `readOnly: true` property on cells
+- Library adds `Spreadsheet__cell--readonly` CSS class to readonly cells
+- Library prevents click-to-edit on readonly cells via internal check
+- CSS updated to target `.Spreadsheet__cell--readonly` instead of old selectors
+
+### Files changed
+- src/index.css (fixed CSS selector for readonly cells to use library's class)
+
+### How it works
+1. spreadsheet-adapter.ts sets `readOnly: true` on col 0 cells for rows > 0
+2. applyDuplicateHighlighting reinforces `readOnly: true` with className for bg color
+3. react-spreadsheet adds `Spreadsheet__cell--readonly` class and prevents editing
+4. Header row (row 0) has no readOnly flag, allowing column rename
+5. processAutoSKU still updates SKU values programmatically when spec values change
+
+### Notes
+- All 4 stepsToVerify criteria verified
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- Existing spreadsheet-adapter tests already verify readOnly flag behavior
+- SpreadsheetContainer tests fail (expected - need migration-tests-update task)
+
 ## migration-css-styles - COMPLETED
 Add CSS styles for react-spreadsheet customizations
 
