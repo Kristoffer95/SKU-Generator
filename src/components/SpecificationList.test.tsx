@@ -1,8 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from "vitest"
+import { describe, it, expect, beforeEach } from "vitest"
 import { render, screen, waitFor, act } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { SpecificationList } from "./SpecificationList"
-import { useSpecificationsStore } from "@/store/specifications"
 import { useSheetsStore } from "@/store/sheets"
 import { useSettingsStore } from "@/store/settings"
 import { updateRowSKU } from "@/lib/auto-sku"
@@ -46,16 +45,20 @@ function createSheetWithSpecs(
     sheets: [...state.sheets, sheet],
     activeSheetId: sheetId,
   }))
-  // Also sync global store for backward compat with methods like updateSpecValue
-  useSpecificationsStore.setState({ specifications })
   return sheetId
+}
+
+/**
+ * Helper to get the specifications from the active sheet.
+ */
+function getActiveSheetSpecs(): Specification[] {
+  const { sheets, activeSheetId } = useSheetsStore.getState()
+  const activeSheet = sheets.find(s => s.id === activeSheetId)
+  return activeSheet?.specifications ?? []
 }
 
 // Reset stores before each test
 beforeEach(() => {
-  useSpecificationsStore.setState({
-    specifications: [],
-  })
   useSheetsStore.setState({
     sheets: [],
     activeSheetId: null,
@@ -245,13 +248,12 @@ describe("SpecificationList", () => {
         { displayValue: "Small", skuFragment: "S" },
       ]),
     ]
-    // Update both the sheet and global store
+    // Update the sheet's specifications
     useSheetsStore.setState((state) => ({
       sheets: state.sheets.map(s =>
         s.id === sheetId ? { ...s, specifications: updatedSpecs } : s
       ),
     }))
-    useSpecificationsStore.setState({ specifications: updatedSpecs })
 
     rerender(<SpecificationList />)
     // Use getAllBy since the same Color spec may show with updated values
@@ -311,27 +313,20 @@ describe("SpecificationList", () => {
         values: [{ id: "v2", displayValue: "Small", skuFragment: "S" }],
       }
 
-      useSpecificationsStore.setState({
-        specifications: [colorSpec, sizeSpec],
-      })
+      const sheetId = createSheetWithSpecs("Test Sheet", [], [colorSpec, sizeSpec])
 
-      // Spy on reorderSpec
-      const reorderSpy = vi.spyOn(useSpecificationsStore.getState(), "reorderSpec")
-
-      // Call reorderSpec directly to simulate what happens after drag-end
+      // Call sheet-scoped reorderSpec directly to simulate what happens after drag-end
       act(() => {
-        useSpecificationsStore.getState().reorderSpec("spec-size", 0)
+        useSheetsStore.getState().reorderSpec(sheetId, "spec-size", 0)
       })
 
-      // Verify the store was updated
-      const specs = useSpecificationsStore.getState().specifications
+      // Verify the sheet-scoped store was updated
+      const specs = getActiveSheetSpecs()
       const sizeUpdated = specs.find((s) => s.id === "spec-size")
       const colorUpdated = specs.find((s) => s.id === "spec-color")
 
       expect(sizeUpdated?.order).toBe(0)
       expect(colorUpdated?.order).toBe(1)
-
-      reorderSpy.mockRestore()
     })
 
     it("regenerates SKUs after reorder with correct fragment order", () => {
@@ -348,26 +343,24 @@ describe("SpecificationList", () => {
         values: [{ id: "v2", displayValue: "Small", skuFragment: "S" }],
       }
 
-      useSpecificationsStore.setState({
-        specifications: [colorSpec, sizeSpec],
-      })
-
       // Create a data sheet with sample data - initial SKU is R-S (Color first, Size second)
       const sheetData: CellData[][] = [
         [{ v: "SKU", m: "SKU" }, { v: "Color", m: "Color" }, { v: "Size", m: "Size" }],
         [{ v: "R-S", m: "R-S" }, { v: "Red", m: "Red" }, { v: "Small", m: "Small" }],
       ]
 
+      // Create sheet with per-sheet specifications
+      const sheetId = "sheet-1"
       useSheetsStore.setState({
         sheets: [{
-          id: "sheet-1",
+          id: sheetId,
           name: "Products",
           type: "data",
           data: sheetData,
           columns: [],
-          specifications: [],
+          specifications: [colorSpec, sizeSpec],
         }],
-        activeSheetId: "sheet-1",
+        activeSheetId: sheetId,
       })
 
       // Verify initial SKU is R-S
@@ -379,12 +372,12 @@ describe("SpecificationList", () => {
       // Simulate reordering: Size moves to order 0, Color to order 1
       // This mimics what handleDragEnd does internally
       act(() => {
-        // 1. First, update the store (as reorderSpec would do)
-        useSpecificationsStore.getState().reorderSpec("spec-size", 0)
+        // 1. First, update the store (as sheet-scoped reorderSpec would do)
+        useSheetsStore.getState().reorderSpec(sheetId, "spec-size", 0)
 
         // 2. Then manually call regeneration with updated specs
         // This simulates what regenerateAllSKUs does in the component
-        const updatedSpecs = useSpecificationsStore.getState().specifications
+        const updatedSpecs = getActiveSheetSpecs()
         const settings = useSettingsStore.getState()
         const sheets = useSheetsStore.getState().sheets
 
@@ -398,8 +391,8 @@ describe("SpecificationList", () => {
         })
       })
 
-      // After reorder, the store should have updated orders
-      const updatedSpecs = useSpecificationsStore.getState().specifications
+      // After reorder, the sheet-scoped store should have updated orders
+      const updatedSpecs = getActiveSheetSpecs()
       expect(updatedSpecs.find((s) => s.id === "spec-size")?.order).toBe(0)
       expect(updatedSpecs.find((s) => s.id === "spec-color")?.order).toBe(1)
 
@@ -415,15 +408,15 @@ describe("SpecificationList", () => {
         createSpecification("Material", 2, []),
       ]
 
-      useSpecificationsStore.setState({ specifications: specs })
+      const sheetId = createSheetWithSpecs("Test Sheet", [], specs)
 
       // Simulate a reorder: Material moves to position 0
       act(() => {
-        useSpecificationsStore.getState().reorderSpec(specs[2].id, 0)
+        useSheetsStore.getState().reorderSpec(sheetId, specs[2].id, 0)
       })
 
       // Verify order persisted correctly
-      const updatedSpecs = useSpecificationsStore.getState().specifications
+      const updatedSpecs = getActiveSheetSpecs()
       const sorted = [...updatedSpecs].sort((a, b) => a.order - b.order)
 
       expect(sorted[0].name).toBe("Material")
@@ -513,9 +506,9 @@ describe("SpecificationList", () => {
       // Save
       await user.click(screen.getByTestId("save-edit"))
 
-      // Verify the store was updated
+      // Verify the sheet-scoped store was updated
       await waitFor(() => {
-        const specs = useSpecificationsStore.getState().specifications
+        const specs = getActiveSheetSpecs()
         const value = specs[0].values[0]
         expect(value.displayValue).toBe("Crimson")
         expect(value.skuFragment).toBe("R") // Should remain unchanged
@@ -547,9 +540,9 @@ describe("SpecificationList", () => {
       await user.clear(skuInput)
       await user.type(skuInput, "RD{Enter}")
 
-      // Verify the store was updated
+      // Verify the sheet-scoped store was updated
       await waitFor(() => {
-        const specs = useSpecificationsStore.getState().specifications
+        const specs = getActiveSheetSpecs()
         const value = specs[0].values[0]
         expect(value.skuFragment).toBe("RD")
       })
@@ -591,7 +584,7 @@ describe("SpecificationList", () => {
       })
 
       // Store should not be updated
-      const storeSpecs = useSpecificationsStore.getState().specifications
+      const storeSpecs = getActiveSheetSpecs()
       expect(storeSpecs[0].values[0].displayValue).toBe("Red")
     })
 
@@ -672,7 +665,7 @@ describe("SpecificationList", () => {
       })
 
       // Store should not be updated
-      const specs = useSpecificationsStore.getState().specifications
+      const specs = getActiveSheetSpecs()
       expect(specs[0].values[1].skuFragment).toBe("B") // Still 'B'
     })
 
@@ -723,8 +716,8 @@ describe("SpecificationList", () => {
         expect(screen.queryByTestId("value-edit-form")).not.toBeInTheDocument()
       })
 
-      // Verify store was updated
-      const storeSpecs = useSpecificationsStore.getState().specifications
+      // Verify sheet-scoped store was updated
+      const storeSpecs = getActiveSheetSpecs()
       const sizeSpec = storeSpecs.find((s) => s.id === "spec-size")
       expect(sizeSpec?.values[0].skuFragment).toBe("R")
     })

@@ -1,3 +1,38 @@
+## spec-store-migration - COMPLETED
+Migrate specification management methods from global useSpecificationsStore to sheet-scoped methods in useSheetsStore
+
+### Key decisions
+- Added 9 sheet-scoped methods to useSheetsStore interface:
+  - addSpecification(sheetId, name) -> returns specId or null
+  - updateSpecification(sheetId, specId, updates) -> returns boolean
+  - removeSpecification(sheetId, specId) -> returns boolean (recalculates order)
+  - reorderSpec(sheetId, specId, newOrder) -> returns boolean
+  - addSpecValue(sheetId, specId, displayValue, skuFragment) -> returns valueId or null
+  - updateSpecValue(sheetId, specId, valueId, updates) -> returns boolean
+  - removeSpecValue(sheetId, specId, valueId) -> returns boolean
+  - getSpecificationById(sheetId, specId) -> returns Specification or undefined
+  - validateSkuFragment(sheetId, specId, skuFragment, excludeValueId?) -> returns boolean
+- Updated SpecificationList to use sheet-scoped methods (reorderSpec, updateSpecValue, validateSkuFragment)
+- Updated AddSpecDialog to use sheet-scoped methods (addSpecification, addSpecValue)
+- SpecValueItem now receives sheetId prop for calling sheet-scoped methods
+- Removed useSpecificationsStore import from SpecificationList and AddSpecDialog
+
+### Files changed
+- src/store/sheets.ts (added interface methods + implementations, ~180 lines)
+- src/components/SpecificationList.tsx (updated to use sheet-scoped methods, pass sheetId)
+- src/components/AddSpecDialog.tsx (updated to use sheet-scoped methods)
+- src/store/sheets.test.ts (added 24 tests for sheet-scoped methods)
+- src/components/SpecificationList.test.tsx (updated to check sheet specs instead of global)
+- src/components/AddSpecDialog.test.tsx (updated to check sheet specs instead of global)
+
+### Notes
+- All 8 stepsToVerify criteria verified
+- Global useSpecificationsStore kept for backwards compat and migration
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (598 tests)
+- npm run build passes
+
 ## column-types-spec-free - COMPLETED
 Support two column types: spec columns (dropdown) and free columns (plain text, no SKU contribution)
 

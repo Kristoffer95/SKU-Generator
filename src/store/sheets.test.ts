@@ -959,4 +959,341 @@ describe('useSheetsStore', () => {
       expect(sheets[0].data[1]).toEqual([{ v: 'SomeData' }]);
     });
   });
+
+  describe('Sheet-scoped specification methods (spec-store-migration)', () => {
+    let sheetId: string;
+
+    beforeEach(() => {
+      useSheetsStore.setState({ sheets: [], activeSheetId: null });
+      useSpecificationsStore.setState({ specifications: [] });
+      const { addSheet } = useSheetsStore.getState();
+      sheetId = addSheet('Test Sheet');
+    });
+
+    describe('addSpecification', () => {
+      it('should add a specification to the sheet', () => {
+        const { addSpecification } = useSheetsStore.getState();
+        const specId = addSpecification(sheetId, 'Color');
+
+        expect(specId).toBeTruthy();
+        const { sheets } = useSheetsStore.getState();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        expect(sheet?.specifications).toHaveLength(1);
+        expect(sheet?.specifications[0].name).toBe('Color');
+        expect(sheet?.specifications[0].order).toBe(0);
+        expect(sheet?.specifications[0].values).toEqual([]);
+      });
+
+      it('should return null if sheet not found', () => {
+        const { addSpecification } = useSheetsStore.getState();
+        const specId = addSpecification('non-existent-id', 'Color');
+        expect(specId).toBeNull();
+      });
+
+      it('should assign incrementing order values to new specs', () => {
+        const { addSpecification } = useSheetsStore.getState();
+        addSpecification(sheetId, 'Color');
+        addSpecification(sheetId, 'Size');
+        addSpecification(sheetId, 'Material');
+
+        const { sheets } = useSheetsStore.getState();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        expect(sheet?.specifications).toHaveLength(3);
+        expect(sheet?.specifications[0].order).toBe(0);
+        expect(sheet?.specifications[1].order).toBe(1);
+        expect(sheet?.specifications[2].order).toBe(2);
+      });
+
+      it('should not affect specifications in other sheets', () => {
+        const { addSheet, addSpecification } = useSheetsStore.getState();
+        const sheet2Id = addSheet('Sheet 2');
+
+        addSpecification(sheetId, 'Color');
+        addSpecification(sheet2Id, 'Size');
+
+        const { sheets } = useSheetsStore.getState();
+        const sheet1 = sheets.find((s) => s.id === sheetId);
+        const sheet2 = sheets.find((s) => s.id === sheet2Id);
+
+        expect(sheet1?.specifications).toHaveLength(1);
+        expect(sheet1?.specifications[0].name).toBe('Color');
+        expect(sheet2?.specifications).toHaveLength(1);
+        expect(sheet2?.specifications[0].name).toBe('Size');
+      });
+    });
+
+    describe('updateSpecification', () => {
+      it('should update specification name', () => {
+        const { addSpecification, updateSpecification } = useSheetsStore.getState();
+        const specId = addSpecification(sheetId, 'Color');
+
+        const result = updateSpecification(sheetId, specId!, { name: 'Colour' });
+        expect(result).toBe(true);
+
+        const { sheets } = useSheetsStore.getState();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        expect(sheet?.specifications[0].name).toBe('Colour');
+      });
+
+      it('should return false if sheet not found', () => {
+        const { addSpecification, updateSpecification } = useSheetsStore.getState();
+        const specId = addSpecification(sheetId, 'Color');
+        const result = updateSpecification('non-existent', specId!, { name: 'Colour' });
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('removeSpecification', () => {
+      it('should remove specification and recalculate order', () => {
+        const { addSpecification, removeSpecification } = useSheetsStore.getState();
+        addSpecification(sheetId, 'Color');
+        const sizeId = addSpecification(sheetId, 'Size');
+        addSpecification(sheetId, 'Material');
+
+        const result = removeSpecification(sheetId, sizeId!);
+        expect(result).toBe(true);
+
+        const { sheets } = useSheetsStore.getState();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        expect(sheet?.specifications).toHaveLength(2);
+        expect(sheet?.specifications[0].name).toBe('Color');
+        expect(sheet?.specifications[0].order).toBe(0);
+        expect(sheet?.specifications[1].name).toBe('Material');
+        expect(sheet?.specifications[1].order).toBe(1);
+      });
+
+      it('should return false if sheet not found', () => {
+        const { removeSpecification } = useSheetsStore.getState();
+        const result = removeSpecification('non-existent', 'spec-id');
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('reorderSpec', () => {
+      it('should reorder specifications correctly when moving down', () => {
+        const { addSpecification, reorderSpec } = useSheetsStore.getState();
+        const colorId = addSpecification(sheetId, 'Color');
+        addSpecification(sheetId, 'Size');
+        addSpecification(sheetId, 'Material');
+
+        // Move Color from order 0 to order 2
+        const result = reorderSpec(sheetId, colorId!, 2);
+        expect(result).toBe(true);
+
+        const { sheets } = useSheetsStore.getState();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        const specs = [...sheet!.specifications].sort((a, b) => a.order - b.order);
+        expect(specs[0].name).toBe('Size');
+        expect(specs[1].name).toBe('Material');
+        expect(specs[2].name).toBe('Color');
+      });
+
+      it('should reorder specifications correctly when moving up', () => {
+        const { addSpecification, reorderSpec } = useSheetsStore.getState();
+        addSpecification(sheetId, 'Color');
+        addSpecification(sheetId, 'Size');
+        const materialId = addSpecification(sheetId, 'Material');
+
+        // Move Material from order 2 to order 0
+        const result = reorderSpec(sheetId, materialId!, 0);
+        expect(result).toBe(true);
+
+        const { sheets } = useSheetsStore.getState();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        const specs = [...sheet!.specifications].sort((a, b) => a.order - b.order);
+        expect(specs[0].name).toBe('Material');
+        expect(specs[1].name).toBe('Color');
+        expect(specs[2].name).toBe('Size');
+      });
+
+      it('should return true if order unchanged', () => {
+        const { addSpecification, reorderSpec } = useSheetsStore.getState();
+        const colorId = addSpecification(sheetId, 'Color');
+
+        const result = reorderSpec(sheetId, colorId!, 0);
+        expect(result).toBe(true);
+      });
+
+      it('should return false if sheet not found', () => {
+        const { reorderSpec } = useSheetsStore.getState();
+        const result = reorderSpec('non-existent', 'spec-id', 0);
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('addSpecValue', () => {
+      it('should add a value to the specification', () => {
+        const { addSpecification, addSpecValue } = useSheetsStore.getState();
+        const specId = addSpecification(sheetId, 'Color');
+        const valueId = addSpecValue(sheetId, specId!, 'Red', 'R');
+
+        expect(valueId).toBeTruthy();
+        const { sheets } = useSheetsStore.getState();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        const spec = sheet?.specifications.find((s) => s.id === specId);
+        expect(spec?.values).toHaveLength(1);
+        expect(spec?.values[0].displayValue).toBe('Red');
+        expect(spec?.values[0].skuFragment).toBe('R');
+      });
+
+      it('should return null for duplicate skuFragment', () => {
+        const { addSpecification, addSpecValue } = useSheetsStore.getState();
+        const specId = addSpecification(sheetId, 'Color');
+        addSpecValue(sheetId, specId!, 'Red', 'R');
+        const duplicateId = addSpecValue(sheetId, specId!, 'Crimson', 'R');
+
+        expect(duplicateId).toBeNull();
+        const { sheets } = useSheetsStore.getState();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        const spec = sheet?.specifications.find((s) => s.id === specId);
+        expect(spec?.values).toHaveLength(1);
+      });
+    });
+
+    describe('updateSpecValue', () => {
+      it('should update spec value displayValue', () => {
+        const { addSpecification, addSpecValue, updateSpecValue } = useSheetsStore.getState();
+        const specId = addSpecification(sheetId, 'Color');
+        const valueId = addSpecValue(sheetId, specId!, 'Red', 'R');
+
+        const result = updateSpecValue(sheetId, specId!, valueId!, { displayValue: 'Crimson' });
+        expect(result).toBe(true);
+
+        const { sheets } = useSheetsStore.getState();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        const spec = sheet?.specifications.find((s) => s.id === specId);
+        expect(spec?.values[0].displayValue).toBe('Crimson');
+        expect(spec?.values[0].skuFragment).toBe('R');
+      });
+
+      it('should update spec value skuFragment', () => {
+        const { addSpecification, addSpecValue, updateSpecValue } = useSheetsStore.getState();
+        const specId = addSpecification(sheetId, 'Color');
+        const valueId = addSpecValue(sheetId, specId!, 'Red', 'R');
+
+        const result = updateSpecValue(sheetId, specId!, valueId!, { skuFragment: 'RD' });
+        expect(result).toBe(true);
+
+        const { sheets } = useSheetsStore.getState();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        const spec = sheet?.specifications.find((s) => s.id === specId);
+        expect(spec?.values[0].skuFragment).toBe('RD');
+      });
+
+      it('should return false for duplicate skuFragment on update', () => {
+        const { addSpecification, addSpecValue, updateSpecValue } = useSheetsStore.getState();
+        const specId = addSpecification(sheetId, 'Color');
+        addSpecValue(sheetId, specId!, 'Red', 'R');
+        const blueId = addSpecValue(sheetId, specId!, 'Blue', 'B');
+
+        const result = updateSpecValue(sheetId, specId!, blueId!, { skuFragment: 'R' });
+        expect(result).toBe(false);
+
+        const { sheets } = useSheetsStore.getState();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        const spec = sheet?.specifications.find((s) => s.id === specId);
+        expect(spec?.values[1].skuFragment).toBe('B');
+      });
+    });
+
+    describe('removeSpecValue', () => {
+      it('should remove a value from the specification', () => {
+        const { addSpecification, addSpecValue, removeSpecValue } = useSheetsStore.getState();
+        const specId = addSpecification(sheetId, 'Color');
+        const redId = addSpecValue(sheetId, specId!, 'Red', 'R');
+        addSpecValue(sheetId, specId!, 'Blue', 'B');
+
+        const result = removeSpecValue(sheetId, specId!, redId!);
+        expect(result).toBe(true);
+
+        const { sheets } = useSheetsStore.getState();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        const spec = sheet?.specifications.find((s) => s.id === specId);
+        expect(spec?.values).toHaveLength(1);
+        expect(spec?.values[0].displayValue).toBe('Blue');
+      });
+    });
+
+    describe('getSpecificationById', () => {
+      it('should return the specification', () => {
+        const { addSpecification, getSpecificationById } = useSheetsStore.getState();
+        const specId = addSpecification(sheetId, 'Color');
+
+        const spec = getSpecificationById(sheetId, specId!);
+        expect(spec?.name).toBe('Color');
+      });
+
+      it('should return undefined if spec not found', () => {
+        const { getSpecificationById } = useSheetsStore.getState();
+        const spec = getSpecificationById(sheetId, 'non-existent');
+        expect(spec).toBeUndefined();
+      });
+
+      it('should return undefined if sheet not found', () => {
+        const { getSpecificationById } = useSheetsStore.getState();
+        const spec = getSpecificationById('non-existent', 'spec-id');
+        expect(spec).toBeUndefined();
+      });
+    });
+
+    describe('validateSkuFragment', () => {
+      it('should return true for unique fragment', () => {
+        const { addSpecification, addSpecValue, validateSkuFragment } = useSheetsStore.getState();
+        const specId = addSpecification(sheetId, 'Color');
+        addSpecValue(sheetId, specId!, 'Red', 'R');
+
+        const result = validateSkuFragment(sheetId, specId!, 'B');
+        expect(result).toBe(true);
+      });
+
+      it('should return false for duplicate fragment', () => {
+        const { addSpecification, addSpecValue, validateSkuFragment } = useSheetsStore.getState();
+        const specId = addSpecification(sheetId, 'Color');
+        addSpecValue(sheetId, specId!, 'Red', 'R');
+
+        const result = validateSkuFragment(sheetId, specId!, 'R');
+        expect(result).toBe(false);
+      });
+
+      it('should allow same fragment when excluding the value', () => {
+        const { addSpecification, addSpecValue, validateSkuFragment } = useSheetsStore.getState();
+        const specId = addSpecification(sheetId, 'Color');
+        const redId = addSpecValue(sheetId, specId!, 'Red', 'R');
+
+        const result = validateSkuFragment(sheetId, specId!, 'R', redId!);
+        expect(result).toBe(true);
+      });
+
+      it('should return true if sheet not found', () => {
+        const { validateSkuFragment } = useSheetsStore.getState();
+        const result = validateSkuFragment('non-existent', 'spec-id', 'R');
+        expect(result).toBe(true);
+      });
+    });
+
+    describe('SpecificationList reads from activeSheet.specifications', () => {
+      it('switching sheets shows different specifications', () => {
+        const { addSheet, addSpecification, setActiveSheet } = useSheetsStore.getState();
+        const sheet2Id = addSheet('Sheet 2');
+
+        // Add different specs to each sheet
+        addSpecification(sheetId, 'Color');
+        addSpecification(sheet2Id, 'Size');
+
+        // Verify sheet1 has Color
+        setActiveSheet(sheetId);
+        let state = useSheetsStore.getState();
+        let activeSheet = state.sheets.find((s) => s.id === state.activeSheetId);
+        expect(activeSheet?.specifications).toHaveLength(1);
+        expect(activeSheet?.specifications[0].name).toBe('Color');
+
+        // Verify sheet2 has Size
+        setActiveSheet(sheet2Id);
+        state = useSheetsStore.getState();
+        activeSheet = state.sheets.find((s) => s.id === state.activeSheetId);
+        expect(activeSheet?.specifications).toHaveLength(1);
+        expect(activeSheet?.specifications[0].name).toBe('Size');
+      });
+    });
+  });
 });

@@ -322,6 +322,6 @@
       "AddSpecDialog uses sheet-scoped addSpecification method",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   }
 ]

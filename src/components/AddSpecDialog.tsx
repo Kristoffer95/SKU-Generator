@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useSheetsStore } from "@/store/sheets"
-import { useSpecificationsStore } from "@/store/specifications"
 
 interface AddSpecDialogProps {
   open: boolean
@@ -28,8 +27,10 @@ interface ValueEntry {
 const generateId = () => crypto.randomUUID()
 
 export function AddSpecDialog({ open, onOpenChange }: AddSpecDialogProps) {
-  const { getActiveSheet, setSheetData } = useSheetsStore()
-  const { specifications, addSpecification, addSpecValue } = useSpecificationsStore()
+  const { getActiveSheet, setSheetData, addSpecification, addSpecValue } = useSheetsStore()
+  const activeSheet = getActiveSheet()
+  // Use sheet-local specifications
+  const specifications = activeSheet?.specifications ?? []
 
   const [specName, setSpecName] = useState("")
   const [values, setValues] = useState<ValueEntry[]>([
@@ -100,19 +101,29 @@ export function AddSpecDialog({ open, onOpenChange }: AddSpecDialogProps) {
     const trimmedName = specName.trim()
     const validValues = values.filter((v) => v.displayValue.trim())
 
-    // Add specification to store
-    const specId = addSpecification(trimmedName)
+    // Get active sheet - we need its ID for sheet-scoped methods
+    const currentSheet = getActiveSheet()
+    if (!currentSheet) {
+      setError("No active sheet")
+      return
+    }
+
+    // Add specification to sheet-scoped store
+    const specId = addSpecification(currentSheet.id, trimmedName)
+    if (!specId) {
+      setError("Failed to add specification")
+      return
+    }
 
     // Add values to the specification
     validValues.forEach((v) => {
-      addSpecValue(specId, v.displayValue.trim(), v.skuFragment.trim())
+      addSpecValue(currentSheet.id, specId, v.displayValue.trim(), v.skuFragment.trim())
     })
 
     // Add column to active data sheet (if it's a data sheet)
     // SKU is always at column 0, spec columns are appended at the end
-    const activeSheet = getActiveSheet()
-    if (activeSheet && activeSheet.type === "data") {
-      const newDataSheetData = activeSheet.data.map((row, rowIndex) => {
+    if (currentSheet.type === "data") {
+      const newDataSheetData = currentSheet.data.map((row, rowIndex) => {
         const newRow = [...row]
 
         // Add header to first row
@@ -148,7 +159,7 @@ export function AddSpecDialog({ open, onOpenChange }: AddSpecDialogProps) {
         ])
       }
 
-      setSheetData(activeSheet.id, newDataSheetData)
+      setSheetData(currentSheet.id, newDataSheetData)
     }
 
     handleOpenChange(false)

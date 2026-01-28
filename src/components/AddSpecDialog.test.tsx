@@ -2,13 +2,19 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { AddSpecDialog } from './AddSpecDialog'
 import { useSheetsStore } from '@/store/sheets'
-import { useSpecificationsStore } from '@/store/specifications'
+import type { Specification } from '@/types'
+
+/**
+ * Helper to get specifications from the active sheet.
+ */
+function getActiveSheetSpecs(): Specification[] {
+  const { sheets, activeSheetId } = useSheetsStore.getState()
+  const activeSheet = sheets.find(s => s.id === activeSheetId)
+  return activeSheet?.specifications ?? []
+}
 
 // Reset stores before each test
 beforeEach(() => {
-  useSpecificationsStore.setState({
-    specifications: [],
-  })
   useSheetsStore.setState({
     sheets: [
       {
@@ -96,11 +102,21 @@ describe('AddSpecDialog', () => {
   })
 
   it('shows error when specification name already exists', () => {
-    // Add existing spec to specifications store
-    useSpecificationsStore.setState({
-      specifications: [
-        { id: 'spec-1', name: 'Color', order: 0, values: [{ id: 'v-1', displayValue: 'Red', skuFragment: 'R' }] },
+    // Add existing spec to the sheet's specifications
+    useSheetsStore.setState({
+      sheets: [
+        {
+          id: 'data-1',
+          name: 'Sheet 1',
+          type: 'data',
+          data: [],
+          columns: [],
+          specifications: [
+            { id: 'spec-1', name: 'Color', order: 0, values: [{ id: 'v-1', displayValue: 'Red', skuFragment: 'R' }] },
+          ],
+        },
       ],
+      activeSheetId: 'data-1',
     })
 
     render(<AddSpecDialog open={true} onOpenChange={() => {}} />)
@@ -113,10 +129,20 @@ describe('AddSpecDialog', () => {
   })
 
   it('validates spec name case-insensitively', () => {
-    useSpecificationsStore.setState({
-      specifications: [
-        { id: 'spec-1', name: 'Color', order: 0, values: [{ id: 'v-1', displayValue: 'Red', skuFragment: 'R' }] },
+    useSheetsStore.setState({
+      sheets: [
+        {
+          id: 'data-1',
+          name: 'Sheet 1',
+          type: 'data',
+          data: [],
+          columns: [],
+          specifications: [
+            { id: 'spec-1', name: 'Color', order: 0, values: [{ id: 'v-1', displayValue: 'Red', skuFragment: 'R' }] },
+          ],
+        },
       ],
+      activeSheetId: 'data-1',
     })
 
     render(<AddSpecDialog open={true} onOpenChange={() => {}} />)
@@ -143,7 +169,7 @@ describe('AddSpecDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Specification' }))
 
-    const specs = useSpecificationsStore.getState().specifications
+    const specs = getActiveSheetSpecs()
     expect(specs).toHaveLength(1)
     expect(specs[0].name).toBe('Size')
     expect(specs[0].values).toHaveLength(2)
@@ -155,11 +181,21 @@ describe('AddSpecDialog', () => {
   })
 
   it('assigns order = max + 1 to new specification', () => {
-    useSpecificationsStore.setState({
-      specifications: [
-        { id: 'spec-1', name: 'Color', order: 0, values: [] },
-        { id: 'spec-2', name: 'Size', order: 1, values: [] },
+    useSheetsStore.setState({
+      sheets: [
+        {
+          id: 'data-1',
+          name: 'Sheet 1',
+          type: 'data',
+          data: [],
+          columns: [],
+          specifications: [
+            { id: 'spec-1', name: 'Color', order: 0, values: [] },
+            { id: 'spec-2', name: 'Size', order: 1, values: [] },
+          ],
+        },
       ],
+      activeSheetId: 'data-1',
     })
 
     render(<AddSpecDialog open={true} onOpenChange={() => {}} />)
@@ -169,7 +205,7 @@ describe('AddSpecDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Specification' }))
 
-    const specs = useSpecificationsStore.getState().specifications
+    const specs = getActiveSheetSpecs()
     const materialSpec = specs.find((s) => s.name === 'Material')
     expect(materialSpec?.order).toBe(2)
   })
@@ -282,7 +318,7 @@ describe('AddSpecDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Specification' }))
 
-    const specs = useSpecificationsStore.getState().specifications
+    const specs = getActiveSheetSpecs()
     // Only one value should be added (the one with a label)
     expect(specs[0].values).toHaveLength(1)
     expect(specs[0].values[0].displayValue).toBe('Small')
@@ -297,17 +333,27 @@ describe('AddSpecDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Specification' }))
 
-    const specs = useSpecificationsStore.getState().specifications
+    const specs = getActiveSheetSpecs()
     expect(specs[0].name).toBe('Size')
     expect(specs[0].values[0].displayValue).toBe('Small')
     expect(specs[0].values[0].skuFragment).toBe('S')
   })
 
   it('new spec appears at bottom of sidebar list', () => {
-    useSpecificationsStore.setState({
-      specifications: [
-        { id: 'spec-1', name: 'Color', order: 0, values: [] },
+    useSheetsStore.setState({
+      sheets: [
+        {
+          id: 'data-1',
+          name: 'Sheet 1',
+          type: 'data',
+          data: [],
+          columns: [],
+          specifications: [
+            { id: 'spec-1', name: 'Color', order: 0, values: [] },
+          ],
+        },
       ],
+      activeSheetId: 'data-1',
     })
 
     render(<AddSpecDialog open={true} onOpenChange={() => {}} />)
@@ -317,7 +363,7 @@ describe('AddSpecDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Specification' }))
 
-    const specs = useSpecificationsStore.getState().specifications
+    const specs = getActiveSheetSpecs()
     // New spec should have higher order than existing
     const sizeSpec = specs.find((s) => s.name === 'Size')
     const colorSpec = specs.find((s) => s.name === 'Color')

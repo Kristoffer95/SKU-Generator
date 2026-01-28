@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { SheetConfig, CellData, ColumnDef } from '../types';
+import type { SheetConfig, CellData, ColumnDef, Specification, SpecValue } from '../types';
 import { createSampleProductSheet, getSampleSpecifications, createColumnsFromSpecs, isFirstLaunch, markAsInitialized } from '../lib/sample-data';
 import { useSpecificationsStore } from './specifications';
 import { migrateConfigSheetData } from '../lib/migration';
@@ -28,6 +28,17 @@ interface SheetsState {
    */
   initializeWithConfigSheet: () => void;
   initializeWithSampleData: () => void;
+
+  // Sheet-scoped specification management methods
+  addSpecification: (sheetId: string, name: string) => string | null;
+  updateSpecification: (sheetId: string, specId: string, updates: Partial<Pick<Specification, 'name'>>) => boolean;
+  removeSpecification: (sheetId: string, specId: string) => boolean;
+  reorderSpec: (sheetId: string, specId: string, newOrder: number) => boolean;
+  addSpecValue: (sheetId: string, specId: string, displayValue: string, skuFragment: string) => string | null;
+  updateSpecValue: (sheetId: string, specId: string, valueId: string, updates: Partial<Pick<SpecValue, 'displayValue' | 'skuFragment'>>) => boolean;
+  removeSpecValue: (sheetId: string, specId: string, valueId: string) => boolean;
+  getSpecificationById: (sheetId: string, specId: string) => Specification | undefined;
+  validateSkuFragment: (sheetId: string, specId: string, skuFragment: string, excludeValueId?: string) => boolean;
 }
 
 const generateId = () => crypto.randomUUID();
@@ -257,6 +268,209 @@ export const useSheetsStore = create<SheetsState>()(
             sheet.id === sheetId ? { ...sheet, data } : sheet
           ),
         }));
+      },
+
+      // Sheet-scoped specification management methods
+
+      addSpecification: (sheetId: string, name: string) => {
+        const { sheets } = get();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        if (!sheet) return null;
+
+        const specId = generateId();
+        const specs = sheet.specifications ?? [];
+        // New specs get order = max existing order + 1 (or 0 if none exist)
+        const maxOrder = specs.reduce((max, spec) => Math.max(max, spec.order), -1);
+        const order = maxOrder + 1;
+
+        const newSpec: Specification = { id: specId, name, order, values: [] };
+
+        set((state) => ({
+          sheets: state.sheets.map((s) =>
+            s.id === sheetId
+              ? { ...s, specifications: [...(s.specifications ?? []), newSpec] }
+              : s
+          ),
+        }));
+
+        return specId;
+      },
+
+      updateSpecification: (sheetId: string, specId: string, updates: Partial<Pick<Specification, 'name'>>) => {
+        const { sheets } = get();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        if (!sheet) return false;
+
+        set((state) => ({
+          sheets: state.sheets.map((s) =>
+            s.id === sheetId
+              ? {
+                  ...s,
+                  specifications: (s.specifications ?? []).map((spec) =>
+                    spec.id === specId ? { ...spec, ...updates } : spec
+                  ),
+                }
+              : s
+          ),
+        }));
+        return true;
+      },
+
+      removeSpecification: (sheetId: string, specId: string) => {
+        const { sheets } = get();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        if (!sheet) return false;
+
+        set((state) => ({
+          sheets: state.sheets.map((s) => {
+            if (s.id !== sheetId) return s;
+
+            const filtered = (s.specifications ?? []).filter((spec) => spec.id !== specId);
+            // Recalculate order values to be contiguous
+            const sorted = [...filtered].sort((a, b) => a.order - b.order);
+            const reorderedSpecs = sorted.map((spec, index) => ({
+              ...spec,
+              order: index,
+            }));
+
+            return { ...s, specifications: reorderedSpecs };
+          }),
+        }));
+        return true;
+      },
+
+      reorderSpec: (sheetId: string, specId: string, newOrder: number) => {
+        const { sheets } = get();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        if (!sheet) return false;
+
+        const specs = sheet.specifications ?? [];
+        const spec = specs.find((sp) => sp.id === specId);
+        if (!spec) return false;
+
+        const oldOrder = spec.order;
+        if (oldOrder === newOrder) return true;
+
+        set((state) => ({
+          sheets: state.sheets.map((s) => {
+            if (s.id !== sheetId) return s;
+
+            const updatedSpecs = (s.specifications ?? []).map((sp) => {
+              if (sp.id === specId) {
+                return { ...sp, order: newOrder };
+              }
+              // If moving down (oldOrder < newOrder), shift specs in between up
+              if (oldOrder < newOrder && sp.order > oldOrder && sp.order <= newOrder) {
+                return { ...sp, order: sp.order - 1 };
+              }
+              // If moving up (oldOrder > newOrder), shift specs in between down
+              if (oldOrder > newOrder && sp.order >= newOrder && sp.order < oldOrder) {
+                return { ...sp, order: sp.order + 1 };
+              }
+              return sp;
+            });
+
+            return { ...s, specifications: updatedSpecs };
+          }),
+        }));
+        return true;
+      },
+
+      addSpecValue: (sheetId: string, specId: string, displayValue: string, skuFragment: string) => {
+        const { validateSkuFragment } = get();
+        // Check for duplicate skuFragment within this spec
+        if (!validateSkuFragment(sheetId, specId, skuFragment)) {
+          return null;
+        }
+
+        const valueId = generateId();
+
+        set((state) => ({
+          sheets: state.sheets.map((s) =>
+            s.id === sheetId
+              ? {
+                  ...s,
+                  specifications: (s.specifications ?? []).map((spec) =>
+                    spec.id === specId
+                      ? { ...spec, values: [...spec.values, { id: valueId, displayValue, skuFragment }] }
+                      : spec
+                  ),
+                }
+              : s
+          ),
+        }));
+
+        return valueId;
+      },
+
+      updateSpecValue: (sheetId: string, specId: string, valueId: string, updates: Partial<Pick<SpecValue, 'displayValue' | 'skuFragment'>>) => {
+        const { validateSkuFragment } = get();
+        // If updating skuFragment, validate uniqueness (excluding current value)
+        if (updates.skuFragment !== undefined) {
+          if (!validateSkuFragment(sheetId, specId, updates.skuFragment, valueId)) {
+            return false;
+          }
+        }
+
+        set((state) => ({
+          sheets: state.sheets.map((s) =>
+            s.id === sheetId
+              ? {
+                  ...s,
+                  specifications: (s.specifications ?? []).map((spec) =>
+                    spec.id === specId
+                      ? {
+                          ...spec,
+                          values: spec.values.map((val) =>
+                            val.id === valueId ? { ...val, ...updates } : val
+                          ),
+                        }
+                      : spec
+                  ),
+                }
+              : s
+          ),
+        }));
+        return true;
+      },
+
+      removeSpecValue: (sheetId: string, specId: string, valueId: string) => {
+        set((state) => ({
+          sheets: state.sheets.map((s) =>
+            s.id === sheetId
+              ? {
+                  ...s,
+                  specifications: (s.specifications ?? []).map((spec) =>
+                    spec.id === specId
+                      ? { ...spec, values: spec.values.filter((val) => val.id !== valueId) }
+                      : spec
+                  ),
+                }
+              : s
+          ),
+        }));
+        return true;
+      },
+
+      getSpecificationById: (sheetId: string, specId: string) => {
+        const { sheets } = get();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        if (!sheet) return undefined;
+        return (sheet.specifications ?? []).find((spec) => spec.id === specId);
+      },
+
+      validateSkuFragment: (sheetId: string, specId: string, skuFragment: string, excludeValueId?: string) => {
+        const { sheets } = get();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        if (!sheet) return true; // Allow if sheet not found (edge case)
+
+        const spec = (sheet.specifications ?? []).find((sp) => sp.id === specId);
+        if (!spec) return true; // Allow if spec not found (edge case)
+
+        // Check if any other value in this spec has the same skuFragment
+        return !spec.values.some(
+          (val) => val.skuFragment === skuFragment && val.id !== excludeValueId
+        );
       },
     }),
     {

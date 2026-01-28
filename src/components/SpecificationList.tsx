@@ -3,7 +3,6 @@ import { Plus, ChevronDown, GripVertical, Check, X } from "lucide-react"
 import { AnimatePresence, motion, Reorder } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useSpecificationsStore } from "@/store/specifications"
 import { useSheetsStore } from "@/store/sheets"
 import { useSettingsStore } from "@/store/settings"
 import { AddSpecDialog } from "@/components/AddSpecDialog"
@@ -12,19 +11,20 @@ import { updateRowSKU } from "@/lib/auto-sku"
 import type { Specification, SpecValue } from "@/types"
 
 interface SpecValueItemProps {
+  sheetId: string
   specId: string
   value: SpecValue
 }
 
-function SpecValueItem({ specId, value }: SpecValueItemProps) {
+function SpecValueItem({ sheetId, specId, value }: SpecValueItemProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editDisplayValue, setEditDisplayValue] = useState(value.displayValue)
   const [editSkuFragment, setEditSkuFragment] = useState(value.skuFragment)
   const [error, setError] = useState<string | null>(null)
   const displayInputRef = useRef<HTMLInputElement>(null)
 
-  const updateSpecValue = useSpecificationsStore((state) => state.updateSpecValue)
-  const validateSkuFragment = useSpecificationsStore((state) => state.validateSkuFragment)
+  const updateSpecValue = useSheetsStore((state) => state.updateSpecValue)
+  const validateSkuFragment = useSheetsStore((state) => state.validateSkuFragment)
 
   // Reset local state when value changes (e.g., from another source)
   useEffect(() => {
@@ -53,7 +53,7 @@ function SpecValueItem({ specId, value }: SpecValueItemProps) {
   const handleSave = useCallback(() => {
     // Validate skuFragment uniqueness within spec
     if (editSkuFragment !== value.skuFragment) {
-      const isUnique = validateSkuFragment(specId, editSkuFragment, value.id)
+      const isUnique = validateSkuFragment(sheetId, specId, editSkuFragment, value.id)
       if (!isUnique) {
         setError("SKU fragment must be unique within this specification")
         return
@@ -69,7 +69,7 @@ function SpecValueItem({ specId, value }: SpecValueItemProps) {
       if (displayValueChanged) updates.displayValue = editDisplayValue
       if (skuFragmentChanged) updates.skuFragment = editSkuFragment
 
-      const success = updateSpecValue(specId, value.id, updates)
+      const success = updateSpecValue(sheetId, specId, value.id, updates)
       if (!success) {
         setError("SKU fragment must be unique within this specification")
         return
@@ -78,7 +78,7 @@ function SpecValueItem({ specId, value }: SpecValueItemProps) {
 
     setIsEditing(false)
     setError(null)
-  }, [specId, value.id, value.displayValue, value.skuFragment, editDisplayValue, editSkuFragment, updateSpecValue, validateSkuFragment])
+  }, [sheetId, specId, value.id, value.displayValue, value.skuFragment, editDisplayValue, editSkuFragment, updateSpecValue, validateSkuFragment])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
@@ -159,11 +159,12 @@ function SpecValueItem({ specId, value }: SpecValueItemProps) {
 }
 
 interface SpecItemProps {
+  sheetId: string
   spec: Specification
   isFirst?: boolean
 }
 
-function SpecItem({ spec, isFirst }: SpecItemProps) {
+function SpecItem({ sheetId, spec, isFirst }: SpecItemProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   return (
@@ -219,6 +220,7 @@ function SpecItem({ spec, isFirst }: SpecItemProps) {
                     {spec.values.map((value) => (
                       <SpecValueItem
                         key={value.id}
+                        sheetId={sheetId}
                         specId={spec.id}
                         value={value}
                       />
@@ -239,15 +241,13 @@ const EMPTY_SPECIFICATIONS: never[] = []
 export function SpecificationList() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   // Get active sheet and its local specifications
-  const { sheets, activeSheetId, setSheetData } = useSheetsStore()
+  const { sheets, activeSheetId, setSheetData, reorderSpec } = useSheetsStore()
   const activeSheet = sheets.find(s => s.id === activeSheetId)
   // Use sheet-local specifications (fallback to empty array for backward compat)
   const specifications = useMemo(
     () => activeSheet?.specifications ?? EMPTY_SPECIFICATIONS,
     [activeSheet?.specifications]
   )
-  // Keep reference to global store methods for backward compatibility during transition
-  const reorderSpec = useSpecificationsStore((state) => state.reorderSpec)
   const delimiter = useSettingsStore((state) => state.delimiter)
   const prefix = useSettingsStore((state) => state.prefix)
   const suffix = useSettingsStore((state) => state.suffix)
@@ -291,6 +291,8 @@ export function SpecificationList() {
 
   // Commit reorder to store when drag ends
   const handleDragEnd = useCallback(() => {
+    if (!activeSheetId) return
+
     // Check if order actually changed by comparing IDs
     const orderChanged = localOrder.some(
       (spec, index) => sortedSpecifications[index]?.id !== spec.id
@@ -301,15 +303,16 @@ export function SpecificationList() {
     // Update the store with new order
     localOrder.forEach((spec, newIndex) => {
       if (spec.order !== newIndex) {
-        reorderSpec(spec.id, newIndex)
+        reorderSpec(activeSheetId, spec.id, newIndex)
       }
     })
 
     // After reordering, regenerate all SKUs with updated order
-    // Get the latest specifications from store after reorder
-    const latestSpecs = useSpecificationsStore.getState().specifications
+    // Get the latest specifications from the active sheet after reorder
+    const latestSheet = useSheetsStore.getState().sheets.find(s => s.id === activeSheetId)
+    const latestSpecs = latestSheet?.specifications ?? []
     regenerateAllSKUs(latestSpecs)
-  }, [localOrder, sortedSpecifications, reorderSpec, regenerateAllSKUs])
+  }, [activeSheetId, localOrder, sortedSpecifications, reorderSpec, regenerateAllSKUs])
 
   // Callbacks for tour dialog openers
   const openAddSpecDialog = useCallback(() => {
@@ -360,6 +363,7 @@ export function SpecificationList() {
                 onDragEnd={handleDragEnd}
               >
                 <SpecItem
+                  sheetId={activeSheetId!}
                   spec={spec}
                   isFirst={index === 0}
                 />
