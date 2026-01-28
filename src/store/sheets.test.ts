@@ -645,4 +645,216 @@ describe('useSheetsStore', () => {
       expect(useSpecificationsStore.getState().specifications).toHaveLength(0);
     });
   });
+
+  describe('Header repair on hydration (sheet-headers-repair)', () => {
+    beforeEach(() => {
+      localStorage.clear();
+      useSheetsStore.setState({ sheets: [], activeSheetId: null });
+      useSpecificationsStore.setState({ specifications: [] });
+      localStorage.setItem('sku-has-data', 'true'); // Mark as not first launch
+    });
+
+    it('should repair sheets with missing SKU header on hydration', async () => {
+      // Set up specs
+      useSpecificationsStore.setState({
+        specifications: [
+          { id: 's1', name: 'Color', order: 0, values: [] },
+          { id: 's2', name: 'Size', order: 1, values: [] },
+        ],
+      });
+
+      // Simulate legacy sheet without proper header (data in row 0)
+      const legacySheet: SheetConfig = {
+        id: 'legacy-sheet',
+        name: 'Products',
+        type: 'data',
+        data: [
+          [{ v: 'Red' }, { v: 'Small' }],
+          [{ v: 'Blue' }, { v: 'Large' }],
+        ],
+      };
+
+      useSheetsStore.setState({
+        sheets: [legacySheet],
+        activeSheetId: legacySheet.id,
+      });
+
+      // Import and call repair logic directly (simulating hydration)
+      const { needsHeaderRepair, repairAllSheetHeaders } = await import('../lib/header-repair');
+      const state = useSheetsStore.getState();
+      const specifications = useSpecificationsStore.getState().specifications;
+
+      if (needsHeaderRepair(state.sheets)) {
+        useSheetsStore.setState({
+          sheets: repairAllSheetHeaders(state.sheets, specifications),
+        });
+      }
+
+      // Verify header was inserted
+      const { sheets } = useSheetsStore.getState();
+      expect(sheets).toHaveLength(1);
+      expect(sheets[0].data).toHaveLength(3); // Header + 2 original rows
+      expect(sheets[0].data[0]).toEqual([
+        { v: 'SKU', m: 'SKU' },
+        { v: 'Color', m: 'Color' },
+        { v: 'Size', m: 'Size' },
+      ]);
+      // Original data shifted down
+      expect(sheets[0].data[1]).toEqual([{ v: 'Red' }, { v: 'Small' }]);
+      expect(sheets[0].data[2]).toEqual([{ v: 'Blue' }, { v: 'Large' }]);
+    });
+
+    it('should not modify sheets that already have valid headers', async () => {
+      useSpecificationsStore.setState({
+        specifications: [
+          { id: 's1', name: 'Color', order: 0, values: [] },
+        ],
+      });
+
+      const validSheet: SheetConfig = {
+        id: 'valid-sheet',
+        name: 'Products',
+        type: 'data',
+        data: [
+          [{ v: 'SKU' }, { v: 'Color' }],
+          [{ v: 'R' }, { v: 'Red' }],
+        ],
+      };
+
+      useSheetsStore.setState({
+        sheets: [validSheet],
+        activeSheetId: validSheet.id,
+      });
+
+      const { needsHeaderRepair, repairAllSheetHeaders } = await import('../lib/header-repair');
+      const state = useSheetsStore.getState();
+      const specifications = useSpecificationsStore.getState().specifications;
+
+      if (needsHeaderRepair(state.sheets)) {
+        useSheetsStore.setState({
+          sheets: repairAllSheetHeaders(state.sheets, specifications),
+        });
+      }
+
+      // Verify no changes
+      const { sheets } = useSheetsStore.getState();
+      expect(sheets).toHaveLength(1);
+      expect(sheets[0].data).toHaveLength(2); // No header inserted
+    });
+
+    it('should repair multiple sheets independently', async () => {
+      useSpecificationsStore.setState({
+        specifications: [
+          { id: 's1', name: 'Color', order: 0, values: [] },
+        ],
+      });
+
+      const sheetNeedsRepair: SheetConfig = {
+        id: 'needs-repair',
+        name: 'NeedsRepair',
+        type: 'data',
+        data: [[{ v: 'Red' }]],
+      };
+
+      const sheetValid: SheetConfig = {
+        id: 'valid',
+        name: 'Valid',
+        type: 'data',
+        data: [[{ v: 'SKU' }, { v: 'Color' }]],
+      };
+
+      useSheetsStore.setState({
+        sheets: [sheetNeedsRepair, sheetValid],
+        activeSheetId: sheetNeedsRepair.id,
+      });
+
+      const { needsHeaderRepair, repairAllSheetHeaders } = await import('../lib/header-repair');
+      const state = useSheetsStore.getState();
+      const specifications = useSpecificationsStore.getState().specifications;
+
+      if (needsHeaderRepair(state.sheets)) {
+        useSheetsStore.setState({
+          sheets: repairAllSheetHeaders(state.sheets, specifications),
+        });
+      }
+
+      const { sheets } = useSheetsStore.getState();
+
+      // First sheet repaired
+      expect(sheets[0].data).toHaveLength(2);
+      expect(sheets[0].data[0][0]).toEqual({ v: 'SKU', m: 'SKU' });
+
+      // Second sheet unchanged
+      expect(sheets[1].data).toHaveLength(1);
+    });
+
+    it('should handle empty sheets during repair', async () => {
+      useSpecificationsStore.setState({
+        specifications: [
+          { id: 's1', name: 'Color', order: 0, values: [] },
+        ],
+      });
+
+      const emptySheet: SheetConfig = {
+        id: 'empty',
+        name: 'Empty',
+        type: 'data',
+        data: [],
+      };
+
+      useSheetsStore.setState({
+        sheets: [emptySheet],
+        activeSheetId: emptySheet.id,
+      });
+
+      const { needsHeaderRepair, repairAllSheetHeaders } = await import('../lib/header-repair');
+      const state = useSheetsStore.getState();
+      const specifications = useSpecificationsStore.getState().specifications;
+
+      if (needsHeaderRepair(state.sheets)) {
+        useSheetsStore.setState({
+          sheets: repairAllSheetHeaders(state.sheets, specifications),
+        });
+      }
+
+      const { sheets } = useSheetsStore.getState();
+      expect(sheets[0].data).toHaveLength(1);
+      expect(sheets[0].data[0]).toEqual([
+        { v: 'SKU', m: 'SKU' },
+        { v: 'Color', m: 'Color' },
+      ]);
+    });
+
+    it('should work correctly when specs store is empty', async () => {
+      // No specs set up - should still add SKU header
+      useSpecificationsStore.setState({ specifications: [] });
+
+      const legacySheet: SheetConfig = {
+        id: 'legacy',
+        name: 'Products',
+        type: 'data',
+        data: [[{ v: 'SomeData' }]],
+      };
+
+      useSheetsStore.setState({
+        sheets: [legacySheet],
+        activeSheetId: legacySheet.id,
+      });
+
+      const { needsHeaderRepair, repairAllSheetHeaders } = await import('../lib/header-repair');
+      const state = useSheetsStore.getState();
+      const specifications = useSpecificationsStore.getState().specifications;
+
+      if (needsHeaderRepair(state.sheets)) {
+        useSheetsStore.setState({
+          sheets: repairAllSheetHeaders(state.sheets, specifications),
+        });
+      }
+
+      const { sheets } = useSheetsStore.getState();
+      expect(sheets[0].data).toHaveLength(2);
+      expect(sheets[0].data[0]).toEqual([{ v: 'SKU', m: 'SKU' }]);
+      expect(sheets[0].data[1]).toEqual([{ v: 'SomeData' }]);
+    });
+  });
 });

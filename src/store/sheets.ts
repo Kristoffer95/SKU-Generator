@@ -4,6 +4,7 @@ import type { SheetConfig, CellData } from '../types';
 import { createSampleProductSheet, getSampleSpecifications, isFirstLaunch, markAsInitialized } from '../lib/sample-data';
 import { useSpecificationsStore } from './specifications';
 import { migrateConfigSheetData } from '../lib/migration';
+import { needsHeaderRepair, repairAllSheetHeaders } from '../lib/header-repair';
 
 interface SheetsState {
   sheets: SheetConfig[];
@@ -266,6 +267,13 @@ export const useSheetsStore = create<SheetsState>()(
             if (state.activeSheetId === configSheet.id) {
               state.activeSheetId = state.sheets[0]?.id ?? null;
             }
+          }
+
+          // Check if header repair is needed for existing sheets
+          // This fixes data saved before sheet-headers-1 and sheet-headers-2 fixes
+          const specifications = useSpecificationsStore.getState().specifications;
+          if (needsHeaderRepair(state.sheets)) {
+            state.sheets = repairAllSheetHeaders(state.sheets, specifications);
           }
 
           markAsInitialized();

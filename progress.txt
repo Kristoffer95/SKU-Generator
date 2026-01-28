@@ -1,3 +1,25 @@
+## sheet-headers-repair: Add header repair mechanism for existing sheets
+
+**Completed**: Automatic header repair for legacy sheets missing proper headers on hydration
+
+**Key decisions**:
+- Created `header-repair.ts` module with helper functions for header detection/repair
+- `hasValidHeader()` checks if first cell is 'SKU' (case-insensitive, whitespace-tolerant)
+- `repairSheetHeaders()` inserts proper header row and shifts existing data down
+- `needsHeaderRepair()` detects any data sheets needing repair
+- Integrated into `onRehydrateStorage` callback in sheets.ts (runs after migration)
+- Only repairs data sheets; config sheets and other types are ignored
+- Header row includes 'SKU' in column 0 + spec names sorted by order field
+- Original data is preserved (shifted down by one row)
+
+**Files changed**:
+- src/lib/header-repair.ts: New module with header repair functions
+- src/lib/header-repair.test.ts: 29 tests covering all scenarios
+- src/store/sheets.ts: Added import and repair call in onRehydrateStorage
+- src/store/sheets.test.ts: Added 5 integration tests for header repair on hydration
+
+---
+
 ## sku-autogen-1: Verify SKU auto-generation from dropdown selection
 
 **Completed**: Added tests verifying SKU auto-generation works when selecting values from dropdowns

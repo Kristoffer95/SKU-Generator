@@ -288,5 +288,19 @@
       "Example: selecting Red (R) and Small (S) produces 'R-S' in SKU column"
     ],
     "passes": true
+  },
+  {
+    "id": "sheet-headers-repair",
+    "category": "Sheet Initialization",
+    "description": "Add header repair mechanism for existing sheets with missing headers. When app loads from localStorage, detect sheets with missing or malformed headers (no 'SKU' in column 0, missing spec names) and automatically insert a proper header row. This fixes data saved before the sheet-headers-1 and sheet-headers-2 fixes were applied.",
+    "stepsToVerify": [
+      "Load app with existing localStorage data that has sheets without headers in row 0",
+      "App automatically detects missing headers on hydration",
+      "Header row is inserted with 'SKU' in A1 and spec names in B1, C1, etc.",
+      "Existing data rows are preserved (shifted down by 1 row if header was inserted)",
+      "SKU auto-generation works after repair",
+      "npm run typecheck passes"
+    ],
+    "passes": true
   }
 ]
