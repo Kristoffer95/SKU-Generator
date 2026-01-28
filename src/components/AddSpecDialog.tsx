@@ -109,6 +109,7 @@ export function AddSpecDialog({ open, onOpenChange }: AddSpecDialogProps) {
     })
 
     // Add column to active data sheet (if it's a data sheet)
+    // SKU is always at column 0, spec columns are appended at the end
     const activeSheet = getActiveSheet()
     if (activeSheet && activeSheet.type === "data") {
       const newDataSheetData = activeSheet.data.map((row, rowIndex) => {
@@ -116,34 +117,34 @@ export function AddSpecDialog({ open, onOpenChange }: AddSpecDialogProps) {
 
         // Add header to first row
         if (rowIndex === 0) {
-          // Insert new column before SKU column (last column)
-          // If row is empty, just add the header
           if (newRow.length === 0) {
-            newRow.push({ v: trimmedName, m: trimmedName })
+            // Empty row: create SKU header at column 0, new spec at column 1
             newRow.push({ v: "SKU", m: "SKU" })
+            newRow.push({ v: trimmedName, m: trimmedName })
           } else {
-            // Insert before last column (SKU)
-            newRow.splice(newRow.length - 1, 0, { v: trimmedName, m: trimmedName })
+            // Existing row: append new spec header at the end
+            newRow.push({ v: trimmedName, m: trimmedName })
           }
         } else {
           // Add empty cell for data rows
           if (newRow.length === 0) {
+            // Empty row: add two empty cells (SKU column + new spec column)
             newRow.push({})
             newRow.push({})
           } else {
-            // Insert empty cell before SKU column
-            newRow.splice(newRow.length - 1, 0, {})
+            // Existing row: append empty cell at the end for new spec
+            newRow.push({})
           }
         }
 
         return newRow
       })
 
-      // If no rows exist, create header row
+      // If no rows exist, create header row with SKU at column 0
       if (newDataSheetData.length === 0) {
         newDataSheetData.push([
-          { v: trimmedName, m: trimmedName },
           { v: "SKU", m: "SKU" },
+          { v: trimmedName, m: trimmedName },
         ])
       }
 

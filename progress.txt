@@ -1,3 +1,21 @@
+## sheet-headers-2: Fix AddSpecDialog column insertion logic
+
+**Completed**: New spec columns now appended at end instead of before SKU column
+
+**Key decisions**:
+- Changed handleSubmit() column insertion logic in AddSpecDialog.tsx
+- SKU stays at column 0, new spec columns appended at the end
+- For empty sheets: creates `[SKU, specName]` (SKU at column 0)
+- For existing sheets: `.push()` instead of `.splice(length-1)` for headers and data rows
+- Empty cells appended at end of data rows (not inserted before last column)
+- Tests updated to reflect correct column order expectations
+
+**Files changed**:
+- src/components/AddSpecDialog.tsx: Fixed column insertion to append at end
+- src/components/AddSpecDialog.test.tsx: Updated 2 tests, added 4 new tests for column ordering
+
+---
+
 ## sheet-headers-1: Initialize new sheets with proper headers
 
 **Completed**: New data sheets now initialize with SKU and spec headers in row 0

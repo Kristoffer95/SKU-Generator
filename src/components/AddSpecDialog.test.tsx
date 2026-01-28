@@ -173,6 +173,7 @@ describe('AddSpecDialog', () => {
   })
 
   it('adds column to active data sheet on submit', () => {
+    // SKU is at column 0, Color is at column 1
     useSheetsStore.setState({
       sheets: [
         {
@@ -180,8 +181,8 @@ describe('AddSpecDialog', () => {
           name: 'Sheet 1',
           type: 'data',
           data: [
-            [{ v: 'Color' }, { v: 'SKU' }],
-            [{ v: 'Red' }, { v: 'R' }],
+            [{ v: 'SKU' }, { v: 'Color' }],
+            [{ v: 'R' }, { v: 'Red' }],
           ],
         },
       ],
@@ -197,10 +198,14 @@ describe('AddSpecDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add Specification' }))
 
     const dataSheet = useSheetsStore.getState().sheets.find((s) => s.id === 'data-1')
-    // Column should be inserted before SKU
-    expect(dataSheet?.data[0][0].v).toBe('Color')
-    expect(dataSheet?.data[0][1].v).toBe('Size')
-    expect(dataSheet?.data[0][2].v).toBe('SKU')
+    // SKU stays at column 0, new spec is appended at the end
+    expect(dataSheet?.data[0][0].v).toBe('SKU')
+    expect(dataSheet?.data[0][1].v).toBe('Color')
+    expect(dataSheet?.data[0][2].v).toBe('Size')
+    // Data rows also get new column appended
+    expect(dataSheet?.data[1][0].v).toBe('R')
+    expect(dataSheet?.data[1][1].v).toBe('Red')
+    expect(dataSheet?.data[1][2]).toEqual({})
   })
 
   it('calls onOpenChange(false) when cancel is clicked', () => {
@@ -253,9 +258,9 @@ describe('AddSpecDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add Specification' }))
 
     const dataSheet = useSheetsStore.getState().sheets.find((s) => s.id === 'data-1')
-    // Should create header row with spec name and SKU
-    expect(dataSheet?.data[0][0].v).toBe('Color')
-    expect(dataSheet?.data[0][1].v).toBe('SKU')
+    // Should create header row with SKU at column 0 and spec name at column 1
+    expect(dataSheet?.data[0][0].v).toBe('SKU')
+    expect(dataSheet?.data[0][1].v).toBe('Color')
   })
 
   it('skips values with empty labels', () => {
@@ -311,5 +316,99 @@ describe('AddSpecDialog', () => {
     const sizeSpec = specs.find((s) => s.name === 'Size')
     const colorSpec = specs.find((s) => s.name === 'Color')
     expect(sizeSpec?.order).toBeGreaterThan(colorSpec!.order)
+  })
+
+  it('SKU remains at column 0 when adding spec to sheet with existing specs', () => {
+    // Sheet has SKU at column 0, Color at column 1, Size at column 2
+    useSheetsStore.setState({
+      sheets: [
+        {
+          id: 'data-1',
+          name: 'Sheet 1',
+          type: 'data',
+          data: [
+            [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+            [{ v: 'R-S' }, { v: 'Red' }, { v: 'Small' }],
+          ],
+        },
+      ],
+      activeSheetId: 'data-1',
+    })
+
+    render(<AddSpecDialog open={true} onOpenChange={() => {}} />)
+
+    fireEvent.change(screen.getByLabelText('Specification Name'), { target: { value: 'Material' } })
+    fireEvent.change(screen.getByLabelText('Value 1 label'), { target: { value: 'Cotton' } })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Specification' }))
+
+    const dataSheet = useSheetsStore.getState().sheets.find((s) => s.id === 'data-1')
+    // SKU must stay at column 0
+    expect(dataSheet?.data[0][0].v).toBe('SKU')
+    // Existing specs remain in place
+    expect(dataSheet?.data[0][1].v).toBe('Color')
+    expect(dataSheet?.data[0][2].v).toBe('Size')
+    // New spec appended at the end
+    expect(dataSheet?.data[0][3].v).toBe('Material')
+  })
+
+  it('handles sheet with empty header row', () => {
+    useSheetsStore.setState({
+      sheets: [
+        {
+          id: 'data-1',
+          name: 'Sheet 1',
+          type: 'data',
+          data: [
+            [], // Empty header row
+          ],
+        },
+      ],
+      activeSheetId: 'data-1',
+    })
+
+    render(<AddSpecDialog open={true} onOpenChange={() => {}} />)
+
+    fireEvent.change(screen.getByLabelText('Specification Name'), { target: { value: 'Color' } })
+    fireEvent.change(screen.getByLabelText('Value 1 label'), { target: { value: 'Red' } })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Specification' }))
+
+    const dataSheet = useSheetsStore.getState().sheets.find((s) => s.id === 'data-1')
+    // SKU at column 0, new spec at column 1
+    expect(dataSheet?.data[0][0].v).toBe('SKU')
+    expect(dataSheet?.data[0][1].v).toBe('Color')
+  })
+
+  it('existing data rows get empty cell appended at end for new spec', () => {
+    useSheetsStore.setState({
+      sheets: [
+        {
+          id: 'data-1',
+          name: 'Sheet 1',
+          type: 'data',
+          data: [
+            [{ v: 'SKU' }, { v: 'Color' }],
+            [{ v: 'R' }, { v: 'Red' }],
+            [{ v: 'B' }, { v: 'Blue' }],
+          ],
+        },
+      ],
+      activeSheetId: 'data-1',
+    })
+
+    render(<AddSpecDialog open={true} onOpenChange={() => {}} />)
+
+    fireEvent.change(screen.getByLabelText('Specification Name'), { target: { value: 'Size' } })
+    fireEvent.change(screen.getByLabelText('Value 1 label'), { target: { value: 'Small' } })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Specification' }))
+
+    const dataSheet = useSheetsStore.getState().sheets.find((s) => s.id === 'data-1')
+    // All data rows should have empty cell appended
+    expect(dataSheet?.data[1]).toHaveLength(3)
+    expect(dataSheet?.data[1][2]).toEqual({})
+    expect(dataSheet?.data[2]).toHaveLength(3)
+    expect(dataSheet?.data[2][2]).toEqual({})
   })
 })

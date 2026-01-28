@@ -273,7 +273,7 @@
       "Existing data rows get empty cell added at the end for new spec",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "sku-autogen-1",
