@@ -2117,6 +2117,39 @@ describe('SpreadsheetContainer toolbar buttons', () => {
     expect(screen.getByTestId('spreadsheet-toolbar-redo')).toBeInTheDocument()
     expect(screen.getByTestId('spreadsheet-toolbar-add-row')).toBeInTheDocument()
   })
+
+  it('renders add column button in toolbar', () => {
+    useSheetsStore.getState().addSheet('Products')
+    render(<SpreadsheetContainer />)
+
+    expect(screen.getByTestId('spreadsheet-toolbar-add-column')).toBeInTheDocument()
+    expect(screen.getByText('Add Column')).toBeInTheDocument()
+  })
+
+  it('opens AddColumnDialog when Add Column button clicked', () => {
+    useSheetsStore.getState().addSheet('Products')
+    render(<SpreadsheetContainer />)
+
+    // Click add column button
+    const addColumnButton = screen.getByTestId('spreadsheet-toolbar-add-column')
+    fireEvent.click(addColumnButton)
+
+    // AddColumnDialog should be open
+    expect(screen.getByTestId('add-column-dialog')).toBeInTheDocument()
+  })
+
+  it('AddColumnDialog from toolbar defaults to inserting at end', () => {
+    useSheetsStore.getState().addSheet('Products')
+    render(<SpreadsheetContainer />)
+
+    // Click add column button
+    const addColumnButton = screen.getByTestId('spreadsheet-toolbar-add-column')
+    fireEvent.click(addColumnButton)
+
+    // Check that position selector defaults to "At end"
+    const positionSelect = screen.getByTestId('position-selector')
+    expect(positionSelect).toHaveValue('end')
+  })
 })
 
 describe('SpreadsheetContainer column context menu', () => {

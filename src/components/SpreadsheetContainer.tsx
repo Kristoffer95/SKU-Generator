@@ -376,6 +376,12 @@ export function SpreadsheetContainer() {
     setAddColumnDialogOpen(true)
   }, [columns.length])
 
+  // Handle add column from toolbar button (inserts at end)
+  const handleAddColumn = useCallback(() => {
+    setAddColumnDefaultPosition(undefined) // undefined means "at end"
+    setAddColumnDialogOpen(true)
+  }, [])
+
   // Handle delete column request (opens confirmation dialog)
   const handleDeleteColumnRequest = useCallback((columnIndex: number, column: ColumnDef) => {
     setColumnToDelete({ index: columnIndex, column })
@@ -494,6 +500,7 @@ export function SpreadsheetContainer() {
         onUndo={handleUndo}
         onRedo={handleRedo}
         onAddRow={handleAddRow}
+        onAddColumn={handleAddColumn}
       />
       <DraggableColumnHeaders
         columns={columns}

@@ -1,3 +1,32 @@
+## toolbar-add-column-button - COMPLETED
+Add discoverable 'Add Column' button to SpreadsheetToolbar
+
+### Key decisions
+- Added onAddColumn prop to SpreadsheetToolbarProps interface
+- Added Columns icon from lucide-react
+- Button placed after Add Row button in toolbar with label "Add Column"
+- handleAddColumn callback in SpreadsheetContainer sets defaultPosition to undefined (meaning "end")
+- Opens existing AddColumnDialog which defaults to "At end" position
+- Can add both spec and free columns via the button (existing dialog supports both)
+
+### Files changed
+- src/components/spreadsheet/SpreadsheetToolbar.tsx (added onAddColumn prop, Columns icon, Add Column button)
+- src/components/spreadsheet/SpreadsheetToolbar.test.tsx (added 2 tests for Add Column button)
+- src/components/SpreadsheetContainer.tsx (added handleAddColumn callback, wired onAddColumn prop)
+- src/components/SpreadsheetContainer.test.tsx (added 4 tests for toolbar Add Column button)
+
+### Notes
+- All 6 stepsToVerify criteria met:
+  1. SpreadsheetToolbar has 'Add Column' button visible after 'Add Row' button ✓
+  2. Button has Columns icon from lucide-react ✓
+  3. Clicking button opens AddColumnDialog ✓
+  4. Dialog defaults to inserting column at end ✓
+  5. Can add both spec and free columns via the button ✓
+  6. npm run typecheck passes ✓
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (731 tests)
+- npm run build passes
+
 ## remove-duplicate-import-export - COMPLETED
 Remove duplicate Import/Export buttons from SpreadsheetToolbar
 

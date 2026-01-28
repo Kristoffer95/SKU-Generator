@@ -336,7 +336,7 @@
       "Can add both spec and free columns via the button",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "spec-name-editing",

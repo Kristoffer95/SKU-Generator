@@ -6,6 +6,7 @@ describe("SpreadsheetToolbar", () => {
   const mockOnUndo = vi.fn();
   const mockOnRedo = vi.fn();
   const mockOnAddRow = vi.fn();
+  const mockOnAddColumn = vi.fn();
 
   const defaultProps: SpreadsheetToolbarProps = {
     canUndo: true,
@@ -13,6 +14,7 @@ describe("SpreadsheetToolbar", () => {
     onUndo: mockOnUndo,
     onRedo: mockOnRedo,
     onAddRow: mockOnAddRow,
+    onAddColumn: mockOnAddColumn,
   };
 
   beforeEach(() => {
@@ -55,6 +57,13 @@ describe("SpreadsheetToolbar", () => {
 
       expect(screen.getByTestId("spreadsheet-toolbar-add-row")).toBeInTheDocument();
       expect(screen.getByText("Add Row")).toBeInTheDocument();
+    });
+
+    it("renders add column button", () => {
+      render(<SpreadsheetToolbar {...defaultProps} />);
+
+      expect(screen.getByTestId("spreadsheet-toolbar-add-column")).toBeInTheDocument();
+      expect(screen.getByText("Add Column")).toBeInTheDocument();
     });
 
     it("applies custom className", () => {
@@ -131,6 +140,16 @@ describe("SpreadsheetToolbar", () => {
       fireEvent.click(screen.getByTestId("spreadsheet-toolbar-add-row"));
 
       expect(mockOnAddRow).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("add column button", () => {
+    it("calls onAddColumn when clicked", () => {
+      render(<SpreadsheetToolbar {...defaultProps} />);
+
+      fireEvent.click(screen.getByTestId("spreadsheet-toolbar-add-column"));
+
+      expect(mockOnAddColumn).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -1,4 +1,4 @@
-import { Undo2, Redo2, Plus } from "lucide-react";
+import { Undo2, Redo2, Plus, Columns } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,8 @@ export interface SpreadsheetToolbarProps {
   onRedo: () => void;
   /** Called when add row button is clicked */
   onAddRow: () => void;
+  /** Called when add column button is clicked */
+  onAddColumn: () => void;
   /** Optional additional class name */
   className?: string;
 }
@@ -28,6 +30,7 @@ export function SpreadsheetToolbar({
   onUndo,
   onRedo,
   onAddRow,
+  onAddColumn,
   className,
 }: SpreadsheetToolbarProps) {
   return (
@@ -75,6 +78,18 @@ export function SpreadsheetToolbar({
       >
         <Plus className="h-4 w-4" />
         <span className="ml-1">Add Row</span>
+      </Button>
+
+      {/* Add Column button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onAddColumn}
+        title="Add Column"
+        data-testid="spreadsheet-toolbar-add-column"
+      >
+        <Columns className="h-4 w-4" />
+        <span className="ml-1">Add Column</span>
       </Button>
     </div>
   );
