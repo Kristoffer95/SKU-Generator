@@ -2392,3 +2392,302 @@ describe('SpreadsheetContainer column context menu', () => {
     expect(activeSheet!.columns[1].header).toBe('Color')
   })
 })
+
+/**
+ * Tests for column-drag-reorder PRD task
+ * Implement column reordering by dragging column headers
+ */
+describe('SpreadsheetContainer column drag-and-drop (column-drag-reorder)', () => {
+  const colorSpec: Specification = {
+    id: 'color-spec',
+    name: 'Color',
+    order: 0,
+    values: [
+      { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+      { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+    ],
+  }
+
+  const sizeSpec: Specification = {
+    id: 'size-spec',
+    name: 'Size',
+    order: 1,
+    values: [
+      { id: 'v3', displayValue: 'Small', skuFragment: 'S' },
+      { id: 'v4', displayValue: 'Large', skuFragment: 'L' },
+    ],
+  }
+
+  beforeEach(() => {
+    localStorage.clear()
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+    capturedOnChange = null
+    capturedOnSelect = null
+    capturedData = []
+    capturedSelected = null
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('renders DraggableColumnHeaders component', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{}, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // DraggableColumnHeaders should be rendered
+    expect(screen.getByTestId('draggable-column-headers')).toBeInTheDocument()
+  })
+
+  it('shows drag handles for non-SKU columns', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+      { id: 'col-2', type: 'spec', header: 'Size', specId: 'size-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }, { v: 'Size', m: 'Size' }],
+      [{}, { v: 'Red', m: 'Red' }, { v: 'Small', m: 'Small' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec, sizeSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // SKU column (index 0) should NOT have a drag handle
+    expect(screen.queryByTestId('drag-handle-0')).not.toBeInTheDocument()
+
+    // Color column (index 1) should have a drag handle
+    expect(screen.getByTestId('drag-handle-1')).toBeInTheDocument()
+
+    // Size column (index 2) should have a drag handle
+    expect(screen.getByTestId('drag-handle-2')).toBeInTheDocument()
+  })
+
+  it('SKU column is not draggable', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{}, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // SKU column header should have draggable=false
+    const skuHeader = screen.getByTestId('column-header-0')
+    expect(skuHeader).toHaveAttribute('draggable', 'false')
+  })
+
+  it('non-SKU columns are draggable', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+      { id: 'col-2', type: 'free', header: 'Notes' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }, { v: 'Notes', m: 'Notes' }],
+      [{}, { v: 'Red', m: 'Red' }, { v: 'Note 1', m: 'Note 1' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Color column header (spec) should be draggable
+    const colorHeader = screen.getByTestId('column-header-1')
+    expect(colorHeader).toHaveAttribute('draggable', 'true')
+
+    // Notes column header (free) should be draggable
+    const notesHeader = screen.getByTestId('column-header-2')
+    expect(notesHeader).toHaveAttribute('draggable', 'true')
+  })
+
+  it('reorders columns via drag-and-drop and updates store', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+      { id: 'col-2', type: 'spec', header: 'Size', specId: 'size-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }, { v: 'Size', m: 'Size' }],
+      [{ v: 'R-S', m: 'R-S' }, { v: 'Red', m: 'Red' }, { v: 'Small', m: 'Small' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec, sizeSpec])
+
+    render(<SpreadsheetContainer />)
+
+    const colorHeader = screen.getByTestId('column-header-1')
+    const sizeHeader = screen.getByTestId('column-header-2')
+
+    // Simulate drag: Color (index 1) to Size's position (index 2)
+    // Events must be fired synchronously for state to update between them
+    fireEvent.dragStart(colorHeader, {
+      dataTransfer: { effectAllowed: '', setData: vi.fn() },
+    })
+    fireEvent.dragOver(sizeHeader, {
+      dataTransfer: { dropEffect: '' },
+      preventDefault: vi.fn(),
+    })
+    fireEvent.drop(sizeHeader, {
+      dataTransfer: { getData: () => '1' },
+      preventDefault: vi.fn(),
+    })
+
+    // Verify columns were reordered in the store
+    const activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet).toBeDefined()
+    expect(activeSheet!.columns[0].header).toBe('SKU')
+    expect(activeSheet!.columns[1].header).toBe('Size')
+    expect(activeSheet!.columns[2].header).toBe('Color')
+
+    // Verify data rows were also reordered
+    expect(activeSheet!.data[0][1]?.v).toBe('Size')
+    expect(activeSheet!.data[0][2]?.v).toBe('Color')
+    expect(activeSheet!.data[1][1]?.v).toBe('Small')
+    expect(activeSheet!.data[1][2]?.v).toBe('Red')
+  })
+
+  it('undo reverts column reorder operation', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+      { id: 'col-2', type: 'spec', header: 'Size', specId: 'size-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }, { v: 'Size', m: 'Size' }],
+      [{ v: 'R-S', m: 'R-S' }, { v: 'Red', m: 'Red' }, { v: 'Small', m: 'Small' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec, sizeSpec])
+
+    render(<SpreadsheetContainer />)
+
+    const colorHeader = screen.getByTestId('column-header-1')
+    const sizeHeader = screen.getByTestId('column-header-2')
+
+    // Perform drag reorder
+    fireEvent.dragStart(colorHeader, {
+      dataTransfer: { effectAllowed: '', setData: vi.fn() },
+    })
+    fireEvent.dragOver(sizeHeader, {
+      dataTransfer: { dropEffect: '' },
+      preventDefault: vi.fn(),
+    })
+    fireEvent.drop(sizeHeader, {
+      dataTransfer: { getData: () => '1' },
+      preventDefault: vi.fn(),
+    })
+
+    // Verify reorder happened
+    let activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.columns[1].header).toBe('Size')
+    expect(activeSheet!.columns[2].header).toBe('Color')
+
+    // Click Undo
+    const undoButton = screen.getByTestId('spreadsheet-toolbar-undo')
+    expect(undoButton).not.toBeDisabled()
+
+    fireEvent.click(undoButton)
+
+    // Verify column order was reverted
+    activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.columns[1].header).toBe('Color')
+    expect(activeSheet!.columns[2].header).toBe('Size')
+
+    // Verify data was also reverted
+    expect(activeSheet!.data[1][1]?.v).toBe('Red')
+    expect(activeSheet!.data[1][2]?.v).toBe('Small')
+  })
+
+  it('redo re-applies column reorder after undo', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+      { id: 'col-2', type: 'spec', header: 'Size', specId: 'size-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }, { v: 'Size', m: 'Size' }],
+      [{ v: 'R-S', m: 'R-S' }, { v: 'Red', m: 'Red' }, { v: 'Small', m: 'Small' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec, sizeSpec])
+
+    render(<SpreadsheetContainer />)
+
+    const colorHeader = screen.getByTestId('column-header-1')
+    const sizeHeader = screen.getByTestId('column-header-2')
+
+    // Perform drag reorder
+    fireEvent.dragStart(colorHeader, {
+      dataTransfer: { effectAllowed: '', setData: vi.fn() },
+    })
+    fireEvent.dragOver(sizeHeader, {
+      dataTransfer: { dropEffect: '' },
+      preventDefault: vi.fn(),
+    })
+    fireEvent.drop(sizeHeader, {
+      dataTransfer: { getData: () => '1' },
+      preventDefault: vi.fn(),
+    })
+
+    // Undo
+    const undoButton = screen.getByTestId('spreadsheet-toolbar-undo')
+    fireEvent.click(undoButton)
+
+    // Verify undone (Color back to index 1)
+    let activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.columns[1].header).toBe('Color')
+
+    // Click Redo
+    const redoButton = screen.getByTestId('spreadsheet-toolbar-redo')
+    expect(redoButton).not.toBeDisabled()
+
+    fireEvent.click(redoButton)
+
+    // Verify redo re-applied the reorder (Size at index 1)
+    activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.columns[1].header).toBe('Size')
+    expect(activeSheet!.columns[2].header).toBe('Color')
+  })
+
+  it('cannot drop column on SKU column (index 0)', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{}, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    const colorHeader = screen.getByTestId('column-header-1')
+    const skuHeader = screen.getByTestId('column-header-0')
+
+    // Try to drag Color onto SKU column
+    fireEvent.dragStart(colorHeader, {
+      dataTransfer: { effectAllowed: '', setData: vi.fn() },
+    })
+    fireEvent.drop(skuHeader, {
+      dataTransfer: { getData: () => '1' },
+      preventDefault: vi.fn(),
+    })
+
+    // Verify columns were NOT reordered (Color should still be at index 1)
+    const activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.columns[0].header).toBe('SKU')
+    expect(activeSheet!.columns[1].header).toBe('Color')
+  })
+})

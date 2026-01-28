@@ -9,12 +9,22 @@ import { SheetTabs } from "@/components/spreadsheet/SheetTabs"
 import { SpreadsheetToolbar } from "@/components/spreadsheet/SpreadsheetToolbar"
 import { DropdownEditor } from "@/components/spreadsheet/DropdownEditor"
 import { ColumnHeaderContextMenu, ContextMenuPosition } from "@/components/spreadsheet/ColumnHeaderContextMenu"
+import { DraggableColumnHeaders } from "@/components/spreadsheet/DraggableColumnHeaders"
 import { AddColumnDialog } from "@/components/AddColumnDialog"
 import { DeleteColumnConfirmDialog } from "@/components/DeleteColumnConfirmDialog"
 import { convertToSpreadsheetData, convertFromSpreadsheetData } from "@/lib/spreadsheet-adapter"
 import { importFromExcel, importFromCSV, exportToExcel, exportToCSV } from "@/lib/import-export"
 import type { CellData, ColumnDef } from "@/types"
 import type { SKUMatrix } from "@/types/spreadsheet"
+
+/**
+ * History entry for undo/redo - includes both data and columns
+ * to support reverting column reorder operations
+ */
+interface HistoryEntry {
+  data: CellData[][]
+  columns: ColumnDef[]
+}
 
 /**
  * Deep comparison of CellData[][] arrays to detect actual changes
@@ -74,7 +84,7 @@ const EMPTY_SPECIFICATIONS: never[] = []
 const EMPTY_COLUMNS: ColumnDef[] = []
 
 export function SpreadsheetContainer() {
-  const { sheets, activeSheetId, setActiveSheet, setSheetData, addSheetWithId, removeSheet, updateSheet } = useSheetsStore()
+  const { sheets, activeSheetId, setActiveSheet, setSheetData, addSheetWithId, removeSheet, updateSheet, reorderColumns } = useSheetsStore()
   // Get active sheet and use its local specifications and columns
   const activeSheet = sheets.find((s) => s.id === activeSheetId)
   const specifications = useMemo(
@@ -90,10 +100,10 @@ export function SpreadsheetContainer() {
   const suffix = useSettingsStore((state) => state.suffix)
   const settings = useMemo(() => ({ delimiter, prefix, suffix }), [delimiter, prefix, suffix])
 
-  // Undo/Redo history: array of past data states
+  // Undo/Redo history: array of past sheet states (data + columns)
   // history[0] = oldest state, history[history.length-1] = most recent saved state
   // historyIndex points to current position in history (-1 means at latest/unsaved state)
-  const [history, setHistory] = useState<CellData[][][]>([])
+  const [history, setHistory] = useState<HistoryEntry[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
   const historyIndexRef = useRef(-1)
   const isUndoRedoRef = useRef(false)
@@ -159,7 +169,7 @@ export function SpreadsheetContainer() {
 
   // Handle spreadsheet data change
   const handleDataChange = useCallback((data: Matrix<CellBase<string | number | null>>) => {
-    if (!activeSheetId) return
+    if (!activeSheetId || !activeSheet) return
 
     // Convert react-spreadsheet format back to our CellData format
     const newData = convertFromSpreadsheetData(data as SKUMatrix)
@@ -174,16 +184,14 @@ export function SpreadsheetContainer() {
     if (!isUndoRedoRef.current) {
       const currentHistoryIndex = historyIndexRef.current
       // When making a new edit:
-      // - If we're at latest state (historyIndex === -1), just push oldData to history
+      // - If we're at latest state (historyIndex === -1), push old state to history
       // - If we're in middle of history (after some undos), truncate redo states only
-      //   (don't push oldData since current state is already in history at historyIndex)
       setHistory(prev => {
         if (currentHistoryIndex === -1) {
           // At latest state - append the old state before this change
-          return [...prev, oldData]
+          return [...prev, { data: oldData, columns: activeSheet.columns }]
         } else {
           // In middle of history - truncate redo states only
-          // The current state is already at history[currentHistoryIndex]
           return prev.slice(0, currentHistoryIndex + 1)
         }
       })
@@ -197,11 +205,11 @@ export function SpreadsheetContainer() {
     processAutoSKUFromColumns(oldData, newData, columns, specifications, settings)
 
     setSheetData(activeSheetId, newData)
-  }, [activeSheetId, setSheetData, settings, specifications, columns])
+  }, [activeSheetId, activeSheet, setSheetData, settings, specifications, columns])
 
   // Undo handler
   const handleUndo = useCallback(() => {
-    if (!activeSheetId) return
+    if (!activeSheetId || !activeSheet) return
 
     // Determine which history entry to restore
     // If historyIndex is -1, we're at latest state, go to last history entry
@@ -215,18 +223,28 @@ export function SpreadsheetContainer() {
 
     // If at latest state, save current state for potential redo
     if (historyIndex === -1) {
-      const currentData = activeSheet?.data ?? []
-      setHistory(prev => [...prev, currentData])
+      const currentEntry: HistoryEntry = {
+        data: activeSheet.data,
+        columns: activeSheet.columns,
+      }
+      setHistory(prev => [...prev, currentEntry])
     }
 
     isUndoRedoRef.current = true
-    setSheetData(activeSheetId, previousState)
+    // Restore both data and columns atomically
+    useSheetsStore.setState(state => ({
+      sheets: state.sheets.map(sheet =>
+        sheet.id === activeSheetId
+          ? { ...sheet, data: previousState.data, columns: previousState.columns }
+          : sheet
+      )
+    }))
     historyIndexRef.current = targetIndex
     setHistoryIndex(targetIndex)
     // Reset ref - in real usage, handleDataChange will reset it when onChange fires
     // but we also reset here for cases where onChange doesn't fire (e.g., tests)
     isUndoRedoRef.current = false
-  }, [history, historyIndex, activeSheetId, activeSheet?.data, setSheetData])
+  }, [history, historyIndex, activeSheetId, activeSheet])
 
   // Redo handler
   const handleRedo = useCallback(() => {
@@ -238,7 +256,14 @@ export function SpreadsheetContainer() {
     if (!nextState) return
 
     isUndoRedoRef.current = true
-    setSheetData(activeSheetId, nextState)
+    // Restore both data and columns atomically
+    useSheetsStore.setState(state => ({
+      sheets: state.sheets.map(sheet =>
+        sheet.id === activeSheetId
+          ? { ...sheet, data: nextState.data, columns: nextState.columns }
+          : sheet
+      )
+    }))
 
     // If we're moving to the last history entry, set index to -1 (latest state)
     if (nextIndex === history.length - 1) {
@@ -250,7 +275,7 @@ export function SpreadsheetContainer() {
     }
     // Reset ref - see comment in handleUndo
     isUndoRedoRef.current = false
-  }, [history, historyIndex, activeSheetId, setSheetData])
+  }, [history, historyIndex, activeSheetId])
 
   // Add row handler
   const handleAddRow = useCallback(() => {
@@ -435,6 +460,36 @@ export function SpreadsheetContainer() {
     setColumnToDelete(null)
   }, [activeSheet, columnToDelete, columns])
 
+  // Handle column reorder via drag-and-drop
+  const handleColumnReorder = useCallback((oldIndex: number, newIndex: number) => {
+    if (!activeSheetId || !activeSheet) return
+
+    // Track current state for undo before reordering (includes both data AND columns)
+    const oldEntry: HistoryEntry = {
+      data: activeSheet.data,
+      columns: activeSheet.columns,
+    }
+    const currentHistoryIndex = historyIndexRef.current
+
+    // Perform the reorder
+    const success = reorderColumns(activeSheetId, oldIndex, newIndex)
+    if (!success) return
+
+    // Track history for undo/redo (same logic as handleDataChange)
+    setHistory(prev => {
+      if (currentHistoryIndex === -1) {
+        // At latest state - append the old state before this change
+        return [...prev, oldEntry]
+      } else {
+        // In middle of history - truncate redo states only
+        return prev.slice(0, currentHistoryIndex + 1)
+      }
+    })
+    // Reset to latest state
+    setHistoryIndex(-1)
+    historyIndexRef.current = -1
+  }, [activeSheetId, activeSheet, reorderColumns])
+
   // Compute validation errors for the active sheet
   const validationErrors = useMemo((): ValidationError[] => {
     if (!activeSheet) return []
@@ -492,9 +547,13 @@ export function SpreadsheetContainer() {
         onExportCSV={handleExportCSV}
         onAddRow={handleAddRow}
       />
+      <DraggableColumnHeaders
+        columns={columns}
+        onReorder={handleColumnReorder}
+      />
       <div
         ref={spreadsheetContainerRef}
-        className="flex-1 min-h-0 overflow-auto sku-spreadsheet"
+        className="flex-1 min-h-0 overflow-auto sku-spreadsheet with-draggable-headers"
         onContextMenu={handleContextMenu}
       >
         <Spreadsheet

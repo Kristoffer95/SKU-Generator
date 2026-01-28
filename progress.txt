@@ -1,3 +1,33 @@
+## column-drag-reorder - COMPLETED
+Implement column reordering by dragging column headers in the spreadsheet
+
+### Key decisions
+- DraggableColumnHeaders component already existed with drag-and-drop UI logic
+- reorderColumns method in useSheetsStore already reorders columns AND data atomically
+- Added undo/redo support by tracking both data AND columns in history
+- Created HistoryEntry interface: { data: CellData[][], columns: ColumnDef[] }
+- handleUndo/handleRedo now restore both data and columns atomically via useSheetsStore.setState
+- handleColumnReorder now saves old state to history before performing reorder
+- handleDataChange updated to save current columns alongside data in history
+
+### Files changed
+- src/components/SpreadsheetContainer.tsx (HistoryEntry type, updated history handling)
+- src/components/SpreadsheetContainer.test.tsx (+8 tests for drag-reorder and undo/redo)
+- src/store/sheets.test.ts (fixed unused variable lint errors)
+
+### Notes
+- All 6 stepsToVerify criteria verified:
+  1. Column headers show drag affordance (GripVertical icon for non-SKU)
+  2. Dragging shows visual feedback (bg-primary/10 on drop target)
+  3. Dropping reorders columns array in store
+  4. All row data shifts to match column order
+  5. SKU column cannot be dragged (stays at position 0)
+  6. Undo/redo works for column reorder operations
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (713 tests)
+- npm run build passes
+
 ## column-context-menu - COMPLETED
 Add right-click context menu on column headers with Insert/Delete options
 

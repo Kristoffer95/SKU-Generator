@@ -1296,4 +1296,220 @@ describe('useSheetsStore', () => {
       });
     });
   });
+
+  describe('reorderColumns', () => {
+    const createSheetWithColumns = (): { sheetId: string } => {
+      const { addSheet } = useSheetsStore.getState();
+      const sheetId = addSheet('Test Sheet');
+
+      // Set up columns and data
+      useSheetsStore.setState((state) => ({
+        sheets: state.sheets.map((s) =>
+          s.id === sheetId
+            ? {
+                ...s,
+                columns: [
+                  { id: 'col-1', type: 'sku' as const, header: 'SKU' },
+                  { id: 'col-2', type: 'spec' as const, specId: 'spec-1', header: 'Color' },
+                  { id: 'col-3', type: 'spec' as const, specId: 'spec-2', header: 'Size' },
+                  { id: 'col-4', type: 'free' as const, header: 'Notes' },
+                ],
+                data: [
+                  [
+                    { v: 'SKU', m: 'SKU' },
+                    { v: 'Color', m: 'Color' },
+                    { v: 'Size', m: 'Size' },
+                    { v: 'Notes', m: 'Notes' },
+                  ],
+                  [
+                    { v: 'R-S', m: 'R-S' },
+                    { v: 'Red', m: 'Red' },
+                    { v: 'Small', m: 'Small' },
+                    { v: 'Note 1', m: 'Note 1' },
+                  ],
+                  [
+                    { v: 'B-L', m: 'B-L' },
+                    { v: 'Blue', m: 'Blue' },
+                    { v: 'Large', m: 'Large' },
+                    { v: 'Note 2', m: 'Note 2' },
+                  ],
+                ],
+              }
+            : s
+        ),
+      }));
+
+      return { sheetId };
+    };
+
+    it('should reorder columns from index 1 to index 2', () => {
+      const { sheetId } = createSheetWithColumns();
+      const { reorderColumns } = useSheetsStore.getState();
+
+      // Move Color (index 1) to Size's position (index 2)
+      const result = reorderColumns(sheetId, 1, 2);
+      expect(result).toBe(true);
+
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+
+      // Columns should be reordered
+      expect(sheet.columns[0].header).toBe('SKU');
+      expect(sheet.columns[1].header).toBe('Size');
+      expect(sheet.columns[2].header).toBe('Color');
+      expect(sheet.columns[3].header).toBe('Notes');
+
+      // Data should also be reordered in each row
+      // Header row
+      expect(sheet.data[0][0].v).toBe('SKU');
+      expect(sheet.data[0][1].v).toBe('Size');
+      expect(sheet.data[0][2].v).toBe('Color');
+      expect(sheet.data[0][3].v).toBe('Notes');
+
+      // Data row 1
+      expect(sheet.data[1][0].v).toBe('R-S');
+      expect(sheet.data[1][1].v).toBe('Small');
+      expect(sheet.data[1][2].v).toBe('Red');
+      expect(sheet.data[1][3].v).toBe('Note 1');
+
+      // Data row 2
+      expect(sheet.data[2][0].v).toBe('B-L');
+      expect(sheet.data[2][1].v).toBe('Large');
+      expect(sheet.data[2][2].v).toBe('Blue');
+      expect(sheet.data[2][3].v).toBe('Note 2');
+    });
+
+    it('should reorder columns from index 3 to index 1', () => {
+      const { sheetId } = createSheetWithColumns();
+      const { reorderColumns } = useSheetsStore.getState();
+
+      // Move Notes (index 3) to Color's position (index 1)
+      const result = reorderColumns(sheetId, 3, 1);
+      expect(result).toBe(true);
+
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+
+      // Columns should be reordered
+      expect(sheet.columns[0].header).toBe('SKU');
+      expect(sheet.columns[1].header).toBe('Notes');
+      expect(sheet.columns[2].header).toBe('Color');
+      expect(sheet.columns[3].header).toBe('Size');
+
+      // Data should also be reordered
+      expect(sheet.data[1][1].v).toBe('Note 1');
+      expect(sheet.data[1][2].v).toBe('Red');
+      expect(sheet.data[1][3].v).toBe('Small');
+    });
+
+    it('should not allow moving SKU column (index 0)', () => {
+      const { sheetId } = createSheetWithColumns();
+      const { reorderColumns } = useSheetsStore.getState();
+
+      // Try to move SKU column
+      const result = reorderColumns(sheetId, 0, 2);
+      expect(result).toBe(false);
+
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+
+      // Columns should remain unchanged
+      expect(sheet.columns[0].header).toBe('SKU');
+      expect(sheet.columns[1].header).toBe('Color');
+      expect(sheet.columns[2].header).toBe('Size');
+    });
+
+    it('should not allow moving column to SKU position (index 0)', () => {
+      const { sheetId } = createSheetWithColumns();
+      const { reorderColumns } = useSheetsStore.getState();
+
+      // Try to move Color column to position 0
+      const result = reorderColumns(sheetId, 1, 0);
+      expect(result).toBe(false);
+
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+
+      // Columns should remain unchanged
+      expect(sheet.columns[0].header).toBe('SKU');
+      expect(sheet.columns[1].header).toBe('Color');
+    });
+
+    it('should return true when oldIndex equals newIndex (no-op)', () => {
+      const { sheetId } = createSheetWithColumns();
+      const { reorderColumns } = useSheetsStore.getState();
+
+      const result = reorderColumns(sheetId, 2, 2);
+      expect(result).toBe(true);
+
+      // Data should be unchanged
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.columns[2].header).toBe('Size');
+    });
+
+    it('should return false for invalid oldIndex', () => {
+      const { sheetId } = createSheetWithColumns();
+      const { reorderColumns } = useSheetsStore.getState();
+
+      expect(reorderColumns(sheetId, -1, 2)).toBe(false);
+      expect(reorderColumns(sheetId, 10, 2)).toBe(false);
+    });
+
+    it('should return false for invalid newIndex', () => {
+      const { sheetId } = createSheetWithColumns();
+      const { reorderColumns } = useSheetsStore.getState();
+
+      expect(reorderColumns(sheetId, 1, -1)).toBe(false);
+      expect(reorderColumns(sheetId, 1, 10)).toBe(false);
+    });
+
+    it('should return false for non-existent sheet', () => {
+      const { reorderColumns } = useSheetsStore.getState();
+
+      const result = reorderColumns('non-existent-sheet', 1, 2);
+      expect(result).toBe(false);
+    });
+
+    it('should handle sheet with minimal columns (just SKU)', () => {
+      const { addSheet } = useSheetsStore.getState();
+      const sheetId = addSheet('Minimal Sheet');
+
+      // This sheet should only have SKU column by default
+      const { reorderColumns } = useSheetsStore.getState();
+
+      // Cannot reorder with only one column
+      const result = reorderColumns(sheetId, 0, 1);
+      expect(result).toBe(false);
+    });
+
+    it('should preserve column IDs during reorder', () => {
+      const { sheetId } = createSheetWithColumns();
+      const originalSheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      const originalColumnIds = originalSheet.columns.map((c) => c.id);
+
+      const { reorderColumns } = useSheetsStore.getState();
+      reorderColumns(sheetId, 1, 3);
+
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      const newColumnIds = sheet.columns.map((c) => c.id);
+
+      // All original IDs should still be present
+      expect(newColumnIds.sort()).toEqual(originalColumnIds.sort());
+    });
+
+    it('should update columns and data atomically', () => {
+      const { sheetId } = createSheetWithColumns();
+      const { reorderColumns } = useSheetsStore.getState();
+
+      reorderColumns(sheetId, 1, 2);
+
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+
+      // Both columns and data should be updated together
+      // Column count should match data row length
+      expect(sheet.columns.length).toBe(sheet.data[0].length);
+      expect(sheet.columns.length).toBe(sheet.data[1].length);
+
+      // Column header should match data header row
+      for (let i = 0; i < sheet.columns.length; i++) {
+        expect(sheet.data[0][i].v).toBe(sheet.columns[i].header);
+      }
+    });
+  });
 });

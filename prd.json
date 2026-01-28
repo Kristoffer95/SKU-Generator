@@ -247,7 +247,7 @@
       "SKU column cannot be dragged (stays at position 0)",
       "Undo/redo works for column reorder operations"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "column-types-spec-free",
