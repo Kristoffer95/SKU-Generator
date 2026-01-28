@@ -1,3 +1,16 @@
+## PRD-014: Infinite Re-render Fix - COMPLETE
+- Fixed 'Maximum update depth exceeded' error in SpreadsheetContainer
+- Added isDataEqual helper for deep CellData[][] comparison
+- Replaced sheetsRef useMemo with previousDataRef useRef (no render triggers)
+- Added sheetsSnapshotRef useRef synced via useEffect for stable callback access
+- Removed sheets dependency from handleBeforeDeleteSheet/handleBeforeUpdateSheetName
+- handleChange now uses refs + isDataEqual check to skip unchanged data
+- Memoized configSheet with useMemo finding config type sheet
+- All feedback loops pass (219 tests, typecheck, lint)
+
+Files changed:
+- src/components/SpreadsheetContainer.tsx (refactored hooks/refs for stability)
+
 ## PRD-012: End-to-End Verification - COMPLETE
 - Created comprehensive integration test suite (23 tests) verifying complete workflow
 - Tests cover all PRD-012 steps: Config parsing, SKU generation, settings, export/import

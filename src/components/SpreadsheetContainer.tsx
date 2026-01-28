@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from "react"
+import { useMemo, useCallback, useRef, useEffect } from "react"
 import { Workbook } from "@fortune-sheet/react"
 import type { Sheet, Cell, CellMatrix } from "@fortune-sheet/core"
 import "@fortune-sheet/react/dist/index.css"
@@ -7,6 +7,28 @@ import { useSettingsStore } from "@/store/settings"
 import { parseConfigSheet, getSpecValues } from "@/lib/config-sheet"
 import { processAutoSKU } from "@/lib/auto-sku"
 import type { CellData, ParsedSpec, SheetConfig } from "@/types"
+
+/**
+ * Deep comparison of CellData[][] arrays to detect actual changes
+ */
+function isDataEqual(a: CellData[][], b: CellData[][]): boolean {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    const rowA = a[i]
+    const rowB = b[i]
+    if (!rowA && !rowB) continue
+    if (!rowA || !rowB) return false
+    if (rowA.length !== rowB.length) return false
+    for (let j = 0; j < rowA.length; j++) {
+      const cellA = rowA[j]
+      const cellB = rowB[j]
+      if (!cellA && !cellB) continue
+      if (!cellA || !cellB) return false
+      if (cellA.v !== cellB.v || cellA.m !== cellB.m) return false
+    }
+  }
+  return true
+}
 
 /**
  * Build dataVerification object for dropdown cells based on column headers
@@ -98,26 +120,39 @@ function convertFromFortuneSheetData(data: CellMatrix | undefined): CellData[][]
 }
 
 export function SpreadsheetContainer() {
-  const { sheets, activeSheetId, setActiveSheet, setSheetData, getConfigSheet, addSheetWithId, removeSheet, updateSheet } = useSheetsStore()
+  const { sheets, activeSheetId, setActiveSheet, setSheetData, addSheetWithId, removeSheet, updateSheet } = useSheetsStore()
   const delimiter = useSettingsStore((state) => state.delimiter)
   const prefix = useSettingsStore((state) => state.prefix)
   const suffix = useSettingsStore((state) => state.suffix)
   const settings = useMemo(() => ({ delimiter, prefix, suffix }), [delimiter, prefix, suffix])
 
+  // Memoize configSheet - find the config type sheet from sheets array
+  const configSheet = useMemo(() => {
+    return sheets.find(s => s.type === "config") ?? null
+  }, [sheets])
+
   // Parse Config sheet for spec definitions
-  const configSheet = getConfigSheet()
   const parsedSpecs = useMemo(() => {
     if (!configSheet) return []
     return parseConfigSheet(configSheet.data)
   }, [configSheet])
 
-  // Keep a reference to previous sheet data for change detection
-  const sheetsRef = useMemo(() => {
+  // Use ref for previous sheet data to avoid triggering re-renders
+  const previousDataRef = useRef<Map<string, CellData[][]>>(new Map())
+
+  // Update previous data ref when sheets change
+  useEffect(() => {
     const map = new Map<string, CellData[][]>()
     sheets.forEach(sheet => {
       map.set(sheet.id, sheet.data)
     })
-    return map
+    previousDataRef.current = map
+  }, [sheets])
+
+  // Keep a snapshot ref for sheets to access current state without dependency
+  const sheetsSnapshotRef = useRef<SheetConfig[]>(sheets)
+  useEffect(() => {
+    sheetsSnapshotRef.current = sheets
   }, [sheets])
 
   // Handle when user clicks a sheet tab in Fortune-Sheet
@@ -125,28 +160,28 @@ export function SpreadsheetContainer() {
     setActiveSheet(sheetId)
   }, [setActiveSheet])
 
-  // Prevent deletion of Config sheet
+  // Prevent deletion of Config sheet (uses ref to avoid sheets dependency)
   const handleBeforeDeleteSheet = useCallback((id: string): boolean => {
-    const sheet = sheets.find(s => s.id === id)
+    const sheet = sheetsSnapshotRef.current.find(s => s.id === id)
     if (sheet?.type === "config") {
       return false // Prevent deletion
     }
     return true // Allow deletion of data sheets
-  }, [sheets])
+  }, [])
 
   // Sync sheet deletion to Zustand store
   const handleAfterDeleteSheet = useCallback((id: string) => {
     removeSheet(id)
   }, [removeSheet])
 
-  // Prevent renaming of Config sheet
+  // Prevent renaming of Config sheet (uses ref to avoid sheets dependency)
   const handleBeforeUpdateSheetName = useCallback((id: string): boolean => {
-    const sheet = sheets.find(s => s.id === id)
+    const sheet = sheetsSnapshotRef.current.find(s => s.id === id)
     if (sheet?.type === "config") {
       return false // Prevent rename
     }
     return true // Allow rename of data sheets
-  }, [sheets])
+  }, [])
 
   // Sync sheet rename to Zustand store
   // Fortune-Sheet hook signature: (id: string, oldName: string, newName: string)
@@ -165,26 +200,29 @@ export function SpreadsheetContainer() {
 
   // Handle sheet data changes from Fortune-Sheet
   const handleChange = useCallback((data: Sheet[]) => {
-    // Find the original sheets from store for type information
-    const sheetMap = new Map<string, SheetConfig>()
-    sheets.forEach(s => sheetMap.set(s.id, s))
-
     // Find changed sheets and update our store
     data.forEach(sheet => {
       if (!sheet.id) return
 
-      const sheetConfig = sheetMap.get(sheet.id)
       const newData = convertFromFortuneSheetData(sheet.data)
+      const oldData = previousDataRef.current.get(sheet.id) ?? []
+
+      // Skip if data hasn't actually changed (prevents infinite loop)
+      if (isDataEqual(oldData, newData)) {
+        return
+      }
+
+      // Get sheet config from snapshot ref
+      const sheetConfig = sheetsSnapshotRef.current.find(s => s.id === sheet.id)
 
       // For data sheets, auto-generate SKUs for changed rows
       if (sheetConfig?.type === "data") {
-        const oldData = sheetsRef.get(sheet.id) ?? []
         processAutoSKU(oldData, newData, parsedSpecs, settings)
       }
 
       setSheetData(sheet.id, newData)
     })
-  }, [setSheetData, sheets, sheetsRef, parsedSpecs, settings])
+  }, [setSheetData, parsedSpecs, settings])
 
   // Convert sheets to Fortune-Sheet format with hooks
   const fortuneSheetData: Sheet[] = useMemo(() => {

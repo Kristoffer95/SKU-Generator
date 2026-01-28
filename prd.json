@@ -187,6 +187,28 @@
         "Verify new dropdown appears in the new column with defined values"
       ],
       "passes": true
+    },
+    {
+      "id": "PRD-014",
+      "category": "Bug Fix",
+      "description": "Fix infinite re-render loop in SpreadsheetContainer causing app crash with 'Maximum update depth exceeded' error",
+      "stepsToVerify": [
+        "Add useRef and useEffect to imports in SpreadsheetContainer.tsx",
+        "Create isDataEqual helper function for deep comparison of CellData[][] arrays",
+        "Replace sheetsRef useMemo with useRef (previousDataRef) to track previous data without triggering re-renders",
+        "Add sheetsSnapshotRef useRef synced via useEffect to access current sheets without dependency",
+        "Memoize configSheet with useMemo instead of calling getConfigSheet() directly",
+        "Rewrite handleChange callback: remove sheets/sheetsRef from dependencies, add isDataEqual check to skip unchanged data",
+        "Update handleBeforeDeleteSheet and handleBeforeUpdateSheetName to use sheetsSnapshotRef instead of sheets dependency",
+        "Verify app loads without blank white page",
+        "Verify browser console has no 'Maximum update depth exceeded' errors",
+        "Verify editing cells in data sheet auto-generates SKU correctly",
+        "Verify switching between sheets works without crashes",
+        "Run npm run typecheck with no errors",
+        "Run npm run lint with no errors",
+        "Run npm run test with all tests passing"
+      ],
+      "passes": true
     }
   ]
 }
