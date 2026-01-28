@@ -1,3 +1,28 @@
+## migration-container-rewrite - COMPLETED
+Rewrite SpreadsheetContainer to use react-spreadsheet instead of Fortune-Sheet
+
+### Key decisions
+- Imports Spreadsheet, Matrix, CellBase from 'react-spreadsheet' (not @fortune-sheet/react)
+- Renders <Spreadsheet> with data, onChange, DataEditor props
+- SpreadsheetToolbar renders above spreadsheet (undo/redo, import, export, add row)
+- SheetTabs renders below spreadsheet (tab switching, rename, delete, add)
+- ValidationPanel renders at bottom showing errors for active sheet
+- Uses convertToSpreadsheetData/convertFromSpreadsheetData from spreadsheet-adapter
+- Undo/redo history tracking with isUndoRedoRef to prevent infinite loops
+- Duplicate highlighting via applyDuplicateHighlighting function
+- Deep comparison via isDataEqual to detect actual cell changes
+
+### Files changed
+- src/components/SpreadsheetContainer.tsx (already rewritten in migration-dependencies)
+
+### Notes
+- All 6 stepsToVerify criteria verified manually
+- npm run typecheck passes
+- npm run lint passes (only warnings)
+- Tests still mock @fortune-sheet/react (migration-tests-update task)
+- Import/export handlers are placeholder implementations (migration-import-export task)
+- Click-to-navigate for errors is placeholder (migration-click-navigate task)
+
 ## migration-dependencies - COMPLETED
 Swap spreadsheet library dependencies - remove Fortune-Sheet, add react-spreadsheet
 

@@ -91,7 +91,7 @@
       "ValidationPanel still renders and functions correctly",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "migration-readonly-sku",
