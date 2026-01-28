@@ -184,12 +184,11 @@ export function SpreadsheetContainer() {
       }
 
       // Auto-generate SKUs for changed rows
-      // TODO: processAutoSKU needs to be updated to use specifications store (remove-config-3/sku-gen-2)
-      processAutoSKU(oldData, newData, [], settings)
+      processAutoSKU(oldData, newData, specifications, settings)
 
       setSheetData(sheet.id, newData)
     })
-  }, [setSheetData, settings])
+  }, [setSheetData, settings, specifications])
 
   // Convert sheets to Fortune-Sheet format with hooks and dataVerification for dropdowns
   const fortuneSheetData: Sheet[] = useMemo(() => {

@@ -134,7 +134,7 @@
       "Changing a value in data sheet updates SKU in column 0",
       "SKU uses skuFragments from store, sorted by spec order"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "readonly-sku-1",

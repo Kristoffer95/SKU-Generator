@@ -380,6 +380,104 @@ describe('SpreadsheetContainer onChange handler', () => {
     const dataSheet = sheets.find(s => s.id === dataSheetId)!
     expect(dataSheet.data[1][1]?.v).toBe('Red')
   })
+
+  it('generates SKU using specifications from store when cell value changes', () => {
+    // Set up specifications in store
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-1',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+          ],
+        },
+        {
+          id: 'spec-2',
+          name: 'Size',
+          order: 1,
+          values: [
+            { id: 'v3', displayValue: 'Small', skuFragment: 'S' },
+            { id: 'v4', displayValue: 'Large', skuFragment: 'L' },
+          ],
+        },
+      ],
+    })
+
+    // Set up sheet with Color and Size columns
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+      [{ v: '' }, { v: '' }, { v: '' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Simulate user selecting Red and Small in row 1
+    capturedOnChange?.([{
+      id: sheetId,
+      name: 'Products',
+      data: [
+        [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }, { v: 'Size', m: 'Size' }],
+        [{ v: '', m: '' }, { v: 'Red', m: 'Red' }, { v: 'Small', m: 'Small' }],
+      ],
+    }])
+
+    // SKU should be auto-generated as R-S (using fragments from store, sorted by order)
+    const { sheets } = useSheetsStore.getState()
+    const sheet = sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][0]?.v).toBe('R-S')
+  })
+
+  it('generates SKU based on spec order field, not column order', () => {
+    // Set up specifications with Size having lower order than Color
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-1',
+          name: 'Color',
+          order: 1, // Color has higher order
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          ],
+        },
+        {
+          id: 'spec-2',
+          name: 'Size',
+          order: 0, // Size has lower order (comes first in SKU)
+          values: [
+            { id: 'v2', displayValue: 'Small', skuFragment: 'S' },
+          ],
+        },
+      ],
+    })
+
+    // Set up sheet with Color column before Size column (opposite of spec order)
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+      [{ v: '' }, { v: '' }, { v: '' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Simulate user selecting Red and Small
+    capturedOnChange?.([{
+      id: sheetId,
+      name: 'Products',
+      data: [
+        [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }, { v: 'Size', m: 'Size' }],
+        [{ v: '', m: '' }, { v: 'Red', m: 'Red' }, { v: 'Small', m: 'Small' }],
+      ],
+    }])
+
+    // SKU should be S-R (Size first due to order:0, Color second due to order:1)
+    const { sheets } = useSheetsStore.getState()
+    const sheet = sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][0]?.v).toBe('S-R')
+  })
 })
 
 describe('SpreadsheetContainer hooks', () => {

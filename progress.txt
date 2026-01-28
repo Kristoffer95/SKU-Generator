@@ -1,3 +1,18 @@
+## sku-gen-2: Update auto-SKU logic to use specifications from store
+
+**Completed**: processAutoSKU now reads specifications from useSpecificationsStore
+
+**Key decisions**:
+- Changed processAutoSKU call in SpreadsheetContainer to pass actual specifications instead of empty array
+- Added specifications to handleChange callback dependency array for proper reactivity
+- Removed TODO comment about this task
+
+**Files changed**:
+- src/components/SpreadsheetContainer.tsx: Pass specifications to processAutoSKU, add to deps
+- src/components/SpreadsheetContainer.test.tsx: Added 2 tests for SKU generation using store specs
+
+---
+
 ## sku-gen-1: Modify generateRowSKU to accept Specification[] and sort by order
 
 **Completed**: generateRowSKU now uses Specification[] and sorts by order field
