@@ -1,3 +1,28 @@
+## add-column-dialog - COMPLETED
+Create AddColumnDialog component for inserting columns at any position
+
+### Key decisions
+- Created AddColumnDialog component with column type toggle (Specification/Free)
+- Spec type shows dropdown of existing specs + "Create new" option with inline spec form
+- Free type shows text input for column name
+- Position selector shows "At end" or "Before [ColumnName]" for all non-SKU columns
+- Component uses native `<select>` styled to match shadcn/ui for simplicity
+- New spec creation uses sheet-scoped addSpecification/addSpecValue from useSheetsStore
+- Column insertion updates both columns array and data rows atomically via setState
+- defaultPosition prop allows pre-selecting position (for future context menu integration)
+
+### Files changed
+- src/components/AddColumnDialog.tsx (new, ~320 lines)
+- src/components/AddColumnDialog.test.tsx (new, 46 tests)
+
+### Notes
+- All 6 stepsToVerify criteria verified via unit tests
+- Tests cover: rendering, type toggle, spec selector, new spec form, position selection, validation, submit logic
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (644 tests, +46 new)
+- npm run build passes
+
 ## spec-store-migration - COMPLETED
 Migrate specification management methods from global useSpecificationsStore to sheet-scoped methods in useSheetsStore
 

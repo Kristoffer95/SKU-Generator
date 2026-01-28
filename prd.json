@@ -275,7 +275,7 @@
       "Position dropdown shows all current columns as 'Before X' options plus 'At end'",
       "Submitting adds column at selected position and updates all row data"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "column-context-menu",
