@@ -7,10 +7,16 @@ import {
   getSpecNames,
 } from './config-sheet';
 
+/**
+ * @deprecated These tests are for the deprecated config-sheet module.
+ * They are kept to ensure migration-1 (Config sheet to specifications store migration) works correctly.
+ * Once migration-1 is complete and Config sheet support is removed, these tests should be deleted.
+ */
+
 // Helper to create cell data
 const cell = (value: string): CellData => ({ v: value, m: value });
 
-describe('parseConfigSheet', () => {
+describe('parseConfigSheet (deprecated - for migration)', () => {
   it('returns empty array for empty data', () => {
     expect(parseConfigSheet([])).toEqual([]);
   });
@@ -144,7 +150,7 @@ describe('parseConfigSheet', () => {
   });
 });
 
-describe('getSpecValues', () => {
+describe('getSpecValues (deprecated - for migration)', () => {
   const specs = [
     {
       name: 'Color',
@@ -178,7 +184,7 @@ describe('getSpecValues', () => {
   });
 });
 
-describe('lookupSkuCode', () => {
+describe('lookupSkuCode (deprecated - for migration)', () => {
   const specs = [
     {
       name: 'Color',
@@ -214,7 +220,7 @@ describe('lookupSkuCode', () => {
   });
 });
 
-describe('getSpecNames', () => {
+describe('getSpecNames (deprecated - for migration)', () => {
   it('returns all specification names', () => {
     const specs = [
       { name: 'Color', values: [] },

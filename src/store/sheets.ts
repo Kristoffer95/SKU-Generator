@@ -13,16 +13,27 @@ interface SheetsState {
   removeSheet: (id: string) => boolean;
   setActiveSheet: (id: string) => void;
   getActiveSheet: () => SheetConfig | undefined;
+  /**
+   * @deprecated Config sheet approach is deprecated. Use useSpecificationsStore instead.
+   * This method is kept only for migration-1 task to detect existing Config sheets.
+   */
   getConfigSheet: () => SheetConfig | undefined;
   updateCellData: (sheetId: string, row: number, col: number, cell: CellData) => void;
   setSheetData: (sheetId: string, data: CellData[][]) => void;
+  /**
+   * @deprecated Config sheet approach is deprecated. Use initializeWithSampleData instead.
+   * This method is kept only for migration-1 task to support legacy setups.
+   */
   initializeWithConfigSheet: () => void;
   initializeWithSampleData: () => void;
 }
 
 const generateId = () => crypto.randomUUID();
 
-/** Config sheet header row */
+/**
+ * @deprecated Config sheet approach is deprecated.
+ * Kept only for migration-1 task.
+ */
 const CONFIG_SHEET_HEADERS: CellData[] = [
   { v: 'Specification', m: 'Specification' },
   { v: 'Value', m: 'Value' },
@@ -36,6 +47,10 @@ const createEmptySheet = (name: string, type: SheetConfig['type'] = 'data'): She
   data: [],
 });
 
+/**
+ * @deprecated Config sheet approach is deprecated.
+ * Kept only for migration-1 task.
+ */
 const createConfigSheet = (): SheetConfig => ({
   id: generateId(),
   name: 'Config',
@@ -49,6 +64,10 @@ export const useSheetsStore = create<SheetsState>()(
       sheets: [],
       activeSheetId: null,
 
+      /**
+       * @deprecated Config sheet approach is deprecated.
+       * Kept only for migration-1 task to support legacy setups.
+       */
       initializeWithConfigSheet: () => {
         const { sheets } = get();
         // Only initialize if no Config sheet exists
@@ -156,6 +175,10 @@ export const useSheetsStore = create<SheetsState>()(
         return sheets.find((sheet) => sheet.id === activeSheetId);
       },
 
+      /**
+       * @deprecated Config sheet approach is deprecated.
+       * Kept only for migration-1 task to detect existing Config sheets.
+       */
       getConfigSheet: () => {
         const { sheets } = get();
         return sheets.find((sheet) => sheet.type === 'config');

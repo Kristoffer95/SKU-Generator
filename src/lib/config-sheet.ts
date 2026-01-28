@@ -1,7 +1,17 @@
 import type { CellData, ParsedSpec, ParsedSpecValue } from '../types';
 
 /**
+ * @deprecated This module is deprecated and will be removed after migration-1 is complete.
+ * The Config sheet approach has been replaced by useSpecificationsStore.
+ * These functions are kept only for migrating existing users' Config sheet data.
+ *
+ * DO NOT add new code that depends on this module.
+ * @see src/store/specifications.ts for the current implementation
+ */
+
+/**
  * Extract string value from a CellData object
+ * @deprecated Part of deprecated config-sheet module
  */
 const getCellValue = (cell: CellData | undefined): string => {
   if (!cell) return '';
@@ -12,6 +22,9 @@ const getCellValue = (cell: CellData | undefined): string => {
  * Parse Config sheet data into structured specifications
  * Config sheet format: Row 0 = headers, Row 1+ = data rows
  * Columns: Specification | Value | SKU Code
+ *
+ * @deprecated Used only for migration from Config sheet to specifications store.
+ * @see migration-1 task in prd.json
  */
 export function parseConfigSheet(data: CellData[][]): ParsedSpec[] {
   if (data.length <= 1) {
@@ -54,6 +67,7 @@ export function parseConfigSheet(data: CellData[][]): ParsedSpec[] {
 
 /**
  * Get all values for a specific specification name from parsed specs
+ * @deprecated Used only for migration from Config sheet to specifications store.
  */
 export function getSpecValues(
   specs: ParsedSpec[],
@@ -66,6 +80,7 @@ export function getSpecValues(
 /**
  * Look up SKU code for a given specification name and value label
  * Returns empty string if not found
+ * @deprecated Used only for migration from Config sheet to specifications store.
  */
 export function lookupSkuCode(
   specs: ParsedSpec[],
@@ -79,6 +94,7 @@ export function lookupSkuCode(
 
 /**
  * Get all unique specification names from parsed specs
+ * @deprecated Used only for migration from Config sheet to specifications store.
  */
 export function getSpecNames(specs: ParsedSpec[]): string[] {
   return specs.map((s) => s.name);

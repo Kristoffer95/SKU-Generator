@@ -234,7 +234,7 @@
       "No active imports of parseConfigSheet in codebase",
       "npm run build succeeds without config-sheet dependencies"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "migration-1",

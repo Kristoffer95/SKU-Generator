@@ -8,7 +8,11 @@ describe('useSheetsStore', () => {
     useSpecificationsStore.setState({ specifications: [] });
   });
 
-  describe('initializeWithConfigSheet', () => {
+  /**
+   * @deprecated Tests for initializeWithConfigSheet which is deprecated.
+   * Kept for migration-1 task to ensure existing Config sheets work.
+   */
+  describe('initializeWithConfigSheet (deprecated - for migration)', () => {
     it('should create Config sheet with headers when no sheets exist', () => {
       const { initializeWithConfigSheet } = useSheetsStore.getState();
       initializeWithConfigSheet();
@@ -129,7 +133,11 @@ describe('useSheetsStore', () => {
     });
   });
 
-  describe('getConfigSheet', () => {
+  /**
+   * @deprecated Tests for getConfigSheet which is deprecated.
+   * Kept for migration-1 task to detect existing Config sheets.
+   */
+  describe('getConfigSheet (deprecated - for migration)', () => {
     it('should return Config sheet when it exists', () => {
       const { initializeWithConfigSheet, getConfigSheet } = useSheetsStore.getState();
       initializeWithConfigSheet();
@@ -147,7 +155,11 @@ describe('useSheetsStore', () => {
     });
   });
 
-  describe('Config sheet protection', () => {
+  /**
+   * @deprecated Tests for Config sheet protection which is deprecated.
+   * Kept for migration-1 task compatibility.
+   */
+  describe('Config sheet protection (deprecated - for migration)', () => {
     it('should not allow deleting Config sheet', () => {
       const { initializeWithConfigSheet, removeSheet, getConfigSheet } = useSheetsStore.getState();
       initializeWithConfigSheet();

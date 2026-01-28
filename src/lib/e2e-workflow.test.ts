@@ -6,6 +6,13 @@
  * 2. SKU generation from row values using specifications from store
  * 3. Settings (delimiter, prefix, suffix) applied correctly
  * 4. Export/import round-trip preserves Config and data
+ *
+ * NOTE: The Config sheet parsing tests (Step 1-3) use the deprecated config-sheet module.
+ * These tests are kept to verify the migration-1 task works correctly when converting
+ * existing Config sheet data to the specifications store format.
+ *
+ * @see src/lib/config-sheet.ts (deprecated)
+ * @see migration-1 task in prd.json
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';

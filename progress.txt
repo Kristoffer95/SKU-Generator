@@ -1,3 +1,24 @@
+## cleanup-1: Deprecate config-sheet.ts and related utilities
+
+**Completed**: config-sheet.ts and related functions marked as @deprecated with JSDoc comments
+
+**Key decisions**:
+- Did NOT delete config-sheet.ts since migration-1 task needs parseConfigSheet to migrate existing users' Config sheet data
+- Marked all functions in config-sheet.ts with @deprecated JSDoc comments
+- Marked getConfigSheet and initializeWithConfigSheet in sheets.ts as @deprecated
+- Updated test file describe() names to include "(deprecated - for migration)" suffix
+- Added header comment to e2e-workflow.test.ts explaining migration purpose
+- All deprecation notices reference migration-1 task and prd.json
+
+**Files changed**:
+- src/lib/config-sheet.ts: Added @deprecated module and function comments
+- src/lib/config-sheet.test.ts: Added deprecation comment, renamed describe blocks
+- src/store/sheets.ts: Added @deprecated to getConfigSheet, initializeWithConfigSheet, CONFIG_SHEET_HEADERS, createConfigSheet
+- src/store/sheets.test.ts: Renamed 3 describe blocks to indicate deprecation
+- src/lib/e2e-workflow.test.ts: Added header comment explaining migration context
+
+---
+
 ## reactivity-3: Update cells when displayValue renamed
 
 **Completed**: Cells automatically update when a displayValue is renamed in the specifications store
