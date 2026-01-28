@@ -128,7 +128,7 @@
       "Changing one row to have different values removes amber from both",
       "Validation panel shows duplicate SKU errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "migration-click-navigate",

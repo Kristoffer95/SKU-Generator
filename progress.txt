@@ -1,3 +1,25 @@
+## migration-duplicate-highlight - COMPLETED
+Verify duplicate SKU warning styling works
+
+### Key decisions
+- Duplicate detection via findDuplicateSKUs() in validation.ts (lines 91-137)
+- applyDuplicateHighlighting() in SpreadsheetContainer applies className bg-[#fef3c7] for duplicates
+- Normal SKU cells get bg-[#f1f5f9] (gray-blue)
+- CSS attribute selectors [class*="bg-[#fef3c7]"] in index.css handle dynamic Tailwind classes
+- ValidationPanel shows duplicate SKU errors with amber icons
+
+### Files changed
+- None (already implemented)
+
+### Notes
+- All 4 stepsToVerify criteria verified via existing unit tests
+- Tests in SpreadsheetContainer.test.tsx lines 611-702 verify: className applied, all duplicate rows highlighted, unique rows not highlighted, empty SKUs not flagged
+- Tests in validation.test.ts lines 208-351 verify findDuplicateSKUs logic
+- ValidationPanel integration tested at lines 773-819
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (546 tests total)
+
 ## migration-dropdowns - COMPLETED
 Verify dropdown selection works in spec columns
 
