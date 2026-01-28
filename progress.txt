@@ -1,3 +1,20 @@
+## readonly-sku-1: Make SKU column (column 0) read-only in data sheets
+
+**Completed**: Column 0 is now read-only; users cannot manually edit SKU values
+
+**Key decisions**:
+- Added `config.colReadOnly: { 0: 1 }` to each sheet's Fortune-Sheet config
+- Added `beforeUpdateCell` hook that returns false for column 0 (row > 0)
+- Header row (row 0) remains editable for renaming "SKU" header
+- Auto-generated SKUs via processAutoSKU still work (happens before Fortune-Sheet sees data)
+- Copy from SKU cells works (read-only doesn't block selection/copy)
+
+**Files changed**:
+- src/components/SpreadsheetContainer.tsx: Added colReadOnly config, beforeUpdateCell hook
+- src/components/SpreadsheetContainer.test.tsx: Added 6 tests for read-only behavior
+
+---
+
 ## sku-gen-2: Update auto-SKU logic to use specifications from store
 
 **Completed**: processAutoSKU now reads specifications from useSpecificationsStore

@@ -201,19 +201,33 @@ export function SpreadsheetContainer() {
         data: convertToFortuneSheetData(sheet.data),
         // Add dropdown validation for columns that match specification names
         dataVerification: buildDataVerification(sheet.data, specifications),
+        // Configure column 0 (SKU) as read-only
+        config: {
+          colReadOnly: { 0: 1 },
+        },
       }
 
       return sheetData
     })
   }, [sheets, activeSheetId, specifications])
 
+  // Prevent edits to column 0 (SKU column) - return false to block the update
+  const handleBeforeUpdateCell = useCallback((r: number, c: number) => {
+    // Block edits to column 0 (SKU column), except for row 0 (header)
+    if (c === 0 && r > 0) {
+      return false
+    }
+    return true
+  }, [])
+
   // Hooks for Fortune-Sheet events
   const hooks = useMemo(() => ({
+    beforeUpdateCell: handleBeforeUpdateCell,
     afterActivateSheet: handleSheetActivate,
     afterDeleteSheet: handleAfterDeleteSheet,
     afterUpdateSheetName: handleAfterUpdateSheetName,
     afterAddSheet: handleAfterAddSheet,
-  }), [handleSheetActivate, handleAfterDeleteSheet, handleAfterUpdateSheetName, handleAfterAddSheet])
+  }), [handleBeforeUpdateCell, handleSheetActivate, handleAfterDeleteSheet, handleAfterUpdateSheetName, handleAfterAddSheet])
 
   if (sheets.length === 0) {
     return (

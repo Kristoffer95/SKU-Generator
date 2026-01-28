@@ -547,3 +547,129 @@ describe('SpreadsheetContainer hooks', () => {
     expect(sheets.find(s => s.id === dataSheetId)).toBeUndefined()
   })
 })
+
+describe('SpreadsheetContainer read-only SKU column', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+    capturedHooks = {}
+    capturedData = []
+  })
+
+  it('sets column 0 as read-only via colReadOnly config', () => {
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R-S' }, { v: 'Red' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    const sheet = capturedData.find((s: { id: string }) => s.id === sheetId)
+    expect(sheet.config).toBeDefined()
+    expect(sheet.config.colReadOnly).toBeDefined()
+    expect(sheet.config.colReadOnly[0]).toBe(1)
+  })
+
+  it('provides beforeUpdateCell hook that blocks edits to column 0 data cells', () => {
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R-S' }, { v: 'Red' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // beforeUpdateCell should be provided
+    expect(capturedHooks.beforeUpdateCell).toBeDefined()
+
+    // Editing column 0, row 1 (data row) should be blocked
+    const result = capturedHooks.beforeUpdateCell?.(1, 0, 'NEW-VALUE')
+    expect(result).toBe(false)
+  })
+
+  it('allows editing column 0 header (row 0)', () => {
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R-S' }, { v: 'Red' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Editing column 0, row 0 (header) should be allowed
+    const result = capturedHooks.beforeUpdateCell?.(0, 0, 'Product Code')
+    expect(result).toBe(true)
+  })
+
+  it('allows editing non-SKU columns (columns other than 0)', () => {
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R-S' }, { v: 'Red' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Editing column 1, row 1 should be allowed
+    const result = capturedHooks.beforeUpdateCell?.(1, 1, 'Blue')
+    expect(result).toBe(true)
+  })
+
+  it('blocks edits to column 0 for all data rows', () => {
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R-S' }, { v: 'Red' }],
+      [{ v: 'B-L' }, { v: 'Blue' }],
+      [{ v: 'G-M' }, { v: 'Green' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // All data rows (1, 2, 3) should be blocked for column 0
+    expect(capturedHooks.beforeUpdateCell?.(1, 0, 'X')).toBe(false)
+    expect(capturedHooks.beforeUpdateCell?.(2, 0, 'Y')).toBe(false)
+    expect(capturedHooks.beforeUpdateCell?.(3, 0, 'Z')).toBe(false)
+  })
+
+  it('auto-generated SKU values still update via processAutoSKU', () => {
+    // Set up specifications
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-1',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: '' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Simulate selecting Red via onChange (auto-SKU update happens through processAutoSKU)
+    capturedOnChange?.([{
+      id: sheetId,
+      name: 'Products',
+      data: [
+        [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+        [{ v: '', m: '' }, { v: 'Red', m: 'Red' }],
+      ],
+    }])
+
+    // SKU should be auto-generated despite column being read-only for manual edits
+    const { sheets } = useSheetsStore.getState()
+    const sheet = sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][0]?.v).toBe('R')
+  })
+})

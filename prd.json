@@ -146,7 +146,7 @@
       "Copy from SKU cell still works",
       "Auto-generated SKU values still update correctly"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "readonly-sku-2",
