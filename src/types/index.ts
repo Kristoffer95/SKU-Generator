@@ -33,6 +33,7 @@ export interface CellData {
   m?: string; // display text
   ct?: { fa?: string; t?: string }; // cell type info
   bg?: string; // background color (hex)
+  fc?: string; // font/text color (hex)
 }
 
 /**
@@ -105,4 +106,5 @@ export interface ColumnDef {
   type: ColumnType;
   specId?: string;  // Required when type is 'spec', references a Specification.id
   header: string;   // Column header text
+  width?: number;   // Column width in pixels (default: 120, min: 80)
 }

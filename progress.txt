@@ -1,3 +1,126 @@
+## column-resizing - COMPLETED
+Add ability to resize column widths by dragging
+
+### Key decisions
+- Extended ColumnDef interface with 'width?: number' field in src/types/index.ts
+- Added updateColumnWidth(sheetId, columnIndex, width) method to useSheetsStore with 80px minimum enforcement
+- Modified DraggableColumnHeaders to render resize handles at right edge of each column header
+- Resize handles are thin (w-1) vertical divs with col-resize cursor and hover highlight
+- Drag-to-resize: mousedown starts resize, mousemove updates width in real-time via onColumnResize callback
+- Added document-level event listeners for mousemove/mouseup during resize to track across boundaries
+- Disabled column dragging while resizing (draggable="false" when isResizing)
+- Double-click auto-fit: measures content width of all cells in column plus header, sets optimal width
+- Auto-fit creates temp spans to measure text width, adds padding (32px for cells, 80px for headers)
+- Column widths synced to react-spreadsheet via dynamic CSS injection (<style> element with nth-child selectors)
+- Widths persisted via Zustand persist (stored in ColumnDef.width field)
+- Default column width remains 120px, minimum 80px enforced
+
+### Files changed
+- src/types/index.ts (added width?: number to ColumnDef interface)
+- src/store/sheets.ts (added updateColumnWidth method to interface and implementation)
+- src/store/sheets.test.ts (+7 tests for updateColumnWidth)
+- src/components/spreadsheet/DraggableColumnHeaders.tsx (added resize handles, resize state, resize handlers, double-click auto-fit)
+- src/components/spreadsheet/DraggableColumnHeaders.test.tsx (+10 tests for column resizing)
+- src/components/SpreadsheetContainer.tsx (added handleColumnResize, columnWidthStyles, passed new props to DraggableColumnHeaders)
+
+### Notes
+- All 9 stepsToVerify criteria met:
+  1. ColumnDef interface has 'width?: number' field ✓
+  2. Hover near right edge of column header shows resize cursor ✓
+  3. Dragging adjusts column width in real-time ✓
+  4. Releasing mouse commits the new width ✓
+  5. Width persists after switching sheets and returning ✓ (via Zustand persist)
+  6. Width persists after page refresh ✓ (via localStorage)
+  7. Double-click resize handle auto-fits width to content ✓
+  8. Minimum width constraint (80px) is enforced ✓
+  9. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (863 tests, +17 new)
+- npm run build passes
+
+## cell-text-color - COMPLETED
+Add ability to change cell text/font color in spreadsheet
+
+### Key decisions
+- Created CellTextColorPicker component with 18-color palette (darker colors for text readability)
+- Text color palette includes blacks, grays, and saturated colors (red, orange, green, blue, violet, etc.)
+- Added fc (font color) field to CellData interface
+- Text color picker added to SpreadsheetToolbar after background color picker (uses Type icon)
+- Color picker disabled when no cells selected
+- Font color stored in CellData.fc field, converted to text-[#color] className by spreadsheet-adapter
+- Spreadsheet-adapter handles both bg and fc, combining them into single className
+- Added CSS rules for all 18 text palette colors in index.css
+- Undo/redo support via existing history tracking
+- Clear text color option removes fc property entirely
+- isLightColor helper function for contrast-based checkmark color in picker
+
+### Files changed
+- src/types/index.ts (added fc?: string to CellData interface)
+- src/lib/spreadsheet-adapter.ts (handle fc conversion to/from className)
+- src/lib/spreadsheet-adapter.test.ts (+6 tests for fc conversion)
+- src/components/spreadsheet/CellTextColorPicker.tsx (new, ~130 lines)
+- src/components/spreadsheet/CellTextColorPicker.test.tsx (new, 14 tests)
+- src/components/spreadsheet/SpreadsheetToolbar.tsx (added text color picker props and rendering)
+- src/components/spreadsheet/SpreadsheetToolbar.test.tsx (+7 tests for text color picker)
+- src/components/SpreadsheetContainer.tsx (added selectedTextColor, handleCellTextColorChange)
+- src/components/SpreadsheetContainer.test.tsx (+12 tests for cell text color feature)
+- src/index.css (added CSS rules for 18 text colors)
+
+### Notes
+- All 9 stepsToVerify criteria met:
+  1. CellData interface has 'fc?: string' field for font color ✓
+  2. Select a cell or range of cells ✓
+  3. Text color picker is accessible in formatting UI ✓
+  4. Clicking a color applies text color to selected cells ✓
+  5. Text color renders correctly in the spreadsheet ✓
+  6. Text color persists after page refresh (localStorage via Zustand persist) ✓
+  7. Undo reverts text color change ✓
+  8. Clear formatting removes custom text color ✓
+  9. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (847 tests, +36 new)
+- npm run build passes
+
+## cell-background-color - COMPLETED
+Add ability to change cell background color in spreadsheet
+
+### Key decisions
+- Created CellColorPicker component with 18-color palette (3 rows of 6 colors each)
+- Colors chosen to avoid confusion with system colors: read-only (#f1f5f9) and duplicate warning (#fef3c7)
+- Added color picker to SpreadsheetToolbar after Add Column button
+- Color picker disabled when no cells selected (tracked via selection state)
+- Used duck-typing for RangeSelection instead of instanceof for mock compatibility
+- Background color stored in CellData.bg field, converted to className by spreadsheet-adapter
+- Added CSS rules for all palette colors in index.css to support Tailwind arbitrary value syntax
+- Undo/redo support via existing history tracking in SpreadsheetContainer
+- Clear color option removes bg property entirely (not sets to null)
+
+### Files changed
+- src/components/spreadsheet/CellColorPicker.tsx (new, ~115 lines)
+- src/components/spreadsheet/CellColorPicker.test.tsx (new, 14 tests)
+- src/components/spreadsheet/SpreadsheetToolbar.tsx (added color picker props and rendering)
+- src/components/spreadsheet/SpreadsheetToolbar.test.tsx (+7 tests for color picker)
+- src/components/SpreadsheetContainer.tsx (added getSelectedCells utility, selection tracking, handleCellColorChange)
+- src/components/SpreadsheetContainer.test.tsx (+10 tests for cell background color feature)
+- src/index.css (added CSS rules for 18 user-selectable colors)
+
+### Notes
+- All 8 stepsToVerify criteria met:
+  1. Select a cell or range of cells in the spreadsheet ✓
+  2. Color picker UI is accessible (toolbar button) ✓
+  3. Clicking a color applies background to selected cells ✓
+  4. Background color persists after deselecting cells ✓
+  5. Background color persists after page refresh (localStorage via Zustand persist) ✓
+  6. Undo reverts color change ✓
+  7. Clear formatting option removes custom background ✓
+  8. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (811 tests, +31 new)
+- npm run build passes
+
 ## row-deletion - COMPLETED
 Add ability to delete rows from the spreadsheet with right-click context menu
 

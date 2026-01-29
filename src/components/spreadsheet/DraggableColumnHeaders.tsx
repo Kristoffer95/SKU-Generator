@@ -3,31 +3,48 @@ import { GripVertical } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { ColumnDef } from "@/types"
 
+/** Default width for columns without explicit width */
+const DEFAULT_COLUMN_WIDTH = 120
+/** Minimum allowed column width */
+const MIN_COLUMN_WIDTH = 80
+
 export interface DraggableColumnHeadersProps {
   /** Column definitions for the current sheet */
   columns: ColumnDef[]
   /** Called when a column is reordered */
   onReorder: (oldIndex: number, newIndex: number) => void
-  /** Width of each column header cell (should match spreadsheet column width) */
-  columnWidth?: number
+  /** Called when a column width is changed via resize handle */
+  onColumnResize?: (columnIndex: number, newWidth: number) => void
+  /** Default width for columns without explicit width */
+  defaultColumnWidth?: number
   /** Width of the row indicator column (leftmost column) */
   rowIndicatorWidth?: number
+  /** Reference to the spreadsheet container for auto-fit measurement */
+  spreadsheetRef?: React.RefObject<HTMLDivElement>
 }
 
 /**
  * Draggable header row for spreadsheet columns.
  * Renders above the spreadsheet and allows drag-reorder of columns.
- * SKU column (index 0) is not draggable.
+ * Also supports column resizing via drag handles at the right edge.
+ * SKU column (index 0) is not draggable but can be resized.
  */
 export function DraggableColumnHeaders({
   columns,
   onReorder,
-  columnWidth = 120,
+  onColumnResize,
+  defaultColumnWidth = DEFAULT_COLUMN_WIDTH,
   rowIndicatorWidth = 40,
+  spreadsheetRef,
 }: DraggableColumnHeadersProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)
   const dragOverColumnRef = useRef<number | null>(null)
+
+  // Resize state
+  const [resizingColumnIndex, setResizingColumnIndex] = useState<number | null>(null)
+  const resizeStartXRef = useRef<number>(0)
+  const resizeStartWidthRef = useRef<number>(0)
 
   // Check if a column can be dragged (SKU column at index 0 cannot be moved)
   const canDragColumn = useCallback((index: number) => {
@@ -108,6 +125,108 @@ export function DraggableColumnHeaders({
     dragOverColumnRef.current = null
   }, [draggedIndex, canDropOnColumn, onReorder])
 
+  // Resize handlers
+  const handleResizeStart = useCallback((e: React.MouseEvent, columnIndex: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const column = columns[columnIndex]
+    const currentWidth = column?.width ?? defaultColumnWidth
+
+    setResizingColumnIndex(columnIndex)
+    resizeStartXRef.current = e.clientX
+    resizeStartWidthRef.current = currentWidth
+
+    // Add mouse event listeners to document for tracking resize
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - resizeStartXRef.current
+      const newWidth = Math.max(MIN_COLUMN_WIDTH, resizeStartWidthRef.current + deltaX)
+
+      // Update width while dragging (for visual feedback)
+      onColumnResize?.(columnIndex, newWidth)
+    }
+
+    const handleMouseUp = () => {
+      setResizingColumnIndex(null)
+      document.removeEventListener("mousemove", handleMouseMove)
+      document.removeEventListener("mouseup", handleMouseUp)
+      document.body.style.cursor = ""
+      document.body.style.userSelect = ""
+    }
+
+    document.addEventListener("mousemove", handleMouseMove)
+    document.addEventListener("mouseup", handleMouseUp)
+    document.body.style.cursor = "col-resize"
+    document.body.style.userSelect = "none"
+  }, [columns, defaultColumnWidth, onColumnResize])
+
+  // Double-click to auto-fit column width to content
+  const handleResizeDoubleClick = useCallback((e: React.MouseEvent, columnIndex: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (!spreadsheetRef?.current || !onColumnResize) return
+
+    // Find all cells in this column and measure their content width
+    const tbody = spreadsheetRef.current.querySelector("tbody")
+    if (!tbody) return
+
+    const rows = tbody.querySelectorAll("tr")
+    let maxWidth = MIN_COLUMN_WIDTH
+
+    rows.forEach((row) => {
+      // Get the cell at columnIndex + 1 (accounting for row indicator column)
+      const cells = row.querySelectorAll("th, td")
+      const cell = cells[columnIndex + 1] as HTMLElement | null
+
+      if (cell) {
+        // Create a temporary span to measure content width
+        const span = document.createElement("span")
+        span.style.visibility = "hidden"
+        span.style.position = "absolute"
+        span.style.whiteSpace = "nowrap"
+        span.style.font = window.getComputedStyle(cell).font
+        span.textContent = cell.textContent || ""
+        document.body.appendChild(span)
+
+        // Add some padding (16px on each side = 32px total)
+        const contentWidth = span.offsetWidth + 32
+        maxWidth = Math.max(maxWidth, contentWidth)
+
+        document.body.removeChild(span)
+      }
+    })
+
+    // Also measure the header text
+    const column = columns[columnIndex]
+    if (column) {
+      const span = document.createElement("span")
+      span.style.visibility = "hidden"
+      span.style.position = "absolute"
+      span.style.whiteSpace = "nowrap"
+      span.style.fontWeight = "600"
+      span.style.fontSize = "14px"
+      span.textContent = column.header
+      document.body.appendChild(span)
+
+      // Add padding for header (including drag handle and type badge)
+      const headerWidth = span.offsetWidth + 80
+      maxWidth = Math.max(maxWidth, headerWidth)
+
+      document.body.removeChild(span)
+    }
+
+    // Clamp to reasonable maximum
+    maxWidth = Math.min(maxWidth, 400)
+
+    onColumnResize(columnIndex, maxWidth)
+  }, [columns, spreadsheetRef, onColumnResize])
+
+  // Get the effective width for a column
+  const getColumnWidth = useCallback((column: ColumnDef) => {
+    return column.width ?? defaultColumnWidth
+  }, [defaultColumnWidth])
+
   return (
     <div
       className="draggable-column-headers flex items-stretch border-b bg-[var(--spreadsheet-header-bg,#f8fafc)]"
@@ -127,6 +246,8 @@ export function DraggableColumnHeaders({
         const isDropTarget = dropTargetIndex === index
         const isDraggable = canDragColumn(index)
         const isSKUColumn = column.type === "sku"
+        const isResizing = resizingColumnIndex === index
+        const columnWidth = getColumnWidth(column)
 
         return (
           <div
@@ -134,7 +255,7 @@ export function DraggableColumnHeaders({
             data-column-header
             data-column-index={index}
             data-testid={`column-header-${index}`}
-            draggable={isDraggable}
+            draggable={isDraggable && !isResizing}
             onDragStart={(e) => handleDragStart(e, index)}
             onDragEnd={handleDragEnd}
             onDragOver={(e) => handleDragOver(e, index)}
@@ -143,16 +264,15 @@ export function DraggableColumnHeaders({
             className={cn(
               "relative flex items-center gap-1 px-2 py-1.5 font-semibold text-sm border-r border-[var(--spreadsheet-cell-border,#e2e8f0)]",
               "transition-colors",
-              isDraggable && "cursor-grab active:cursor-grabbing",
-              !isDraggable && "cursor-default",
+              isDraggable && !isResizing && "cursor-grab active:cursor-grabbing",
+              !isDraggable && !isResizing && "cursor-default",
               isDragging && "opacity-50 bg-muted",
               isDropTarget && !isDragging && "bg-primary/10 border-primary",
               isDropTarget && !isDragging && "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-primary"
             )}
             style={{
               width: columnWidth,
-              minWidth: 80,
-              maxWidth: 300,
+              minWidth: MIN_COLUMN_WIDTH,
             }}
             role="columnheader"
             aria-colindex={index + 1}
@@ -194,6 +314,21 @@ export function DraggableColumnHeaders({
               >
                 free
               </span>
+            )}
+
+            {/* Resize handle at right edge */}
+            {onColumnResize && (
+              <div
+                className={cn(
+                  "absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-10",
+                  "hover:bg-primary/50 active:bg-primary",
+                  isResizing && "bg-primary"
+                )}
+                data-testid={`resize-handle-${index}`}
+                onMouseDown={(e) => handleResizeStart(e, index)}
+                onDoubleClick={(e) => handleResizeDoubleClick(e, index)}
+                aria-label={`Resize ${column.header} column`}
+              />
             )}
           </div>
         )

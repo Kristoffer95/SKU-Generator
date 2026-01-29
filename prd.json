@@ -620,7 +620,7 @@
       "Clear formatting option removes custom background",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "cell-text-color",
@@ -637,7 +637,7 @@
       "Clear formatting removes custom text color",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "column-resizing",
@@ -654,7 +654,7 @@
       "Minimum width constraint (80px) is enforced",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "row-resizing",

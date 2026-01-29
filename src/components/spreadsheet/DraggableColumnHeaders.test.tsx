@@ -245,4 +245,194 @@ describe("DraggableColumnHeaders", () => {
     const longHeader = screen.getByTitle("Very Long Column Header Name That Should Be Truncated")
     expect(longHeader).toBeInTheDocument()
   })
+
+  describe("column resizing", () => {
+    let mockOnColumnResize: ReturnType<typeof vi.fn>
+
+    beforeEach(() => {
+      mockOnColumnResize = vi.fn()
+    })
+
+    it("renders resize handles when onColumnResize is provided", () => {
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onColumnResize={mockOnColumnResize}
+        />
+      )
+
+      // All columns should have resize handles
+      expect(screen.getByTestId("resize-handle-0")).toBeInTheDocument()
+      expect(screen.getByTestId("resize-handle-1")).toBeInTheDocument()
+      expect(screen.getByTestId("resize-handle-2")).toBeInTheDocument()
+      expect(screen.getByTestId("resize-handle-3")).toBeInTheDocument()
+    })
+
+    it("does not render resize handles when onColumnResize is not provided", () => {
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+        />
+      )
+
+      expect(screen.queryByTestId("resize-handle-0")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("resize-handle-1")).not.toBeInTheDocument()
+    })
+
+    it("uses column.width when provided", () => {
+      const columns: ColumnDef[] = [
+        { id: "col-1", type: "sku", header: "SKU", width: 150 },
+        { id: "col-2", type: "spec", specId: "spec-1", header: "Color", width: 200 },
+      ]
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onColumnResize={mockOnColumnResize}
+        />
+      )
+
+      const skuHeader = screen.getByTestId("column-header-0")
+      const colorHeader = screen.getByTestId("column-header-1")
+
+      expect(skuHeader).toHaveStyle({ width: "150px" })
+      expect(colorHeader).toHaveStyle({ width: "200px" })
+    })
+
+    it("uses defaultColumnWidth when column.width is not set", () => {
+      const columns: ColumnDef[] = [
+        { id: "col-1", type: "sku", header: "SKU" },
+      ]
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onColumnResize={mockOnColumnResize}
+          defaultColumnWidth={180}
+        />
+      )
+
+      const skuHeader = screen.getByTestId("column-header-0")
+      expect(skuHeader).toHaveStyle({ width: "180px" })
+    })
+
+    it("calls onColumnResize when dragging resize handle", () => {
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onColumnResize={mockOnColumnResize}
+        />
+      )
+
+      const resizeHandle = screen.getByTestId("resize-handle-1")
+
+      // Simulate mousedown
+      fireEvent.mouseDown(resizeHandle, { clientX: 100 })
+
+      // Simulate mousemove on document
+      fireEvent.mouseMove(document, { clientX: 150 })
+
+      // Should call onColumnResize with new width (120 default + 50 delta = 170)
+      // But minimum is 80, so expect the calculation to be based on default 120 + 50 = 170
+      expect(mockOnColumnResize).toHaveBeenCalled()
+    })
+
+    it("enforces minimum column width of 80px", () => {
+      const columns: ColumnDef[] = [
+        { id: "col-1", type: "sku", header: "SKU", width: 120 },
+      ]
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onColumnResize={mockOnColumnResize}
+        />
+      )
+
+      const resizeHandle = screen.getByTestId("resize-handle-0")
+
+      // Simulate mousedown
+      fireEvent.mouseDown(resizeHandle, { clientX: 100 })
+
+      // Simulate dragging far to the left (beyond minimum)
+      fireEvent.mouseMove(document, { clientX: 0 })
+
+      // Should call onColumnResize with minimum width 80
+      expect(mockOnColumnResize).toHaveBeenCalledWith(0, 80)
+    })
+
+    it("resize handle has col-resize cursor style", () => {
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onColumnResize={mockOnColumnResize}
+        />
+      )
+
+      const resizeHandle = screen.getByTestId("resize-handle-0")
+      expect(resizeHandle).toHaveClass("cursor-col-resize")
+    })
+
+    it("stops event propagation to prevent dragging during resize", () => {
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onColumnResize={mockOnColumnResize}
+        />
+      )
+
+      const resizeHandle = screen.getByTestId("resize-handle-1")
+
+      // Create a MouseEvent and spy on its methods
+      const event = new MouseEvent("mousedown", {
+        bubbles: true,
+        cancelable: true,
+        clientX: 100,
+      })
+      const stopPropagationSpy = vi.spyOn(event, "stopPropagation")
+      const preventDefaultSpy = vi.spyOn(event, "preventDefault")
+
+      resizeHandle.dispatchEvent(event)
+
+      // stopPropagation and preventDefault should have been called
+      expect(stopPropagationSpy).toHaveBeenCalled()
+      expect(preventDefaultSpy).toHaveBeenCalled()
+    })
+
+    it("disables dragging while resizing", () => {
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onColumnResize={mockOnColumnResize}
+        />
+      )
+
+      const resizeHandle = screen.getByTestId("resize-handle-1")
+      const colorHeader = screen.getByTestId("column-header-1")
+
+      // Start resizing
+      fireEvent.mouseDown(resizeHandle, { clientX: 100 })
+
+      // During resize, column should not be draggable
+      expect(colorHeader).toHaveAttribute("draggable", "false")
+
+      // End resizing
+      fireEvent.mouseUp(document)
+
+      // After resize ends, column should be draggable again
+      expect(colorHeader).toHaveAttribute("draggable", "true")
+    })
+  })
 })

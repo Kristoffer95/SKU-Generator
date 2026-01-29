@@ -84,8 +84,57 @@ function applyDuplicateHighlighting(matrix: SKUMatrix, duplicateRows: Set<number
 const EMPTY_SPECIFICATIONS: never[] = []
 const EMPTY_COLUMNS: ColumnDef[] = []
 
+/**
+ * Extract cell coordinates from a react-spreadsheet Selection
+ * Returns array of {row, column} objects for all selected cells
+ */
+function getSelectedCells(selection: Selection | undefined): { row: number; column: number }[] {
+  if (!selection) return []
+
+  // Check for RangeSelection - either instanceof or duck-typing for mocked objects
+  // RangeSelection has a 'range' property with start and end points
+  const sel = selection as unknown
+  if (sel && typeof sel === "object" && "range" in sel) {
+    const rangeSelection = sel as { range: { start: { row: number; column: number }; end: { row: number; column: number } } }
+    const range = rangeSelection.range
+    const cells: { row: number; column: number }[] = []
+    const minRow = Math.min(range.start.row, range.end.row)
+    const maxRow = Math.max(range.start.row, range.end.row)
+    const minCol = Math.min(range.start.column, range.end.column)
+    const maxCol = Math.max(range.start.column, range.end.column)
+
+    for (let row = minRow; row <= maxRow; row++) {
+      for (let col = minCol; col <= maxCol; col++) {
+        cells.push({ row, column: col })
+      }
+    }
+    return cells
+  }
+
+  // For selection types with multiple ranges (like EntireColumnsSelection)
+  if (sel && typeof sel === "object" && "ranges" in sel) {
+    const ranges = (sel as { ranges: Array<{ start: { row: number; column: number }; end: { row: number; column: number } }> }).ranges
+    const cells: { row: number; column: number }[] = []
+    for (const range of ranges) {
+      const minRow = Math.min(range.start.row, range.end.row)
+      const maxRow = Math.max(range.start.row, range.end.row)
+      const minCol = Math.min(range.start.column, range.end.column)
+      const maxCol = Math.max(range.start.column, range.end.column)
+
+      for (let row = minRow; row <= maxRow; row++) {
+        for (let col = minCol; col <= maxCol; col++) {
+          cells.push({ row, column: col })
+        }
+      }
+    }
+    return cells
+  }
+
+  return []
+}
+
 export function SpreadsheetContainer() {
-  const { sheets, activeSheetId, setActiveSheet, setSheetData, addSheetWithId, removeSheet, updateSheet, reorderColumns } = useSheetsStore()
+  const { sheets, activeSheetId, setActiveSheet, setSheetData, addSheetWithId, removeSheet, updateSheet, reorderColumns, updateColumnWidth } = useSheetsStore()
   // Get active sheet and use its local specifications and columns
   const activeSheet = sheets.find((s) => s.id === activeSheetId)
   const specifications = useMemo(
@@ -523,6 +572,12 @@ export function SpreadsheetContainer() {
     historyIndexRef.current = -1
   }, [activeSheetId, activeSheet, reorderColumns])
 
+  // Handle column resize
+  const handleColumnResize = useCallback((columnIndex: number, newWidth: number) => {
+    if (!activeSheetId) return
+    updateColumnWidth(activeSheetId, columnIndex, newWidth)
+  }, [activeSheetId, updateColumnWidth])
+
   // Compute validation errors for the active sheet
   const validationErrors = useMemo((): ValidationError[] => {
     if (!activeSheet) return []
@@ -555,10 +610,171 @@ export function SpreadsheetContainer() {
     }))
   }, [sheets])
 
+  // Generate dynamic column width styles
+  const columnWidthStyles = useMemo(() => {
+    if (!columns.length) return null
+
+    const styles = columns.map((col, index) => {
+      const width = col.width ?? 120
+      // Target cells in each column (nth-child is 1-indexed, +2 for row indicator column)
+      return `.sku-spreadsheet .Spreadsheet__cell:nth-child(${index + 2}) { width: ${width}px; min-width: ${width}px; max-width: ${width}px; }`
+    }).join("\n")
+
+    return <style data-testid="column-width-styles">{styles}</style>
+  }, [columns])
+
   // Handle selection changes from user interaction
   const handleSelectionChange = useCallback((newSelection: Selection) => {
     setSelected(newSelection)
   }, [])
+
+  // Compute selected cells from selection state
+  const selectedCells = useMemo(() => getSelectedCells(selected), [selected])
+
+  // Check if there are any selected cells
+  const hasSelection = selectedCells.length > 0
+
+  // Compute the current background color of selected cells
+  // Returns undefined if no cells selected or mixed colors, otherwise the common color
+  const selectedCellColor = useMemo(() => {
+    if (!activeSheet || selectedCells.length === 0) return undefined
+
+    const colors = new Set<string | undefined>()
+    for (const { row, column } of selectedCells) {
+      const cell = activeSheet.data[row]?.[column]
+      colors.add(cell?.bg || undefined)
+    }
+
+    // If all cells have the same color, return that color
+    if (colors.size === 1) {
+      return Array.from(colors)[0]
+    }
+
+    // Mixed colors or some have no color
+    return undefined
+  }, [activeSheet, selectedCells])
+
+  // Compute the current text color of selected cells
+  // Returns undefined if no cells selected or mixed colors, otherwise the common color
+  const selectedTextColor = useMemo(() => {
+    if (!activeSheet || selectedCells.length === 0) return undefined
+
+    const colors = new Set<string | undefined>()
+    for (const { row, column } of selectedCells) {
+      const cell = activeSheet.data[row]?.[column]
+      colors.add(cell?.fc || undefined)
+    }
+
+    // If all cells have the same color, return that color
+    if (colors.size === 1) {
+      return Array.from(colors)[0]
+    }
+
+    // Mixed colors or some have no color
+    return undefined
+  }, [activeSheet, selectedCells])
+
+  // Handle cell background color change
+  const handleCellColorChange = useCallback((color: string | null) => {
+    if (!activeSheet || selectedCells.length === 0) return
+
+    // Track history for undo
+    const oldEntry: HistoryEntry = {
+      data: activeSheet.data,
+      columns: activeSheet.columns,
+    }
+    const currentHistoryIndex = historyIndexRef.current
+
+    // Create a deep copy of the data with new colors applied
+    const newData = activeSheet.data.map((row, rowIndex) => {
+      return row.map((cell, colIndex) => {
+        // Check if this cell is selected
+        const isSelected = selectedCells.some(
+          (sel) => sel.row === rowIndex && sel.column === colIndex
+        )
+
+        if (isSelected) {
+          // Apply or remove the background color
+          if (color === null) {
+            // Remove background color - use rest spread to exclude bg
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { bg, ...rest } = cell || {}
+            return rest
+          } else {
+            // Apply background color
+            return { ...(cell || {}), bg: color }
+          }
+        }
+
+        return cell
+      })
+    })
+
+    // Update sheet data
+    setSheetData(activeSheet.id, newData)
+
+    // Track history for undo/redo
+    setHistory(prev => {
+      if (currentHistoryIndex === -1) {
+        return [...prev, oldEntry]
+      } else {
+        return prev.slice(0, currentHistoryIndex + 1)
+      }
+    })
+    setHistoryIndex(-1)
+    historyIndexRef.current = -1
+  }, [activeSheet, selectedCells, setSheetData])
+
+  // Handle cell text color change
+  const handleCellTextColorChange = useCallback((color: string | null) => {
+    if (!activeSheet || selectedCells.length === 0) return
+
+    // Track history for undo
+    const oldEntry: HistoryEntry = {
+      data: activeSheet.data,
+      columns: activeSheet.columns,
+    }
+    const currentHistoryIndex = historyIndexRef.current
+
+    // Create a deep copy of the data with new colors applied
+    const newData = activeSheet.data.map((row, rowIndex) => {
+      return row.map((cell, colIndex) => {
+        // Check if this cell is selected
+        const isSelected = selectedCells.some(
+          (sel) => sel.row === rowIndex && sel.column === colIndex
+        )
+
+        if (isSelected) {
+          // Apply or remove the text color
+          if (color === null) {
+            // Remove text color - use rest spread to exclude fc
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { fc, ...rest } = cell || {}
+            return rest
+          } else {
+            // Apply text color
+            return { ...(cell || {}), fc: color }
+          }
+        }
+
+        return cell
+      })
+    })
+
+    // Update sheet data
+    setSheetData(activeSheet.id, newData)
+
+    // Track history for undo/redo
+    setHistory(prev => {
+      if (currentHistoryIndex === -1) {
+        return [...prev, oldEntry]
+      } else {
+        return prev.slice(0, currentHistoryIndex + 1)
+      }
+    })
+    setHistoryIndex(-1)
+    historyIndexRef.current = -1
+  }, [activeSheet, selectedCells, setSheetData])
 
   if (sheets.length === 0) {
     return (
@@ -570,6 +786,7 @@ export function SpreadsheetContainer() {
 
   return (
     <div className="h-full w-full flex flex-col" data-testid="spreadsheet-container" data-tour="spreadsheet">
+      {columnWidthStyles}
       <SpreadsheetToolbar
         canUndo={historyIndex === -1 ? history.length > 0 : historyIndex > 0}
         canRedo={historyIndex !== -1 && historyIndex < history.length - 1}
@@ -577,10 +794,17 @@ export function SpreadsheetContainer() {
         onRedo={handleRedo}
         onAddRow={handleAddRow}
         onAddColumn={handleAddColumn}
+        hasSelection={hasSelection}
+        selectedCellColor={selectedCellColor}
+        onCellColorChange={handleCellColorChange}
+        selectedTextColor={selectedTextColor}
+        onTextColorChange={handleCellTextColorChange}
       />
       <DraggableColumnHeaders
         columns={columns}
         onReorder={handleColumnReorder}
+        onColumnResize={handleColumnResize}
+        spreadsheetRef={spreadsheetContainerRef}
       />
       <div
         ref={spreadsheetContainerRef}

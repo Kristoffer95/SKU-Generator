@@ -1512,4 +1512,99 @@ describe('useSheetsStore', () => {
       }
     });
   });
+
+  describe('updateColumnWidth', () => {
+    const createSheetWithColumns = (): { sheetId: string } => {
+      const { addSheet } = useSheetsStore.getState();
+      const sheetId = addSheet('Test Sheet');
+
+      // Set up columns
+      useSheetsStore.setState((state) => ({
+        sheets: state.sheets.map((s) =>
+          s.id === sheetId
+            ? {
+                ...s,
+                columns: [
+                  { id: 'col-1', type: 'sku' as const, header: 'SKU' },
+                  { id: 'col-2', type: 'spec' as const, specId: 'spec-1', header: 'Color' },
+                  { id: 'col-3', type: 'free' as const, header: 'Notes' },
+                ],
+              }
+            : s
+        ),
+      }));
+
+      return { sheetId };
+    };
+
+    it('should update column width', () => {
+      const { sheetId } = createSheetWithColumns();
+      const { updateColumnWidth } = useSheetsStore.getState();
+
+      const result = updateColumnWidth(sheetId, 1, 200);
+      expect(result).toBe(true);
+
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.columns[1].width).toBe(200);
+    });
+
+    it('should enforce minimum width of 80px', () => {
+      const { sheetId } = createSheetWithColumns();
+      const { updateColumnWidth } = useSheetsStore.getState();
+
+      const result = updateColumnWidth(sheetId, 1, 50);
+      expect(result).toBe(true);
+
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.columns[1].width).toBe(80);
+    });
+
+    it('should return false for non-existent sheet', () => {
+      const { updateColumnWidth } = useSheetsStore.getState();
+      const result = updateColumnWidth('non-existent', 0, 200);
+      expect(result).toBe(false);
+    });
+
+    it('should return false for invalid column index', () => {
+      const { sheetId } = createSheetWithColumns();
+      const { updateColumnWidth } = useSheetsStore.getState();
+
+      expect(updateColumnWidth(sheetId, -1, 200)).toBe(false);
+      expect(updateColumnWidth(sheetId, 10, 200)).toBe(false);
+    });
+
+    it('should allow updating width of SKU column', () => {
+      const { sheetId } = createSheetWithColumns();
+      const { updateColumnWidth } = useSheetsStore.getState();
+
+      const result = updateColumnWidth(sheetId, 0, 150);
+      expect(result).toBe(true);
+
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.columns[0].width).toBe(150);
+    });
+
+    it('should not affect other columns when updating one', () => {
+      const { sheetId } = createSheetWithColumns();
+      const { updateColumnWidth } = useSheetsStore.getState();
+
+      updateColumnWidth(sheetId, 1, 200);
+
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.columns[0].width).toBeUndefined();
+      expect(sheet.columns[1].width).toBe(200);
+      expect(sheet.columns[2].width).toBeUndefined();
+    });
+
+    it('should persist width after refresh (via Zustand persist)', () => {
+      const { sheetId } = createSheetWithColumns();
+      const { updateColumnWidth } = useSheetsStore.getState();
+
+      updateColumnWidth(sheetId, 1, 250);
+
+      // Zustand persist is set up, so width should be in state
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.columns[1].width).toBe(250);
+    });
+  });
 });

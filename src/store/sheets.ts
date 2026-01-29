@@ -39,6 +39,22 @@ interface SheetsState {
   removeSpecValue: (sheetId: string, specId: string, valueId: string) => boolean;
   getSpecificationById: (sheetId: string, specId: string) => Specification | undefined;
   validateSkuFragment: (sheetId: string, specId: string, skuFragment: string, excludeValueId?: string) => boolean;
+
+  // Column management methods
+  /**
+   * Reorder columns in a sheet.
+   * Moves a column from oldIndex to newIndex and updates all row data accordingly.
+   * SKU column (index 0) cannot be moved.
+   */
+  reorderColumns: (sheetId: string, oldIndex: number, newIndex: number) => boolean;
+
+  /**
+   * Update the width of a column.
+   * @param sheetId - The ID of the sheet
+   * @param columnIndex - The index of the column to resize
+   * @param width - The new width in pixels (min: 80)
+   */
+  updateColumnWidth: (sheetId: string, columnIndex: number, width: number) => boolean;
 }
 
 const generateId = () => crypto.randomUUID();
@@ -471,6 +487,75 @@ export const useSheetsStore = create<SheetsState>()(
         return !spec.values.some(
           (val) => val.skuFragment === skuFragment && val.id !== excludeValueId
         );
+      },
+
+      reorderColumns: (sheetId: string, oldIndex: number, newIndex: number) => {
+        const { sheets } = get();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        if (!sheet) return false;
+
+        const columns = sheet.columns ?? [];
+
+        // Validate indices
+        if (oldIndex < 0 || oldIndex >= columns.length) return false;
+        if (newIndex < 0 || newIndex >= columns.length) return false;
+        if (oldIndex === newIndex) return true; // Nothing to do
+
+        // SKU column (index 0) cannot be moved
+        if (oldIndex === 0 || newIndex === 0) return false;
+
+        // Reorder columns array
+        const newColumns = [...columns];
+        const [movedColumn] = newColumns.splice(oldIndex, 1);
+        newColumns.splice(newIndex, 0, movedColumn);
+
+        // Reorder data in all rows to match new column order
+        const newData = sheet.data.map((row) => {
+          const newRow = [...row];
+          const [movedCell] = newRow.splice(oldIndex, 1);
+          newRow.splice(newIndex, 0, movedCell);
+          return newRow;
+        });
+
+        // Update the sheet atomically with both columns and data
+        set((state) => ({
+          sheets: state.sheets.map((s) =>
+            s.id === sheetId
+              ? { ...s, columns: newColumns, data: newData }
+              : s
+          ),
+        }));
+
+        return true;
+      },
+
+      updateColumnWidth: (sheetId: string, columnIndex: number, width: number) => {
+        const { sheets } = get();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        if (!sheet) return false;
+
+        const columns = sheet.columns ?? [];
+
+        // Validate column index
+        if (columnIndex < 0 || columnIndex >= columns.length) return false;
+
+        // Enforce minimum width
+        const clampedWidth = Math.max(80, width);
+
+        set((state) => ({
+          sheets: state.sheets.map((s) =>
+            s.id === sheetId
+              ? {
+                  ...s,
+                  columns: s.columns.map((col, idx) =>
+                    idx === columnIndex ? { ...col, width: clampedWidth } : col
+                  ),
+                }
+              : s
+          ),
+        }));
+
+        return true;
       },
     }),
     {
