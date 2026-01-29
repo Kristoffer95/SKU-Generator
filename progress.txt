@@ -1,3 +1,40 @@
+## remotion-validation-scene - COMPLETED
+Create ValidationScene.tsx (~5 seconds, 150 frames at 30fps)
+
+### Key decisions
+- Created ValidationScene component demonstrating validation panel and click-to-navigate feature
+- Animation timeline divided into 6 phases:
+  - Frame 0-20: App frame visible, zoom focus effect on sheet tabs area (scale 1.05, blue glow)
+  - Frame 20-40: Cursor moves to Sheet 2 tab, click animation, tab switches with scale effect
+  - Frame 40-60: Validation panel slides up from bottom using spring animation
+  - Frame 60-100: Error list items fade in sequentially with 8-frame stagger (3 errors total)
+  - Frame 100-130: Cursor appears at first error, click animation with scale/bg-color change
+  - Frame 130-150: Navigate animation - cursor moves from error to cell, cell highlight with glow
+- Custom components: SheetTab, ValidationErrorItem, SpreadsheetCell (all frame-driven animations)
+- Cursor animates along path from validation error row to target cell in spreadsheet
+- Cell highlight uses box-shadow with expanding ring width and blue glow
+- Zoom effect zooms out after panel appears to show full context
+- Feature callout bubbles explain each phase: "Switch between sheets", "See validation issues", "Click error to navigate", "Jumps to the affected cell!"
+- Spreadsheet shows realistic validation scenario: missing values and duplicate SKU errors
+
+### Files changed
+- remotion/scenes/ValidationScene.tsx (new, ~600 lines)
+- remotion/Root.tsx (added ValidationScene composition with 150 frames)
+
+### Notes
+- All 6 stepsToVerify criteria met:
+  1. remotion/scenes/ValidationScene.tsx exports ValidationScene component ✓
+  2. Sheet tabs area receives focus with zoom ✓
+  3. Tab click shows cursor and tab switches ✓
+  4. Validation panel slides up from bottom ✓
+  5. Error items appear with staggered fade-in ✓
+  6. Navigate animation shows cursor moving from error to cell ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build dir)
+- npm run test passes (747 tests)
+- npm run build passes
+- Remotion bundle builds successfully
+
 ## remotion-settings-scene - COMPLETED
 Create SettingsScene.tsx (~4 seconds, 120 frames at 30fps)
 

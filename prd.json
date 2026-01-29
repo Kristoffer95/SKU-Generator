@@ -528,7 +528,7 @@
       "Error items appear with staggered fade-in",
       "Navigate animation shows cursor moving from error to cell"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "remotion-outro-scene",
