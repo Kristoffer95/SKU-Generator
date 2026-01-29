@@ -1,3 +1,39 @@
+## remotion-spec-management-scene - COMPLETED
+Create SpecManagementScene.tsx (~7 seconds, 210 frames at 30fps)
+
+### Key decisions
+- Created SpecManagementScene component demonstrating sidebar spec management workflow
+- Animation timeline divided into 4 phases:
+  - Frame 0-30: Sidebar slides in from left using MockSidebar with spring animation
+  - Frame 30-90: Spec cards (Color, Size, Material) appear with staggered fade-in (15 frame delay each)
+  - Frame 90-130: Material card expands to show values with height animation (chevron rotates, values stagger in)
+  - Frame 130-200: Drag-to-reorder simulation - Material moves up 2 positions, Color/Size shift down
+- Used spring() with damping=20, stiffness=80 for smooth drag animation
+- Ghost card (dashed border, faded) shows original position during drag
+- After drag settles (frame 180+), cards render in final order: Material, Color, Size
+- Scene title "Manage Specifications" fades in at top with AnimatedText
+- Feature callout bubbles explain: expand/collapse, SKU fragments, drag reorder
+- Main content area shows placeholder for spreadsheet context
+- Card height calculation: 56px per position (48px card + 8px gap) for accurate Y offsets
+
+### Files changed
+- remotion/scenes/SpecManagementScene.tsx (new, ~280 lines)
+- remotion/Root.tsx (added SpecManagementScene composition for preview)
+
+### Notes
+- All 6 stepsToVerify criteria met:
+  1. remotion/scenes/SpecManagementScene.tsx exports SpecManagementScene component ✓
+  2. Sidebar slides in from left using spring animation ✓
+  3. Spec cards (Color, Size, Material) appear with staggered timing ✓
+  4. One card expands to show values with height animation ✓
+  5. Drag reorder simulation shows card moving and others shifting ✓
+  6. SKU fragment badges are highlighted during expansion ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (747 tests)
+- npm run build passes
+- Remotion bundle builds successfully
+
 ## remotion-intro-scene - COMPLETED
 Create IntroScene.tsx (~4 seconds, 120 frames at 30fps)
 

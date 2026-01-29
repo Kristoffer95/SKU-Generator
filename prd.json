@@ -485,7 +485,7 @@
       "Drag reorder simulation shows card moving and others shifting",
       "SKU fragment badges are highlighted during expansion"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "remotion-spreadsheet-scene",
