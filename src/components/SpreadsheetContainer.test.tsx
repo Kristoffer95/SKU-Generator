@@ -4391,4 +4391,46 @@ describe('column width styles (column-resize-full-column)', () => {
     const styleElement = document.querySelector('[data-testid="column-width-styles"]')
     expect(styleElement).not.toBeInTheDocument()
   })
+
+  it('generates properly formatted CSS selectors without malformed characters', () => {
+    // This test verifies the fix for the bug where CSS selectors were malformed
+    // due to incorrect newline handling between colStyles and cellStyles
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU', width: 100 },
+      { id: 'col-1', type: 'spec', specId: 'spec-1', header: 'Color', width: 150 },
+      { id: 'col-2', type: 'free', header: 'Notes', width: 200 },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU' }, { v: 'Color' }, { v: 'Notes' }],
+      [{ v: 'SKU-001' }, { v: 'Red' }, { v: 'Test' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [])
+
+    render(<SpreadsheetContainer />)
+
+    const styleElement = document.querySelector('[data-testid="column-width-styles"]')
+    expect(styleElement).toBeInTheDocument()
+
+    const styleContent = styleElement?.textContent || ''
+
+    // All selectors should start with .sku-spreadsheet (not n.sku-spreadsheet or other malformed variants)
+    const selectorRegex = /[a-z]\.[a-z]/gi
+    const malformedMatches = styleContent.match(selectorRegex)
+    // The only valid match should be "sku-spreadsheet" patterns, not like "n.sku"
+    if (malformedMatches) {
+      malformedMatches.forEach(match => {
+        // Valid patterns include "d.s" (spreadsheet), "t.S" (Spreadsheet__table), etc.
+        // Invalid would be something starting a line that looks like a malformed selector
+        expect(match).not.toBe('n.')
+      })
+    }
+
+    // Verify that each cell style selector is properly formed
+    expect(styleContent).toContain('.sku-spreadsheet .Spreadsheet__table tr > *:nth-child(2)')
+    expect(styleContent).toContain('.sku-spreadsheet .Spreadsheet__table tr > *:nth-child(3)')
+    expect(styleContent).toContain('.sku-spreadsheet .Spreadsheet__table tr > *:nth-child(4)')
+
+    // Verify no malformed selectors like 'n.sku-spreadsheet' exist
+    expect(styleContent).not.toMatch(/\bn\.sku-spreadsheet/)
+  })
 })

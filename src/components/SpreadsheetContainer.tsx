@@ -16,7 +16,7 @@ import { AddColumnDialog } from "@/components/AddColumnDialog"
 import { DeleteColumnConfirmDialog } from "@/components/DeleteColumnConfirmDialog"
 import { DeleteRowConfirmDialog } from "@/components/DeleteRowConfirmDialog"
 import { convertToSpreadsheetData, convertFromSpreadsheetData } from "@/lib/spreadsheet-adapter"
-import type { CellData, ColumnDef } from "@/types"
+import type { CellData, ColumnDef, CellTextAlign } from "@/types"
 import type { SKUMatrix } from "@/types/spreadsheet"
 
 /**
@@ -680,7 +680,9 @@ export function SpreadsheetContainer() {
       return `.sku-spreadsheet .Spreadsheet__table tr > *:nth-child(${index + 2}) { width: ${width}px; min-width: ${width}px; max-width: ${width}px; }`
     }).join("\n")
 
-    return <style data-testid="column-width-styles">{colStyles}\n{cellStyles}</style>
+    // Combine styles with proper newline separation
+    const combinedStyles = `${colStyles}\n${cellStyles}`
+    return <style data-testid="column-width-styles">{combinedStyles}</style>
   }, [columns])
 
   // Generate dynamic row height styles
@@ -752,6 +754,66 @@ export function SpreadsheetContainer() {
     }
 
     // Mixed colors or some have no color
+    return undefined
+  }, [activeSheet, selectedCells])
+
+  // Compute the current bold state of selected cells
+  // Returns undefined if mixed, true if all bold, false if all not bold
+  const isBold = useMemo((): boolean | undefined => {
+    if (!activeSheet || selectedCells.length === 0) return undefined
+
+    const states = new Set<boolean>()
+    for (const { row, column } of selectedCells) {
+      const cell = activeSheet.data[row]?.[column]
+      states.add(cell?.bold === true)
+    }
+
+    // If all cells have the same state, return that state
+    if (states.size === 1) {
+      return Array.from(states)[0]
+    }
+
+    // Mixed states
+    return undefined
+  }, [activeSheet, selectedCells])
+
+  // Compute the current italic state of selected cells
+  // Returns undefined if mixed, true if all italic, false if all not italic
+  const isItalic = useMemo((): boolean | undefined => {
+    if (!activeSheet || selectedCells.length === 0) return undefined
+
+    const states = new Set<boolean>()
+    for (const { row, column } of selectedCells) {
+      const cell = activeSheet.data[row]?.[column]
+      states.add(cell?.italic === true)
+    }
+
+    // If all cells have the same state, return that state
+    if (states.size === 1) {
+      return Array.from(states)[0]
+    }
+
+    // Mixed states
+    return undefined
+  }, [activeSheet, selectedCells])
+
+  // Compute the current text alignment of selected cells
+  // Returns undefined if mixed, otherwise the common alignment
+  const textAlign = useMemo((): CellTextAlign | undefined => {
+    if (!activeSheet || selectedCells.length === 0) return undefined
+
+    const alignments = new Set<CellTextAlign | undefined>()
+    for (const { row, column } of selectedCells) {
+      const cell = activeSheet.data[row]?.[column]
+      alignments.add(cell?.align)
+    }
+
+    // If all cells have the same alignment, return it
+    if (alignments.size === 1) {
+      return Array.from(alignments)[0]
+    }
+
+    // Mixed alignments
     return undefined
   }, [activeSheet, selectedCells])
 
@@ -879,6 +941,162 @@ export function SpreadsheetContainer() {
     historyIndexRef.current = -1
   }, [activeSheet, selectedCells, setSheetData])
 
+  // Handle bold formatting change
+  const handleBoldChange = useCallback((bold: boolean) => {
+    if (!activeSheet) return
+
+    // Use preserved selection if current selection is empty
+    const cellsToApply = selectedCells.length > 0
+      ? selectedCells
+      : getSelectedCells(preservedSelectionRef.current)
+
+    if (cellsToApply.length === 0) return
+
+    // Track history for undo
+    const oldEntry: HistoryEntry = {
+      data: activeSheet.data,
+      columns: activeSheet.columns,
+    }
+    const currentHistoryIndex = historyIndexRef.current
+
+    // Create a deep copy of the data with new bold state applied
+    const newData = activeSheet.data.map((row, rowIndex) => {
+      return row.map((cell, colIndex) => {
+        const isSelected = cellsToApply.some(
+          (sel) => sel.row === rowIndex && sel.column === colIndex
+        )
+
+        if (isSelected) {
+          if (bold) {
+            return { ...(cell || {}), bold: true }
+          } else {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { bold: _, ...rest } = cell || {}
+            return rest
+          }
+        }
+
+        return cell
+      })
+    })
+
+    // Update sheet data
+    setSheetData(activeSheet.id, newData)
+
+    // Track history for undo/redo
+    setHistory(prev => {
+      if (currentHistoryIndex === -1) {
+        return [...prev, oldEntry]
+      } else {
+        return prev.slice(0, currentHistoryIndex + 1)
+      }
+    })
+    setHistoryIndex(-1)
+    historyIndexRef.current = -1
+  }, [activeSheet, selectedCells, setSheetData])
+
+  // Handle italic formatting change
+  const handleItalicChange = useCallback((italic: boolean) => {
+    if (!activeSheet) return
+
+    // Use preserved selection if current selection is empty
+    const cellsToApply = selectedCells.length > 0
+      ? selectedCells
+      : getSelectedCells(preservedSelectionRef.current)
+
+    if (cellsToApply.length === 0) return
+
+    // Track history for undo
+    const oldEntry: HistoryEntry = {
+      data: activeSheet.data,
+      columns: activeSheet.columns,
+    }
+    const currentHistoryIndex = historyIndexRef.current
+
+    // Create a deep copy of the data with new italic state applied
+    const newData = activeSheet.data.map((row, rowIndex) => {
+      return row.map((cell, colIndex) => {
+        const isSelected = cellsToApply.some(
+          (sel) => sel.row === rowIndex && sel.column === colIndex
+        )
+
+        if (isSelected) {
+          if (italic) {
+            return { ...(cell || {}), italic: true }
+          } else {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { italic: _, ...rest } = cell || {}
+            return rest
+          }
+        }
+
+        return cell
+      })
+    })
+
+    // Update sheet data
+    setSheetData(activeSheet.id, newData)
+
+    // Track history for undo/redo
+    setHistory(prev => {
+      if (currentHistoryIndex === -1) {
+        return [...prev, oldEntry]
+      } else {
+        return prev.slice(0, currentHistoryIndex + 1)
+      }
+    })
+    setHistoryIndex(-1)
+    historyIndexRef.current = -1
+  }, [activeSheet, selectedCells, setSheetData])
+
+  // Handle text alignment change
+  const handleAlignChange = useCallback((align: CellTextAlign) => {
+    if (!activeSheet) return
+
+    // Use preserved selection if current selection is empty
+    const cellsToApply = selectedCells.length > 0
+      ? selectedCells
+      : getSelectedCells(preservedSelectionRef.current)
+
+    if (cellsToApply.length === 0) return
+
+    // Track history for undo
+    const oldEntry: HistoryEntry = {
+      data: activeSheet.data,
+      columns: activeSheet.columns,
+    }
+    const currentHistoryIndex = historyIndexRef.current
+
+    // Create a deep copy of the data with new alignment applied
+    const newData = activeSheet.data.map((row, rowIndex) => {
+      return row.map((cell, colIndex) => {
+        const isSelected = cellsToApply.some(
+          (sel) => sel.row === rowIndex && sel.column === colIndex
+        )
+
+        if (isSelected) {
+          return { ...(cell || {}), align }
+        }
+
+        return cell
+      })
+    })
+
+    // Update sheet data
+    setSheetData(activeSheet.id, newData)
+
+    // Track history for undo/redo
+    setHistory(prev => {
+      if (currentHistoryIndex === -1) {
+        return [...prev, oldEntry]
+      } else {
+        return prev.slice(0, currentHistoryIndex + 1)
+      }
+    })
+    setHistoryIndex(-1)
+    historyIndexRef.current = -1
+  }, [activeSheet, selectedCells, setSheetData])
+
   if (sheets.length === 0) {
     return (
       <div className="flex h-full items-center justify-center text-muted-foreground">
@@ -905,6 +1123,12 @@ export function SpreadsheetContainer() {
         selectedTextColor={selectedTextColor}
         onTextColorChange={handleCellTextColorChange}
         onTextColorPickerOpenChange={handleColorPickerOpenChange}
+        isBold={isBold}
+        onBoldChange={handleBoldChange}
+        isItalic={isItalic}
+        onItalicChange={handleItalicChange}
+        textAlign={textAlign}
+        onAlignChange={handleAlignChange}
       />
       <DraggableColumnHeaders
         columns={columns}

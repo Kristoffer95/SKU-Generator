@@ -99,13 +99,22 @@ export function convertToSpreadsheetData(
 
       // Free columns: no special treatment (plain text input)
 
-      // Preserve background color and font color as className if set
+      // Preserve styling as classNames
       const classNames: string[] = [];
       if (cell.bg) {
         classNames.push(`bg-[${cell.bg}]`);
       }
       if (cell.fc) {
         classNames.push(`text-[${cell.fc}]`);
+      }
+      if (cell.bold) {
+        classNames.push('cell-bold');
+      }
+      if (cell.italic) {
+        classNames.push('cell-italic');
+      }
+      if (cell.align) {
+        classNames.push(`cell-align-${cell.align}`);
       }
       if (classNames.length > 0) {
         skuCell.className = classNames.join(' ');
@@ -151,7 +160,7 @@ export function convertFromSpreadsheetData(matrix: SKUMatrix): CellData[][] {
         cellData.m = String(cell.value);
       }
 
-      // Convert className back to bg and fc if they're Tailwind color classes
+      // Convert className back to styling properties
       if (cell.className) {
         const bgMatch = cell.className.match(/bg-\[([#\w]+)\]/);
         if (bgMatch) {
@@ -160,6 +169,16 @@ export function convertFromSpreadsheetData(matrix: SKUMatrix): CellData[][] {
         const fcMatch = cell.className.match(/text-\[([#\w]+)\]/);
         if (fcMatch) {
           cellData.fc = fcMatch[1];
+        }
+        if (cell.className.includes('cell-bold')) {
+          cellData.bold = true;
+        }
+        if (cell.className.includes('cell-italic')) {
+          cellData.italic = true;
+        }
+        const alignMatch = cell.className.match(/cell-align-(left|center|right)/);
+        if (alignMatch) {
+          cellData.align = alignMatch[1] as 'left' | 'center' | 'right';
         }
       }
 

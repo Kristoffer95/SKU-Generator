@@ -422,4 +422,309 @@ describe("SpreadsheetToolbar", () => {
       });
     });
   });
+
+  describe("bold button", () => {
+    const mockOnBoldChange = vi.fn();
+
+    beforeEach(() => {
+      mockOnBoldChange.mockClear();
+    });
+
+    it("renders bold button when onBoldChange is provided", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          onBoldChange={mockOnBoldChange}
+        />
+      );
+
+      expect(screen.getByTestId("spreadsheet-toolbar-bold")).toBeInTheDocument();
+    });
+
+    it("does not render bold button when onBoldChange is not provided", () => {
+      render(<SpreadsheetToolbar {...defaultProps} />);
+
+      expect(screen.queryByTestId("spreadsheet-toolbar-bold")).not.toBeInTheDocument();
+    });
+
+    it("bold button is disabled when hasSelection is false", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={false}
+          onBoldChange={mockOnBoldChange}
+        />
+      );
+
+      expect(screen.getByTestId("spreadsheet-toolbar-bold")).toBeDisabled();
+    });
+
+    it("bold button is enabled when hasSelection is true", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          onBoldChange={mockOnBoldChange}
+        />
+      );
+
+      expect(screen.getByTestId("spreadsheet-toolbar-bold")).not.toBeDisabled();
+    });
+
+    it("calls onBoldChange with true when clicked and isBold is false", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          isBold={false}
+          onBoldChange={mockOnBoldChange}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId("spreadsheet-toolbar-bold"));
+
+      expect(mockOnBoldChange).toHaveBeenCalledWith(true);
+    });
+
+    it("calls onBoldChange with false when clicked and isBold is true", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          isBold={true}
+          onBoldChange={mockOnBoldChange}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId("spreadsheet-toolbar-bold"));
+
+      expect(mockOnBoldChange).toHaveBeenCalledWith(false);
+    });
+
+    it("shows active state when isBold is true and hasSelection", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          isBold={true}
+          onBoldChange={mockOnBoldChange}
+        />
+      );
+
+      expect(screen.getByTestId("spreadsheet-toolbar-bold")).toHaveClass("bg-accent");
+    });
+  });
+
+  describe("italic button", () => {
+    const mockOnItalicChange = vi.fn();
+
+    beforeEach(() => {
+      mockOnItalicChange.mockClear();
+    });
+
+    it("renders italic button when onItalicChange is provided", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          onItalicChange={mockOnItalicChange}
+        />
+      );
+
+      expect(screen.getByTestId("spreadsheet-toolbar-italic")).toBeInTheDocument();
+    });
+
+    it("does not render italic button when onItalicChange is not provided", () => {
+      render(<SpreadsheetToolbar {...defaultProps} />);
+
+      expect(screen.queryByTestId("spreadsheet-toolbar-italic")).not.toBeInTheDocument();
+    });
+
+    it("italic button is disabled when hasSelection is false", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={false}
+          onItalicChange={mockOnItalicChange}
+        />
+      );
+
+      expect(screen.getByTestId("spreadsheet-toolbar-italic")).toBeDisabled();
+    });
+
+    it("calls onItalicChange with true when clicked and isItalic is false", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          isItalic={false}
+          onItalicChange={mockOnItalicChange}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId("spreadsheet-toolbar-italic"));
+
+      expect(mockOnItalicChange).toHaveBeenCalledWith(true);
+    });
+
+    it("calls onItalicChange with false when clicked and isItalic is true", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          isItalic={true}
+          onItalicChange={mockOnItalicChange}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId("spreadsheet-toolbar-italic"));
+
+      expect(mockOnItalicChange).toHaveBeenCalledWith(false);
+    });
+
+    it("shows active state when isItalic is true and hasSelection", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          isItalic={true}
+          onItalicChange={mockOnItalicChange}
+        />
+      );
+
+      expect(screen.getByTestId("spreadsheet-toolbar-italic")).toHaveClass("bg-accent");
+    });
+  });
+
+  describe("alignment buttons", () => {
+    const mockOnAlignChange = vi.fn();
+
+    beforeEach(() => {
+      mockOnAlignChange.mockClear();
+    });
+
+    it("renders alignment buttons when onAlignChange is provided", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          onAlignChange={mockOnAlignChange}
+        />
+      );
+
+      expect(screen.getByTestId("spreadsheet-toolbar-align-left")).toBeInTheDocument();
+      expect(screen.getByTestId("spreadsheet-toolbar-align-center")).toBeInTheDocument();
+      expect(screen.getByTestId("spreadsheet-toolbar-align-right")).toBeInTheDocument();
+    });
+
+    it("does not render alignment buttons when onAlignChange is not provided", () => {
+      render(<SpreadsheetToolbar {...defaultProps} />);
+
+      expect(screen.queryByTestId("spreadsheet-toolbar-align-left")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("spreadsheet-toolbar-align-center")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("spreadsheet-toolbar-align-right")).not.toBeInTheDocument();
+    });
+
+    it("alignment buttons are disabled when hasSelection is false", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={false}
+          onAlignChange={mockOnAlignChange}
+        />
+      );
+
+      expect(screen.getByTestId("spreadsheet-toolbar-align-left")).toBeDisabled();
+      expect(screen.getByTestId("spreadsheet-toolbar-align-center")).toBeDisabled();
+      expect(screen.getByTestId("spreadsheet-toolbar-align-right")).toBeDisabled();
+    });
+
+    it("calls onAlignChange with 'left' when align left button is clicked", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          onAlignChange={mockOnAlignChange}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId("spreadsheet-toolbar-align-left"));
+
+      expect(mockOnAlignChange).toHaveBeenCalledWith("left");
+    });
+
+    it("calls onAlignChange with 'center' when align center button is clicked", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          onAlignChange={mockOnAlignChange}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId("spreadsheet-toolbar-align-center"));
+
+      expect(mockOnAlignChange).toHaveBeenCalledWith("center");
+    });
+
+    it("calls onAlignChange with 'right' when align right button is clicked", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          onAlignChange={mockOnAlignChange}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId("spreadsheet-toolbar-align-right"));
+
+      expect(mockOnAlignChange).toHaveBeenCalledWith("right");
+    });
+
+    it("shows active state on align left when textAlign is 'left' and hasSelection", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          textAlign="left"
+          onAlignChange={mockOnAlignChange}
+        />
+      );
+
+      expect(screen.getByTestId("spreadsheet-toolbar-align-left")).toHaveClass("bg-accent");
+      expect(screen.getByTestId("spreadsheet-toolbar-align-center")).not.toHaveClass("bg-accent");
+      expect(screen.getByTestId("spreadsheet-toolbar-align-right")).not.toHaveClass("bg-accent");
+    });
+
+    it("shows active state on align center when textAlign is 'center' and hasSelection", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          textAlign="center"
+          onAlignChange={mockOnAlignChange}
+        />
+      );
+
+      expect(screen.getByTestId("spreadsheet-toolbar-align-left")).not.toHaveClass("bg-accent");
+      expect(screen.getByTestId("spreadsheet-toolbar-align-center")).toHaveClass("bg-accent");
+      expect(screen.getByTestId("spreadsheet-toolbar-align-right")).not.toHaveClass("bg-accent");
+    });
+
+    it("shows active state on align right when textAlign is 'right' and hasSelection", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          textAlign="right"
+          onAlignChange={mockOnAlignChange}
+        />
+      );
+
+      expect(screen.getByTestId("spreadsheet-toolbar-align-left")).not.toHaveClass("bg-accent");
+      expect(screen.getByTestId("spreadsheet-toolbar-align-center")).not.toHaveClass("bg-accent");
+      expect(screen.getByTestId("spreadsheet-toolbar-align-right")).toHaveClass("bg-accent");
+    });
+  });
 });

@@ -168,7 +168,9 @@
 
 .sku-spreadsheet .Spreadsheet__table {
   border-collapse: collapse;
-  width: 100%;
+  /* Use auto width to respect column widths from colgroup/CSS */
+  /* width: 100% causes table to expand and distribute space among columns */
+  width: auto;
 }
 
 /* Header row styling (first row) */
@@ -361,6 +363,34 @@
   color: #701a75 !important;
 }
 
+/* Text formatting: Bold */
+.sku-spreadsheet .Spreadsheet__cell.cell-bold,
+.sku-spreadsheet [class*="cell-bold"] {
+  font-weight: 700 !important;
+}
+
+/* Text formatting: Italic */
+.sku-spreadsheet .Spreadsheet__cell.cell-italic,
+.sku-spreadsheet [class*="cell-italic"] {
+  font-style: italic !important;
+}
+
+/* Text formatting: Alignment */
+.sku-spreadsheet .Spreadsheet__cell.cell-align-left,
+.sku-spreadsheet [class*="cell-align-left"] {
+  text-align: left !important;
+}
+
+.sku-spreadsheet .Spreadsheet__cell.cell-align-center,
+.sku-spreadsheet [class*="cell-align-center"] {
+  text-align: center !important;
+}
+
+.sku-spreadsheet .Spreadsheet__cell.cell-align-right,
+.sku-spreadsheet [class*="cell-align-right"] {
+  text-align: right !important;
+}
+
 /* General cell styling */
 .sku-spreadsheet .Spreadsheet__cell {
   border: 1px solid var(--spreadsheet-cell-border);
@@ -482,17 +512,38 @@
 }
 
 /* Hide the default header row when using draggable headers */
-.sku-spreadsheet.with-draggable-headers tr:first-child .Spreadsheet__cell {
-  visibility: hidden;
+/* IMPORTANT: Use visibility:collapse instead of display:none to preserve */
+/* column width definitions for table-layout: fixed */
+.sku-spreadsheet.with-draggable-headers tr:first-child {
+  visibility: collapse;
+  height: 0;
+  line-height: 0;
+  overflow: hidden;
+}
+
+.sku-spreadsheet.with-draggable-headers tr:first-child .Spreadsheet__cell,
+.sku-spreadsheet.with-draggable-headers tr:first-child .Spreadsheet__header {
   height: 0;
   padding: 0;
   border-top: none;
   border-bottom: none;
+  line-height: 0;
+  font-size: 0;
 }
 
-.sku-spreadsheet.with-draggable-headers tr:first-child {
-  height: 0;
-  display: none;
+/* Fix row indicator column width to match draggable headers spacer (40px) */
+/* The header row defines column widths in table-layout: fixed */
+.sku-spreadsheet.with-draggable-headers tr:first-child th:first-child {
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
+}
+
+/* Ensure all row indicator cells (first th in each row) have consistent width */
+.sku-spreadsheet .Spreadsheet tbody tr th:first-child {
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
 }
 
 /* Dark mode support for draggable headers */

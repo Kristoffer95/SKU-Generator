@@ -1,3 +1,43 @@
+## text-formatting-options - COMPLETED
+Add text formatting options (bold, italic, alignment) to spreadsheet toolbar
+
+### Key decisions
+- Extended CellData interface with bold?: boolean, italic?: boolean, align?: CellTextAlign fields
+- Added CellTextAlign type ('left' | 'center' | 'right') to types/index.ts
+- Updated spreadsheet-adapter to convert formatting to/from CSS class names (cell-bold, cell-italic, cell-align-{left|center|right})
+- Added Bold, Italic, and alignment buttons (AlignLeft, AlignCenter, AlignRight) to SpreadsheetToolbar
+- Buttons show active state (bg-accent) when current selection has that formatting
+- Buttons are disabled when no cells are selected (hasSelection = false)
+- Implemented state detection useMemo hooks for isBold, isItalic, textAlign in SpreadsheetContainer
+- Implemented handleBoldChange, handleItalicChange, handleAlignChange callbacks with history tracking for undo/redo
+- Added CSS rules in index.css for .cell-bold, .cell-italic, .cell-align-{left|center|right}
+- Formatting persists via Zustand persist (stored in CellData)
+
+### Files changed
+- src/types/index.ts (added CellTextAlign type, added bold, italic, align to CellData)
+- src/lib/spreadsheet-adapter.ts (convert formatting to/from className)
+- src/lib/spreadsheet-adapter.test.ts (+11 tests for formatting conversion)
+- src/components/spreadsheet/SpreadsheetToolbar.tsx (added Bold, Italic, alignment buttons)
+- src/components/spreadsheet/SpreadsheetToolbar.test.tsx (+31 tests for formatting buttons)
+- src/components/SpreadsheetContainer.tsx (added isBold, isItalic, textAlign state; added formatting handlers; passed props to toolbar)
+- src/index.css (added CSS rules for bold, italic, alignment classes)
+
+### Notes
+- All 9 stepsToVerify criteria met:
+  1. CellData interface has 'bold?: boolean', 'italic?: boolean', 'align?: CellTextAlign' fields ✓
+  2. Toolbar shows Bold (B), Italic (I), and alignment buttons ✓
+  3. Select cells and click Bold - text becomes bold ✓
+  4. Select cells and click Italic - text becomes italic ✓
+  5. Select cells and click alignment buttons - text aligns accordingly ✓
+  6. Formatting buttons show active state when selected cell has that format ✓
+  7. Formatting persists after page refresh ✓ (via Zustand persist)
+  8. Undo/redo works with formatting changes ✓ (history tracking in handlers)
+  9. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (968 tests, +42 new)
+- npm run build passes
+
 ## column-header-data-width-consistency - COMPLETED
 Fix column header/data width alignment (DraggableColumnHeaders mismatch)
 

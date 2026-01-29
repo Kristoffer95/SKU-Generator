@@ -789,7 +789,7 @@
       "Undo/redo works with formatting changes",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "excel-column-letters-header",

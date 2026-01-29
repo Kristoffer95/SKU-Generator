@@ -26,6 +26,11 @@ export interface ParsedSpec {
 }
 
 /**
+ * Text alignment options for cells
+ */
+export type CellTextAlign = 'left' | 'center' | 'right';
+
+/**
  * Fortune-Sheet cell data structure
  */
 export interface CellData {
@@ -34,6 +39,9 @@ export interface CellData {
   ct?: { fa?: string; t?: string }; // cell type info
   bg?: string; // background color (hex)
   fc?: string; // font/text color (hex)
+  bold?: boolean; // bold text formatting
+  italic?: boolean; // italic text formatting
+  align?: CellTextAlign; // text alignment
 }
 
 /**

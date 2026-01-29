@@ -165,6 +165,66 @@ describe('spreadsheet-adapter', () => {
       expect(result[1][0]?.className).toBe('bg-[#fce4ec] text-[#dc2626]');
     });
 
+    it('preserves bold formatting as className', () => {
+      const skuOnlyColumns: ColumnDef[] = [
+        { id: 'col-sku', type: 'sku', header: 'SKU' },
+      ];
+      const data: CellData[][] = [
+        [{ v: 'SKU' }],
+        [{ v: 'SKU-001', bold: true }],
+      ];
+
+      const result = convertToSpreadsheetData(data, skuOnlyColumns, mockSpecifications);
+
+      expect(result[1][0]?.className).toBe('cell-bold');
+    });
+
+    it('preserves italic formatting as className', () => {
+      const skuOnlyColumns: ColumnDef[] = [
+        { id: 'col-sku', type: 'sku', header: 'SKU' },
+      ];
+      const data: CellData[][] = [
+        [{ v: 'SKU' }],
+        [{ v: 'SKU-001', italic: true }],
+      ];
+
+      const result = convertToSpreadsheetData(data, skuOnlyColumns, mockSpecifications);
+
+      expect(result[1][0]?.className).toBe('cell-italic');
+    });
+
+    it('preserves text alignment as className', () => {
+      const skuOnlyColumns: ColumnDef[] = [
+        { id: 'col-sku', type: 'sku', header: 'SKU' },
+      ];
+      const data: CellData[][] = [
+        [{ v: 'SKU' }],
+        [{ v: 'Left', align: 'left' }],
+        [{ v: 'Center', align: 'center' }],
+        [{ v: 'Right', align: 'right' }],
+      ];
+
+      const result = convertToSpreadsheetData(data, skuOnlyColumns, mockSpecifications);
+
+      expect(result[1][0]?.className).toBe('cell-align-left');
+      expect(result[2][0]?.className).toBe('cell-align-center');
+      expect(result[3][0]?.className).toBe('cell-align-right');
+    });
+
+    it('preserves all formatting options combined as className', () => {
+      const skuOnlyColumns: ColumnDef[] = [
+        { id: 'col-sku', type: 'sku', header: 'SKU' },
+      ];
+      const data: CellData[][] = [
+        [{ v: 'SKU' }],
+        [{ v: 'SKU-001', bg: '#fce4ec', fc: '#dc2626', bold: true, italic: true, align: 'center' }],
+      ];
+
+      const result = convertToSpreadsheetData(data, skuOnlyColumns, mockSpecifications);
+
+      expect(result[1][0]?.className).toBe('bg-[#fce4ec] text-[#dc2626] cell-bold cell-italic cell-align-center');
+    });
+
     it('handles cells with only m (display text) value', () => {
       const skuOnlyColumns: ColumnDef[] = [
         { id: 'col-sku', type: 'sku', header: 'SKU' },
@@ -289,6 +349,58 @@ describe('spreadsheet-adapter', () => {
       const result = convertFromSpreadsheetData(matrix);
 
       expect(result[0][0]).toEqual({ v: 'SKU-001', m: 'SKU-001', bg: '#fce4ec', fc: '#dc2626' });
+    });
+
+    it('converts className back to bold', () => {
+      const matrix: SKUMatrix = [
+        [{ value: 'SKU-001', className: 'cell-bold' }],
+      ];
+
+      const result = convertFromSpreadsheetData(matrix);
+
+      expect(result[0][0]).toEqual({ v: 'SKU-001', m: 'SKU-001', bold: true });
+    });
+
+    it('converts className back to italic', () => {
+      const matrix: SKUMatrix = [
+        [{ value: 'SKU-001', className: 'cell-italic' }],
+      ];
+
+      const result = convertFromSpreadsheetData(matrix);
+
+      expect(result[0][0]).toEqual({ v: 'SKU-001', m: 'SKU-001', italic: true });
+    });
+
+    it('converts className back to text alignment', () => {
+      const matrix: SKUMatrix = [
+        [{ value: 'Left', className: 'cell-align-left' }],
+        [{ value: 'Center', className: 'cell-align-center' }],
+        [{ value: 'Right', className: 'cell-align-right' }],
+      ];
+
+      const result = convertFromSpreadsheetData(matrix);
+
+      expect(result[0][0]).toEqual({ v: 'Left', m: 'Left', align: 'left' });
+      expect(result[1][0]).toEqual({ v: 'Center', m: 'Center', align: 'center' });
+      expect(result[2][0]).toEqual({ v: 'Right', m: 'Right', align: 'right' });
+    });
+
+    it('converts className with all formatting options combined', () => {
+      const matrix: SKUMatrix = [
+        [{ value: 'SKU-001', className: 'bg-[#fce4ec] text-[#dc2626] cell-bold cell-italic cell-align-center' }],
+      ];
+
+      const result = convertFromSpreadsheetData(matrix);
+
+      expect(result[0][0]).toEqual({
+        v: 'SKU-001',
+        m: 'SKU-001',
+        bg: '#fce4ec',
+        fc: '#dc2626',
+        bold: true,
+        italic: true,
+        align: 'center'
+      });
     });
 
     it('handles numeric values', () => {

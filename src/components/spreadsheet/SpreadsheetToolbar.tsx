@@ -1,8 +1,9 @@
-import { Undo2, Redo2, Plus, Columns } from "lucide-react";
+import { Undo2, Redo2, Plus, Columns, Bold, Italic, AlignLeft, AlignCenter, AlignRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CellColorPicker } from "@/components/spreadsheet/CellColorPicker";
 import { CellTextColorPicker } from "@/components/spreadsheet/CellTextColorPicker";
 import { cn } from "@/lib/utils";
+import type { CellTextAlign } from "@/types";
 
 export interface SpreadsheetToolbarProps {
   /** Whether undo is available */
@@ -31,6 +32,18 @@ export interface SpreadsheetToolbarProps {
   onTextColorChange?: (color: string | null) => void;
   /** Called when text color picker open state changes */
   onTextColorPickerOpenChange?: (open: boolean) => void;
+  /** Whether selected cells are bold (or undefined if mixed) */
+  isBold?: boolean;
+  /** Called when bold button is clicked */
+  onBoldChange?: (bold: boolean) => void;
+  /** Whether selected cells are italic (or undefined if mixed) */
+  isItalic?: boolean;
+  /** Called when italic button is clicked */
+  onItalicChange?: (italic: boolean) => void;
+  /** Current text alignment of selected cells (or undefined if mixed) */
+  textAlign?: CellTextAlign;
+  /** Called when alignment button is clicked */
+  onAlignChange?: (align: CellTextAlign) => void;
   /** Optional additional class name */
   className?: string;
 }
@@ -54,6 +67,12 @@ export function SpreadsheetToolbar({
   selectedTextColor,
   onTextColorChange,
   onTextColorPickerOpenChange,
+  isBold,
+  onBoldChange,
+  isItalic,
+  onItalicChange,
+  textAlign,
+  onAlignChange,
   className,
 }: SpreadsheetToolbarProps) {
   return (
@@ -138,6 +157,80 @@ export function SpreadsheetToolbar({
           onColorSelect={onTextColorChange}
           onOpenChange={onTextColorPickerOpenChange}
         />
+      )}
+
+      {/* Separator before text formatting options */}
+      {(onBoldChange || onItalicChange || onAlignChange) && (
+        <div className="mx-1 h-6 w-px bg-border" />
+      )}
+
+      {/* Bold button */}
+      {onBoldChange && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onBoldChange(!isBold)}
+          disabled={!hasSelection}
+          title="Bold"
+          data-testid="spreadsheet-toolbar-bold"
+          className={cn(isBold && hasSelection && "bg-accent")}
+        >
+          <Bold className="h-4 w-4" />
+        </Button>
+      )}
+
+      {/* Italic button */}
+      {onItalicChange && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onItalicChange(!isItalic)}
+          disabled={!hasSelection}
+          title="Italic"
+          data-testid="spreadsheet-toolbar-italic"
+          className={cn(isItalic && hasSelection && "bg-accent")}
+        >
+          <Italic className="h-4 w-4" />
+        </Button>
+      )}
+
+      {/* Alignment buttons */}
+      {onAlignChange && (
+        <>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onAlignChange("left")}
+            disabled={!hasSelection}
+            title="Align Left"
+            data-testid="spreadsheet-toolbar-align-left"
+            className={cn(textAlign === "left" && hasSelection && "bg-accent")}
+          >
+            <AlignLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onAlignChange("center")}
+            disabled={!hasSelection}
+            title="Align Center"
+            data-testid="spreadsheet-toolbar-align-center"
+            className={cn(textAlign === "center" && hasSelection && "bg-accent")}
+          >
+            <AlignCenter className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onAlignChange("right")}
+            disabled={!hasSelection}
+            title="Align Right"
+            data-testid="spreadsheet-toolbar-align-right"
+            className={cn(textAlign === "right" && hasSelection && "bg-accent")}
+          >
+            <AlignRight className="h-4 w-4" />
+          </Button>
+        </>
       )}
     </div>
   );
