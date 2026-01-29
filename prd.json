@@ -682,7 +682,7 @@
       "Visual appearance is consistent across light/dark mode",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "color-picker-selection-fix",
@@ -698,5 +698,113 @@
       "npm run typecheck passes"
     ],
     "passes": true
+  },
+  {
+    "id": "copy-cell-styles-shortcut",
+    "category": "Spreadsheet Features",
+    "description": "Implement Option+Cmd+C keyboard shortcut to copy the styles of a selected cell (background color, text color, bold, italic, alignment) without copying the cell text content. Styles can then be pasted to other cells.",
+    "stepsToVerify": [
+      "Select a cell with custom styling (background color, text color, etc.)",
+      "Press Option+Cmd+C - styles are copied to clipboard/memory",
+      "Select another cell or range of cells",
+      "Press Option+Cmd+V (or similar) - styles are applied without changing text",
+      "Original cell content remains unchanged in target cells",
+      "Works with multiple style properties at once",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "free-column-deletion",
+    "category": "Bug Fix",
+    "description": "Free columns (non-spec columns) cannot be deleted via right-click context menu. The delete option should appear for free columns just like spec columns, allowing users to remove them.",
+    "stepsToVerify": [
+      "Add a free column to the sheet",
+      "Right-click on the free column header",
+      "Context menu shows 'Delete column' option",
+      "Clicking delete shows confirmation dialog",
+      "Confirming deletes the free column and its data",
+      "Undo restores the deleted free column",
+      "npm run typecheck passes"
+    ],
+    "passes": true
+  },
+  {
+    "id": "free-column-rename",
+    "category": "Spreadsheet Features",
+    "description": "Free column titles should be renameable. Add ability to rename free columns by double-clicking the column header or via context menu option. Spec column headers should sync with specification name.",
+    "stepsToVerify": [
+      "Add a free column with a title",
+      "Double-click on the free column header - enters edit mode",
+      "Type new name and press Enter - header is renamed",
+      "Press Escape while editing - cancels rename",
+      "Right-click context menu has 'Rename' option for free columns",
+      "Renamed title persists after page refresh",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "column-resize-full-column",
+    "category": "Bug Fix",
+    "description": "When resizing a column by dragging the header edge, only the header cell resizes while data cells remain unchanged. Fix to ensure the entire column (header and all data cells) resize together.",
+    "stepsToVerify": [
+      "Hover on the right edge of a column header",
+      "Drag to resize the column width",
+      "Header cell AND all data cells in that column resize together",
+      "Column width is consistent from header to last row",
+      "Width persists after page refresh",
+      "Works for all column types (SKU, spec, free)",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "column-header-data-width-consistency",
+    "category": "Bug Fix",
+    "description": "Column widths for column titles (in DraggableColumnHeaders) do not match the widths of the data cells below them, causing misalignment. The SKU/ID column is correct and should remain fixed. Fix other columns to ensure header and data cell widths are synchronized.",
+    "stepsToVerify": [
+      "Column headers align perfectly with their data cells below",
+      "SKU column remains fixed width (current implementation preserved)",
+      "Spec columns have consistent header/data width",
+      "Free columns have consistent header/data width",
+      "Alignment is maintained when scrolling horizontally",
+      "Alignment is maintained after adding/removing columns",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "text-formatting-options",
+    "category": "Spreadsheet Features",
+    "description": "Add text formatting options to the spreadsheet toolbar: bold, italic, text alignment (left, center, right). Extend CellData interface with formatting properties. Apply formatting to selected cells.",
+    "stepsToVerify": [
+      "CellData interface has 'bold?: boolean', 'italic?: boolean', 'align?: string' fields",
+      "Toolbar shows Bold (B), Italic (I), and alignment buttons",
+      "Select cells and click Bold - text becomes bold",
+      "Select cells and click Italic - text becomes italic",
+      "Select cells and click alignment buttons - text aligns accordingly",
+      "Formatting buttons show active state when selected cell has that format",
+      "Formatting persists after page refresh",
+      "Undo/redo works with formatting changes",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "excel-column-letters-header",
+    "category": "Spreadsheet Features",
+    "description": "Add Excel-style column letter headers (A, B, C, D...) above the main column headers. Clicking on a letter selects the entire column including the header. This provides familiar spreadsheet navigation and bulk column selection.",
+    "stepsToVerify": [
+      "Row of column letters (A, B, C...) appears above column headers",
+      "Letters continue correctly for many columns (AA, AB, etc. after Z)",
+      "Clicking on a letter selects the entire column (all cells including header)",
+      "Selected column is visually highlighted",
+      "Can select multiple columns by clicking and dragging across letters",
+      "Shift+click to select range of columns",
+      "Selected column(s) can have formatting applied via toolbar",
+      "npm run typecheck passes"
+    ],
+    "passes": false
   }
 ]

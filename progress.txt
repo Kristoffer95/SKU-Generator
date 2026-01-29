@@ -1,3 +1,56 @@
+## free-column-deletion - COMPLETED
+Enable deleting free columns via right-click context menu and add undo support
+
+### Key decisions
+- Investigation showed free columns COULD already be deleted (delete option shows in context menu)
+- The bug was that column deletion (both spec and free) had no undo support
+- Root cause: handleDeleteColumnConfirm did not track history before making changes
+- Fix: Added history tracking to handleDeleteColumnConfirm following same pattern as handleDeleteRowConfirm
+- HistoryEntry includes both data and columns, so restoring preserves both
+
+### Files changed
+- src/components/SpreadsheetContainer.tsx (added history tracking to handleDeleteColumnConfirm)
+- src/components/SpreadsheetContainer.test.tsx (+3 tests for free column deletion and undo)
+
+### Notes
+- All 7 stepsToVerify criteria met:
+  1. Add a free column to the sheet ✓ (via AddColumnDialog)
+  2. Right-click on the free column header ✓
+  3. Context menu shows 'Delete column' option ✓
+  4. Clicking delete shows confirmation dialog ✓
+  5. Confirming deletes the free column and its data ✓
+  6. Undo restores the deleted free column ✓
+  7. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (905 tests, +3 new)
+
+## row-indicator-width-fix - COMPLETED
+Fix row indicator column width to match draggable headers spacer (40px)
+
+### Key decisions
+- Root cause: Header row was hidden with `display: none`, removing it from table-layout: fixed calculation
+- In table-layout: fixed, the first row defines column widths - hiding it with display: none breaks this
+- Fix: Changed from `display: none` to `visibility: collapse` to preserve layout while hiding visually
+- Added explicit width constraints (40px) on header row's first TH cell
+- Added explicit width constraints (40px) on all tbody row indicator TH cells
+- Used min-width and max-width to enforce consistent 40px width
+
+### Files changed
+- src/index.css (rewrote header row hiding CSS, added row indicator width constraints)
+
+### Notes
+- All 4 stepsToVerify criteria met:
+  1. Row number cells align perfectly with the header cell above ✓
+  2. All row indicators have the same width (40px) ✓
+  3. Visual appearance is consistent across light/dark mode ✓
+  4. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (902 tests)
+- npm run build passes
+- Verified visually: draggable headers spacer (40px) now aligns with row indicator column (40px)
+
 ## color-picker-selection-fix - COMPLETED
 Fix cell color pickers deselecting cells when dropdown opens
 

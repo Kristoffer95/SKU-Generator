@@ -2246,6 +2246,26 @@ describe('SpreadsheetContainer column context menu', () => {
     expect(screen.getByTestId('context-menu-delete')).toBeInTheDocument()
   })
 
+  it('shows delete option for free columns', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'free', header: 'Notes' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Notes', m: 'Notes' }],
+      [{}, { v: 'Some note', m: 'Some note' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [])
+
+    render(<SpreadsheetContainer />)
+
+    // Right-click on the Notes header cell (row 0, col 1)
+    const headerCell = screen.getByTestId('cell-0-1')
+    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
+
+    expect(screen.getByTestId('context-menu-delete')).toBeInTheDocument()
+  })
+
   it('does NOT show delete option for SKU column', () => {
     const columns: ColumnDef[] = [
       { id: 'col-0', type: 'sku', header: 'SKU' },
@@ -2423,6 +2443,76 @@ describe('SpreadsheetContainer column context menu', () => {
     expect(activeSheet).toBeDefined()
     expect(activeSheet!.columns.length).toBe(2) // SKU and Color remain
     expect(activeSheet!.columns[1].header).toBe('Color')
+  })
+
+  it('deletes free column when confirming deletion', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'free', header: 'Notes' },
+      { id: 'col-2', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Notes', m: 'Notes' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'SKU1', m: 'SKU1' }, { v: 'A note', m: 'A note' }, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Right-click on the Notes header cell (column index 1 - free column)
+    const headerCell = screen.getByTestId('cell-0-1')
+    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
+
+    // Click "Delete column"
+    fireEvent.click(screen.getByTestId('context-menu-delete'))
+
+    // Confirm deletion
+    fireEvent.click(screen.getByTestId('delete-column-confirm'))
+
+    // Verify free column was deleted from store
+    const activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet).toBeDefined()
+    expect(activeSheet!.columns.length).toBe(2) // SKU and Color remain
+    expect(activeSheet!.columns[0].header).toBe('SKU')
+    expect(activeSheet!.columns[1].header).toBe('Color')
+
+    // Verify data was updated - Notes column data removed
+    expect(activeSheet!.data[0].length).toBe(2) // SKU and Color columns
+    expect(activeSheet!.data[1].length).toBe(2)
+  })
+
+  it('can undo free column deletion', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'free', header: 'Notes' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Notes', m: 'Notes' }],
+      [{}, { v: 'Some note', m: 'Some note' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [])
+
+    render(<SpreadsheetContainer />)
+
+    // Right-click on the Notes header cell and delete
+    const headerCell = screen.getByTestId('cell-0-1')
+    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
+    fireEvent.click(screen.getByTestId('context-menu-delete'))
+    fireEvent.click(screen.getByTestId('delete-column-confirm'))
+
+    // Verify column was deleted
+    let activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.columns.length).toBe(1) // Only SKU
+
+    // Click undo button
+    const undoButton = screen.getByRole('button', { name: /undo/i })
+    fireEvent.click(undoButton)
+
+    // Verify column was restored
+    activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.columns.length).toBe(2) // SKU and Notes restored
+    expect(activeSheet!.columns[1].header).toBe('Notes')
+    expect(activeSheet!.data[1][1]).toEqual({ v: 'Some note', m: 'Some note' })
   })
 })
 

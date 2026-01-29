@@ -476,6 +476,13 @@ export function SpreadsheetContainer() {
 
     const { index: columnIndex } = columnToDelete
 
+    // Save current state for undo
+    const oldEntry: HistoryEntry = {
+      data: activeSheet.data,
+      columns: activeSheet.columns,
+    }
+    const currentHistoryIndex = historyIndexRef.current
+
     // Remove column from columns array
     const newColumns = columns.filter((_, i) => i !== columnIndex)
 
@@ -494,6 +501,20 @@ export function SpreadsheetContainer() {
           : sheet
       )
     }))
+
+    // Track history for undo/redo
+    setHistory(prev => {
+      if (currentHistoryIndex === -1) {
+        // At latest state - append the old state before this change
+        return [...prev, oldEntry]
+      } else {
+        // In middle of history - truncate redo states only
+        return prev.slice(0, currentHistoryIndex + 1)
+      }
+    })
+    // Reset to latest state
+    setHistoryIndex(-1)
+    historyIndexRef.current = -1
 
     // Clear the column to delete state
     setColumnToDelete(null)
