@@ -11,6 +11,7 @@ import { DropdownEditor } from "@/components/spreadsheet/DropdownEditor"
 import { ColumnHeaderContextMenu, ContextMenuPosition } from "@/components/spreadsheet/ColumnHeaderContextMenu"
 import { RowContextMenu, RowContextMenuPosition } from "@/components/spreadsheet/RowContextMenu"
 import { DraggableColumnHeaders } from "@/components/spreadsheet/DraggableColumnHeaders"
+import { ResizableRowIndicators, DEFAULT_ROW_HEIGHT } from "@/components/spreadsheet/ResizableRowIndicators"
 import { AddColumnDialog } from "@/components/AddColumnDialog"
 import { DeleteColumnConfirmDialog } from "@/components/DeleteColumnConfirmDialog"
 import { DeleteRowConfirmDialog } from "@/components/DeleteRowConfirmDialog"
@@ -134,7 +135,7 @@ function getSelectedCells(selection: Selection | undefined): { row: number; colu
 }
 
 export function SpreadsheetContainer() {
-  const { sheets, activeSheetId, setActiveSheet, setSheetData, addSheetWithId, removeSheet, updateSheet, reorderColumns, updateColumnWidth } = useSheetsStore()
+  const { sheets, activeSheetId, setActiveSheet, setSheetData, addSheetWithId, removeSheet, updateSheet, reorderColumns, updateColumnWidth, updateRowHeight } = useSheetsStore()
   // Get active sheet and use its local specifications and columns
   const activeSheet = sheets.find((s) => s.id === activeSheetId)
   const specifications = useMemo(
@@ -144,6 +145,10 @@ export function SpreadsheetContainer() {
   const columns = useMemo(
     () => activeSheet?.columns ?? EMPTY_COLUMNS,
     [activeSheet?.columns]
+  )
+  const rowHeights = useMemo(
+    () => activeSheet?.rowHeights ?? {},
+    [activeSheet?.rowHeights]
   )
   const delimiter = useSettingsStore((state) => state.delimiter)
   const prefix = useSettingsStore((state) => state.prefix)
@@ -578,6 +583,12 @@ export function SpreadsheetContainer() {
     updateColumnWidth(activeSheetId, columnIndex, newWidth)
   }, [activeSheetId, updateColumnWidth])
 
+  // Handle row resize
+  const handleRowResize = useCallback((rowIndex: number, newHeight: number) => {
+    if (!activeSheetId) return
+    updateRowHeight(activeSheetId, rowIndex, newHeight)
+  }, [activeSheetId, updateRowHeight])
+
   // Compute validation errors for the active sheet
   const validationErrors = useMemo((): ValidationError[] => {
     if (!activeSheet) return []
@@ -622,6 +633,27 @@ export function SpreadsheetContainer() {
 
     return <style data-testid="column-width-styles">{styles}</style>
   }, [columns])
+
+  // Generate dynamic row height styles
+  const rowHeightStyles = useMemo(() => {
+    const rowCount = activeSheet?.data.length ?? 0
+    if (rowCount === 0) return null
+
+    // Generate styles for all rows, using custom height or default
+    const styles = Array.from({ length: rowCount }).map((_, index) => {
+      const height = rowHeights[index] ?? DEFAULT_ROW_HEIGHT
+      // Target rows in tbody (nth-child is 1-indexed)
+      return `.sku-spreadsheet tbody tr:nth-child(${index + 1}) { height: ${height}px; min-height: ${height}px; }`
+    }).join("\n")
+
+    // Also ensure cells respect row height
+    const cellStyles = Array.from({ length: rowCount }).map((_, index) => {
+      const height = rowHeights[index] ?? DEFAULT_ROW_HEIGHT
+      return `.sku-spreadsheet tbody tr:nth-child(${index + 1}) td, .sku-spreadsheet tbody tr:nth-child(${index + 1}) th { height: ${height}px; min-height: ${height}px; }`
+    }).join("\n")
+
+    return <style data-testid="row-height-styles">{styles}\n{cellStyles}</style>
+  }, [activeSheet?.data.length, rowHeights])
 
   // Handle selection changes from user interaction
   const handleSelectionChange = useCallback((newSelection: Selection) => {
@@ -787,6 +819,7 @@ export function SpreadsheetContainer() {
   return (
     <div className="h-full w-full flex flex-col" data-testid="spreadsheet-container" data-tour="spreadsheet">
       {columnWidthStyles}
+      {rowHeightStyles}
       <SpreadsheetToolbar
         canUndo={historyIndex === -1 ? history.length > 0 : historyIndex > 0}
         canRedo={historyIndex !== -1 && historyIndex < history.length - 1}
@@ -808,9 +841,15 @@ export function SpreadsheetContainer() {
       />
       <div
         ref={spreadsheetContainerRef}
-        className="flex-1 min-h-0 overflow-auto sku-spreadsheet with-draggable-headers"
+        className="flex-1 min-h-0 overflow-auto sku-spreadsheet with-draggable-headers relative"
         onContextMenu={handleContextMenu}
       >
+        <ResizableRowIndicators
+          rowCount={activeSheet?.data.length ?? 0}
+          rowHeights={rowHeights}
+          onRowResize={handleRowResize}
+          spreadsheetRef={spreadsheetContainerRef}
+        />
         <Spreadsheet
           data={spreadsheetData as Matrix<CellBase<string | number | null>>}
           onChange={handleDataChange}

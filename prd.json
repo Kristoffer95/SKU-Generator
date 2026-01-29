@@ -670,6 +670,6 @@
       "Minimum height constraint (24px) is enforced",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   }
 ]

@@ -52,6 +52,7 @@ export interface SheetConfig {
   data: CellData[][];
   columns: ColumnDef[];          // Column definitions for this sheet
   specifications: Specification[]; // Specifications local to this sheet
+  rowHeights?: Record<number, number>; // Row heights in pixels (row index -> height)
 }
 
 /**

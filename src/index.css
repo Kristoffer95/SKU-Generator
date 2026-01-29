@@ -192,6 +192,7 @@
 }
 
 /* Apply Tailwind arbitrary background colors for cells */
+/* System colors for read-only SKU column and duplicate warnings */
 .sku-spreadsheet .Spreadsheet__cell[class*="bg-[#f1f5f9]"],
 .sku-spreadsheet [class*="bg-[#f1f5f9]"] {
   background-color: #f1f5f9 !important;
@@ -200,6 +201,164 @@
 .sku-spreadsheet .Spreadsheet__cell[class*="bg-[#fef3c7]"],
 .sku-spreadsheet [class*="bg-[#fef3c7]"] {
   background-color: #fef3c7 !important;
+}
+
+/* User-selectable cell background colors from CellColorPicker palette */
+/* Row 1: Light pastels */
+.sku-spreadsheet .Spreadsheet__cell[class*="bg-[#fce4ec]"],
+.sku-spreadsheet [class*="bg-[#fce4ec]"] {
+  background-color: #fce4ec !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="bg-[#fff3e0]"],
+.sku-spreadsheet [class*="bg-[#fff3e0]"] {
+  background-color: #fff3e0 !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="bg-[#fffde7]"],
+.sku-spreadsheet [class*="bg-[#fffde7]"] {
+  background-color: #fffde7 !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="bg-[#e8f5e9]"],
+.sku-spreadsheet [class*="bg-[#e8f5e9]"] {
+  background-color: #e8f5e9 !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="bg-[#e3f2fd]"],
+.sku-spreadsheet [class*="bg-[#e3f2fd]"] {
+  background-color: #e3f2fd !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="bg-[#f3e5f5]"],
+.sku-spreadsheet [class*="bg-[#f3e5f5]"] {
+  background-color: #f3e5f5 !important;
+}
+
+/* Row 2: Medium pastels */
+.sku-spreadsheet .Spreadsheet__cell[class*="bg-[#f8bbd0]"],
+.sku-spreadsheet [class*="bg-[#f8bbd0]"] {
+  background-color: #f8bbd0 !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="bg-[#ffcc80]"],
+.sku-spreadsheet [class*="bg-[#ffcc80]"] {
+  background-color: #ffcc80 !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="bg-[#fff59d]"],
+.sku-spreadsheet [class*="bg-[#fff59d]"] {
+  background-color: #fff59d !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="bg-[#a5d6a7]"],
+.sku-spreadsheet [class*="bg-[#a5d6a7]"] {
+  background-color: #a5d6a7 !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="bg-[#90caf9]"],
+.sku-spreadsheet [class*="bg-[#90caf9]"] {
+  background-color: #90caf9 !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="bg-[#ce93d8]"],
+.sku-spreadsheet [class*="bg-[#ce93d8]"] {
+  background-color: #ce93d8 !important;
+}
+
+/* Row 3: Stronger colors */
+.sku-spreadsheet .Spreadsheet__cell[class*="bg-[#f48fb1]"],
+.sku-spreadsheet [class*="bg-[#f48fb1]"] {
+  background-color: #f48fb1 !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="bg-[#ffb74d]"],
+.sku-spreadsheet [class*="bg-[#ffb74d]"] {
+  background-color: #ffb74d !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="bg-[#fff176]"],
+.sku-spreadsheet [class*="bg-[#fff176]"] {
+  background-color: #fff176 !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="bg-[#81c784]"],
+.sku-spreadsheet [class*="bg-[#81c784]"] {
+  background-color: #81c784 !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="bg-[#64b5f6]"],
+.sku-spreadsheet [class*="bg-[#64b5f6]"] {
+  background-color: #64b5f6 !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="bg-[#ba68c8]"],
+.sku-spreadsheet [class*="bg-[#ba68c8]"] {
+  background-color: #ba68c8 !important;
+}
+
+/* User-selectable cell text colors from CellTextColorPicker palette */
+/* Row 1: Dark basics */
+.sku-spreadsheet .Spreadsheet__cell[class*="text-[#000000]"],
+.sku-spreadsheet [class*="text-[#000000]"] {
+  color: #000000 !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="text-[#374151]"],
+.sku-spreadsheet [class*="text-[#374151]"] {
+  color: #374151 !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="text-[#6b7280]"],
+.sku-spreadsheet [class*="text-[#6b7280]"] {
+  color: #6b7280 !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="text-[#dc2626]"],
+.sku-spreadsheet [class*="text-[#dc2626]"] {
+  color: #dc2626 !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="text-[#ea580c]"],
+.sku-spreadsheet [class*="text-[#ea580c]"] {
+  color: #ea580c !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="text-[#ca8a04]"],
+.sku-spreadsheet [class*="text-[#ca8a04]"] {
+  color: #ca8a04 !important;
+}
+
+/* Row 2: Rich colors */
+.sku-spreadsheet .Spreadsheet__cell[class*="text-[#16a34a]"],
+.sku-spreadsheet [class*="text-[#16a34a]"] {
+  color: #16a34a !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="text-[#0891b2]"],
+.sku-spreadsheet [class*="text-[#0891b2]"] {
+  color: #0891b2 !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="text-[#2563eb]"],
+.sku-spreadsheet [class*="text-[#2563eb]"] {
+  color: #2563eb !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="text-[#7c3aed]"],
+.sku-spreadsheet [class*="text-[#7c3aed]"] {
+  color: #7c3aed !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="text-[#c026d3]"],
+.sku-spreadsheet [class*="text-[#c026d3]"] {
+  color: #c026d3 !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="text-[#db2777]"],
+.sku-spreadsheet [class*="text-[#db2777]"] {
+  color: #db2777 !important;
+}
+
+/* Row 3: Darker variants */
+.sku-spreadsheet .Spreadsheet__cell[class*="text-[#1e3a8a]"],
+.sku-spreadsheet [class*="text-[#1e3a8a]"] {
+  color: #1e3a8a !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="text-[#166534]"],
+.sku-spreadsheet [class*="text-[#166534]"] {
+  color: #166534 !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="text-[#7f1d1d]"],
+.sku-spreadsheet [class*="text-[#7f1d1d]"] {
+  color: #7f1d1d !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="text-[#78350f]"],
+.sku-spreadsheet [class*="text-[#78350f]"] {
+  color: #78350f !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="text-[#581c87]"],
+.sku-spreadsheet [class*="text-[#581c87]"] {
+  color: #581c87 !important;
+}
+.sku-spreadsheet .Spreadsheet__cell[class*="text-[#701a75]"],
+.sku-spreadsheet [class*="text-[#701a75]"] {
+  color: #701a75 !important;
 }
 
 /* General cell styling */
@@ -303,4 +462,68 @@
 .dark .sku-spreadsheet .Spreadsheet__cell[class*="bg-[#fef3c7]"],
 .dark .sku-spreadsheet [class*="bg-[#fef3c7]"] {
   background-color: hsl(45 93% 30%) !important;
+}
+
+/* Draggable column headers */
+.draggable-column-headers {
+  min-height: 36px;
+}
+
+.draggable-column-headers [data-column-header] {
+  user-select: none;
+}
+
+.draggable-column-headers [data-column-header][draggable="true"]:hover {
+  background-color: hsl(var(--muted));
+}
+
+.draggable-column-headers [data-column-header].drag-over {
+  background-color: hsl(var(--primary) / 0.1);
+}
+
+/* Hide the default header row when using draggable headers */
+.sku-spreadsheet.with-draggable-headers tr:first-child .Spreadsheet__cell {
+  visibility: hidden;
+  height: 0;
+  padding: 0;
+  border-top: none;
+  border-bottom: none;
+}
+
+.sku-spreadsheet.with-draggable-headers tr:first-child {
+  height: 0;
+  display: none;
+}
+
+/* Dark mode support for draggable headers */
+.dark .draggable-column-headers {
+  background-color: hsl(217.2 32.6% 17.5%);
+  border-color: hsl(217.2 32.6% 25%);
+}
+
+.dark .draggable-column-headers [data-column-header] {
+  border-color: hsl(217.2 32.6% 25%);
+}
+
+.dark .draggable-column-headers [data-column-header][draggable="true"]:hover {
+  background-color: hsl(217.2 32.6% 22%);
+}
+
+/* Resizable row indicators overlay */
+.sku-spreadsheet [data-testid="resizable-row-indicators"] {
+  /* Overlay positioned above row indicator column */
+}
+
+.sku-spreadsheet [data-testid^="row-resize-handle-"] {
+  /* Row resize handles at bottom of each row */
+  transition: background-color 0.15s ease;
+}
+
+.sku-spreadsheet [data-testid^="row-resize-handle-"]:hover {
+  background-color: hsl(var(--primary) / 0.5);
+}
+
+.sku-spreadsheet [data-testid^="row-resize-handle-"]:active,
+.sku-spreadsheet [data-testid^="row-resize-handle-"].resizing {
+  background-color: hsl(var(--primary));
 }

@@ -55,6 +55,14 @@ interface SheetsState {
    * @param width - The new width in pixels (min: 80)
    */
   updateColumnWidth: (sheetId: string, columnIndex: number, width: number) => boolean;
+
+  /**
+   * Update the height of a row.
+   * @param sheetId - The ID of the sheet
+   * @param rowIndex - The index of the row to resize
+   * @param height - The new height in pixels (min: 24)
+   */
+  updateRowHeight: (sheetId: string, rowIndex: number, height: number) => boolean;
 }
 
 const generateId = () => crypto.randomUUID();
@@ -550,6 +558,34 @@ export const useSheetsStore = create<SheetsState>()(
                   columns: s.columns.map((col, idx) =>
                     idx === columnIndex ? { ...col, width: clampedWidth } : col
                   ),
+                }
+              : s
+          ),
+        }));
+
+        return true;
+      },
+
+      updateRowHeight: (sheetId: string, rowIndex: number, height: number) => {
+        const { sheets } = get();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        if (!sheet) return false;
+
+        // Validate row index
+        if (rowIndex < 0 || rowIndex >= sheet.data.length) return false;
+
+        // Enforce minimum height (24px)
+        const clampedHeight = Math.max(24, height);
+
+        set((state) => ({
+          sheets: state.sheets.map((s) =>
+            s.id === sheetId
+              ? {
+                  ...s,
+                  rowHeights: {
+                    ...(s.rowHeights ?? {}),
+                    [rowIndex]: clampedHeight,
+                  },
                 }
               : s
           ),

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, within, act } from '@testing-library/react'
+import { render, screen, fireEvent, within, act, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { useSheetsStore } from '@/store/sheets'
 import { useSpecificationsStore } from '@/store/specifications'
 import type { Specification, CellData, SheetConfig, ColumnDef } from '@/types'
@@ -3017,5 +3018,971 @@ describe('SpreadsheetContainer row deletion (row-deletion)', () => {
     activeSheet = useSheetsStore.getState().getActiveSheet()
     expect(activeSheet!.data.length).toBe(4)
     expect(activeSheet!.data[1][0].v).toBe('2') // Row2 is now first data row
+  })
+})
+
+describe('SpreadsheetContainer cell background color (cell-background-color)', () => {
+  const colorSpec: Specification = {
+    id: 'color-spec',
+    name: 'Color',
+    order: 0,
+    values: [
+      { id: 'v-1', displayValue: 'Red', skuFragment: 'R' },
+      { id: 'v-2', displayValue: 'Blue', skuFragment: 'B' },
+    ],
+  }
+
+  beforeEach(() => {
+    localStorage.clear()
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+    capturedOnChange = null
+    capturedOnSelect = null
+    capturedData = []
+    capturedSelected = null
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('renders cell color picker in toolbar', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Color picker should be in toolbar
+    expect(screen.getByTestId('cell-color-picker-trigger')).toBeInTheDocument()
+  })
+
+  it('color picker is disabled when no cells are selected', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Color picker should be disabled when no selection
+    expect(screen.getByTestId('cell-color-picker-trigger')).toBeDisabled()
+  })
+
+  it('color picker is enabled when cells are selected', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Simulate selection via onSelect callback
+    act(() => {
+      if (capturedOnSelect) {
+        // Create a mock RangeSelection
+        capturedOnSelect({
+          range: {
+            start: { row: 1, column: 1 },
+            end: { row: 1, column: 1 },
+          },
+        })
+      }
+    })
+
+    // Color picker should be enabled after selection
+    expect(screen.getByTestId('cell-color-picker-trigger')).not.toBeDisabled()
+  })
+
+  it('applies background color to selected cell', async () => {
+    const user = userEvent.setup()
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Select cell (1, 1) - the "Red" cell
+    act(() => {
+      if (capturedOnSelect) {
+        capturedOnSelect({
+          range: {
+            start: { row: 1, column: 1 },
+            end: { row: 1, column: 1 },
+          },
+        })
+      }
+    })
+
+    // Open color picker and select a color
+    await user.click(screen.getByTestId('cell-color-picker-trigger'))
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-color-swatch-fce4ec')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('cell-color-swatch-fce4ec')) // Light pink
+
+    // Verify background color was applied to store
+    const activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data[1][1].bg).toBe('#fce4ec')
+  })
+
+  it('applies background color to multiple selected cells', async () => {
+    const user = userEvent.setup()
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+      [{ v: 'B', m: 'B' }, { v: 'Blue', m: 'Blue' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Select a range of cells (1,1) to (2,1)
+    act(() => {
+      if (capturedOnSelect) {
+        capturedOnSelect({
+          range: {
+            start: { row: 1, column: 1 },
+            end: { row: 2, column: 1 },
+          },
+        })
+      }
+    })
+
+    // Open color picker and select a color
+    await user.click(screen.getByTestId('cell-color-picker-trigger'))
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-color-swatch-90caf9')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('cell-color-swatch-90caf9')) // Light blue
+
+    // Verify background color was applied to both cells
+    const activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data[1][1].bg).toBe('#90caf9')
+    expect(activeSheet!.data[2][1].bg).toBe('#90caf9')
+  })
+
+  it('clears background color when clear option is selected', async () => {
+    const user = userEvent.setup()
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red', bg: '#fce4ec' }], // Already has a bg color
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Verify cell initially has background color
+    let activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data[1][1].bg).toBe('#fce4ec')
+
+    // Select cell (1, 1)
+    act(() => {
+      if (capturedOnSelect) {
+        capturedOnSelect({
+          range: {
+            start: { row: 1, column: 1 },
+            end: { row: 1, column: 1 },
+          },
+        })
+      }
+    })
+
+    // Open color picker and clear color
+    await user.click(screen.getByTestId('cell-color-picker-trigger'))
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-color-clear')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('cell-color-clear'))
+
+    // Verify background color was removed
+    activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data[1][1].bg).toBeUndefined()
+  })
+
+  it('background color persists after page refresh (via localStorage)', async () => {
+    const user = userEvent.setup()
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Select cell and apply color
+    act(() => {
+      if (capturedOnSelect) {
+        capturedOnSelect({
+          range: {
+            start: { row: 1, column: 1 },
+            end: { row: 1, column: 1 },
+          },
+        })
+      }
+    })
+    await user.click(screen.getByTestId('cell-color-picker-trigger'))
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-color-swatch-e8f5e9')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('cell-color-swatch-e8f5e9')) // Light green
+
+    // Get current state (which is persisted to localStorage by Zustand)
+    const stateBeforeRefresh = useSheetsStore.getState()
+    const activeSheet = stateBeforeRefresh.getActiveSheet()
+    const cellBg = activeSheet!.data[1][1].bg
+
+    // Verify color was applied
+    expect(cellBg).toBe('#e8f5e9')
+
+    // The bg field should be in the store which uses persist middleware
+    // to localStorage, so it will persist across "refresh"
+  })
+
+  it('undo reverts background color change', async () => {
+    const user = userEvent.setup()
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Select cell and apply color
+    act(() => {
+      if (capturedOnSelect) {
+        capturedOnSelect({
+          range: {
+            start: { row: 1, column: 1 },
+            end: { row: 1, column: 1 },
+          },
+        })
+      }
+    })
+    await user.click(screen.getByTestId('cell-color-picker-trigger'))
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-color-swatch-f3e5f5')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('cell-color-swatch-f3e5f5')) // Light purple
+
+    // Verify color was applied
+    let activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data[1][1].bg).toBe('#f3e5f5')
+
+    // Click undo
+    fireEvent.click(screen.getByTestId('spreadsheet-toolbar-undo'))
+
+    // Verify color was reverted (original cell had no bg)
+    activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data[1][1].bg).toBeUndefined()
+  })
+
+  it('redo re-applies background color after undo', async () => {
+    const user = userEvent.setup()
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Select cell and apply color
+    act(() => {
+      if (capturedOnSelect) {
+        capturedOnSelect({
+          range: {
+            start: { row: 1, column: 1 },
+            end: { row: 1, column: 1 },
+          },
+        })
+      }
+    })
+    await user.click(screen.getByTestId('cell-color-picker-trigger'))
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-color-swatch-ffcc80')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('cell-color-swatch-ffcc80')) // Orange
+
+    // Verify color was applied
+    let activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data[1][1].bg).toBe('#ffcc80')
+
+    // Verify undo button is enabled
+    const undoButton = screen.getByTestId('spreadsheet-toolbar-undo')
+    expect(undoButton).not.toBeDisabled()
+
+    // Undo
+    fireEvent.click(undoButton)
+    activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data[1][1].bg).toBeUndefined()
+
+    // Verify redo button is enabled
+    const redoButton = screen.getByTestId('spreadsheet-toolbar-redo')
+    expect(redoButton).not.toBeDisabled()
+
+    // Redo
+    fireEvent.click(redoButton)
+    activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data[1][1].bg).toBe('#ffcc80')
+  })
+
+  it('cell className includes background color for rendering', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red', bg: '#a5d6a7' }], // Green bg
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // The spreadsheet adapter should convert bg to className
+    // Check the mock captured data
+    expect(capturedData.length).toBeGreaterThan(0)
+    const cell = capturedData[1]?.[1] as { className?: string }
+    expect(cell?.className).toBe('bg-[#a5d6a7]')
+  })
+})
+
+describe('SpreadsheetContainer cell text color (cell-text-color)', () => {
+  const colorSpec: Specification = {
+    id: 'color-spec',
+    name: 'Color',
+    order: 0,
+    values: [
+      { id: 'v-1', displayValue: 'Red', skuFragment: 'R' },
+      { id: 'v-2', displayValue: 'Blue', skuFragment: 'B' },
+    ],
+  }
+
+  beforeEach(() => {
+    localStorage.clear()
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+    capturedOnChange = null
+    capturedOnSelect = null
+    capturedData = []
+    capturedSelected = null
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('renders text color picker in toolbar', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Text color picker should be in toolbar
+    expect(screen.getByTestId('cell-text-color-picker-trigger')).toBeInTheDocument()
+  })
+
+  it('text color picker is disabled when no cells are selected', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Text color picker should be disabled when no selection
+    expect(screen.getByTestId('cell-text-color-picker-trigger')).toBeDisabled()
+  })
+
+  it('text color picker is enabled when cells are selected', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Simulate selection via onSelect callback
+    act(() => {
+      if (capturedOnSelect) {
+        capturedOnSelect({
+          range: {
+            start: { row: 1, column: 1 },
+            end: { row: 1, column: 1 },
+          },
+        })
+      }
+    })
+
+    // Text color picker should be enabled after selection
+    expect(screen.getByTestId('cell-text-color-picker-trigger')).not.toBeDisabled()
+  })
+
+  it('applies text color to selected cell', async () => {
+    const user = userEvent.setup()
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Select cell (1, 1) - the "Red" cell
+    act(() => {
+      if (capturedOnSelect) {
+        capturedOnSelect({
+          range: {
+            start: { row: 1, column: 1 },
+            end: { row: 1, column: 1 },
+          },
+        })
+      }
+    })
+
+    // Open text color picker and select a color
+    await user.click(screen.getByTestId('cell-text-color-picker-trigger'))
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-text-color-swatch-dc2626')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('cell-text-color-swatch-dc2626')) // Red
+
+    // Verify text color was applied to store
+    const activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data[1][1].fc).toBe('#dc2626')
+  })
+
+  it('applies text color to multiple selected cells', async () => {
+    const user = userEvent.setup()
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+      [{ v: 'B', m: 'B' }, { v: 'Blue', m: 'Blue' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Select a range of cells (1,1) to (2,1)
+    act(() => {
+      if (capturedOnSelect) {
+        capturedOnSelect({
+          range: {
+            start: { row: 1, column: 1 },
+            end: { row: 2, column: 1 },
+          },
+        })
+      }
+    })
+
+    // Open text color picker and select a color
+    await user.click(screen.getByTestId('cell-text-color-picker-trigger'))
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-text-color-swatch-2563eb')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('cell-text-color-swatch-2563eb')) // Blue
+
+    // Verify text color was applied to both cells
+    const activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data[1][1].fc).toBe('#2563eb')
+    expect(activeSheet!.data[2][1].fc).toBe('#2563eb')
+  })
+
+  it('clears text color when clear option is selected', async () => {
+    const user = userEvent.setup()
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red', fc: '#dc2626' }], // Already has text color
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Verify cell initially has text color
+    let activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data[1][1].fc).toBe('#dc2626')
+
+    // Select cell (1, 1)
+    act(() => {
+      if (capturedOnSelect) {
+        capturedOnSelect({
+          range: {
+            start: { row: 1, column: 1 },
+            end: { row: 1, column: 1 },
+          },
+        })
+      }
+    })
+
+    // Open text color picker and clear color
+    await user.click(screen.getByTestId('cell-text-color-picker-trigger'))
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-text-color-clear')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('cell-text-color-clear'))
+
+    // Verify text color was removed
+    activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data[1][1].fc).toBeUndefined()
+  })
+
+  it('text color persists after page refresh (via localStorage)', async () => {
+    const user = userEvent.setup()
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Select cell and apply text color
+    act(() => {
+      if (capturedOnSelect) {
+        capturedOnSelect({
+          range: {
+            start: { row: 1, column: 1 },
+            end: { row: 1, column: 1 },
+          },
+        })
+      }
+    })
+    await user.click(screen.getByTestId('cell-text-color-picker-trigger'))
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-text-color-swatch-16a34a')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('cell-text-color-swatch-16a34a')) // Green
+
+    // Get current state (which is persisted to localStorage by Zustand)
+    const stateBeforeRefresh = useSheetsStore.getState()
+    const activeSheet = stateBeforeRefresh.getActiveSheet()
+    const cellFc = activeSheet!.data[1][1].fc
+
+    // Verify color was applied
+    expect(cellFc).toBe('#16a34a')
+
+    // The fc field should be in the store which uses persist middleware
+    // to localStorage, so it will persist across "refresh"
+  })
+
+  it('undo reverts text color change', async () => {
+    const user = userEvent.setup()
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Select cell and apply text color
+    act(() => {
+      if (capturedOnSelect) {
+        capturedOnSelect({
+          range: {
+            start: { row: 1, column: 1 },
+            end: { row: 1, column: 1 },
+          },
+        })
+      }
+    })
+    await user.click(screen.getByTestId('cell-text-color-picker-trigger'))
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-text-color-swatch-7c3aed')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('cell-text-color-swatch-7c3aed')) // Violet
+
+    // Verify text color was applied
+    let activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data[1][1].fc).toBe('#7c3aed')
+
+    // Click undo
+    fireEvent.click(screen.getByTestId('spreadsheet-toolbar-undo'))
+
+    // Verify text color was reverted (original cell had no fc)
+    activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data[1][1].fc).toBeUndefined()
+  })
+
+  it('redo re-applies text color after undo', async () => {
+    const user = userEvent.setup()
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Select cell and apply text color
+    act(() => {
+      if (capturedOnSelect) {
+        capturedOnSelect({
+          range: {
+            start: { row: 1, column: 1 },
+            end: { row: 1, column: 1 },
+          },
+        })
+      }
+    })
+    await user.click(screen.getByTestId('cell-text-color-picker-trigger'))
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-text-color-swatch-ea580c')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('cell-text-color-swatch-ea580c')) // Orange
+
+    // Verify text color was applied
+    let activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data[1][1].fc).toBe('#ea580c')
+
+    // Verify undo button is enabled
+    const undoButton = screen.getByTestId('spreadsheet-toolbar-undo')
+    expect(undoButton).not.toBeDisabled()
+
+    // Undo
+    fireEvent.click(undoButton)
+    activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data[1][1].fc).toBeUndefined()
+
+    // Verify redo button is enabled
+    const redoButton = screen.getByTestId('spreadsheet-toolbar-redo')
+    expect(redoButton).not.toBeDisabled()
+
+    // Redo
+    fireEvent.click(redoButton)
+    activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data[1][1].fc).toBe('#ea580c')
+  })
+
+  it('cell className includes text color for rendering', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red', fc: '#dc2626' }], // Red text
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // The spreadsheet adapter should convert fc to className
+    // Check the mock captured data
+    expect(capturedData.length).toBeGreaterThan(0)
+    const cell = capturedData[1]?.[1] as { className?: string }
+    expect(cell?.className).toBe('text-[#dc2626]')
+  })
+
+  it('cell className includes both background and text color', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red', bg: '#fce4ec', fc: '#dc2626' }], // Pink bg, Red text
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // The spreadsheet adapter should convert both bg and fc to className
+    // Check the mock captured data
+    expect(capturedData.length).toBeGreaterThan(0)
+    const cell = capturedData[1]?.[1] as { className?: string }
+    expect(cell?.className).toBe('bg-[#fce4ec] text-[#dc2626]')
+  })
+})
+
+describe('SpreadsheetContainer row resizing (row-resizing)', () => {
+  const colorSpec: Specification = {
+    id: 'color-spec',
+    name: 'Color',
+    order: 0,
+    values: [
+      { id: 'red', displayValue: 'Red', skuFragment: 'R' },
+      { id: 'blue', displayValue: 'Blue', skuFragment: 'B' },
+    ],
+  }
+
+  beforeEach(() => {
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+    capturedOnChange = null
+    capturedOnSelect = null
+    capturedData = []
+    capturedSelected = null
+  })
+
+  it('renders ResizableRowIndicators component', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R' }, { v: 'Red' }],
+      [{ v: 'B' }, { v: 'Blue' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    expect(screen.getByTestId('resizable-row-indicators')).toBeInTheDocument()
+  })
+
+  it('renders row resize handles for each data row', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU' }],
+      [{ v: 'SKU-001' }],
+      [{ v: 'SKU-002' }],
+      [{ v: 'SKU-003' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [])
+
+    render(<SpreadsheetContainer />)
+
+    // Should have resize handles for all 4 rows (including header)
+    expect(screen.getByTestId('row-resize-handle-0')).toBeInTheDocument()
+    expect(screen.getByTestId('row-resize-handle-1')).toBeInTheDocument()
+    expect(screen.getByTestId('row-resize-handle-2')).toBeInTheDocument()
+    expect(screen.getByTestId('row-resize-handle-3')).toBeInTheDocument()
+  })
+
+  it('updates row height in store when resize handle is dragged', async () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU' }],
+      [{ v: 'SKU-001' }],
+    ]
+    const sheetId = createSheetWithColumns('Products', data, columns, [])
+
+    render(<SpreadsheetContainer />)
+
+    const handle = screen.getByTestId('row-resize-handle-1')
+
+    // Start resize
+    fireEvent.mouseDown(handle, { clientY: 100 })
+
+    // Simulate mouse move via document event
+    const mouseMoveEvent = new MouseEvent('mousemove', {
+      clientY: 150,
+      bubbles: true,
+    })
+    document.dispatchEvent(mouseMoveEvent)
+
+    // End resize
+    const mouseUpEvent = new MouseEvent('mouseup', { bubbles: true })
+    document.dispatchEvent(mouseUpEvent)
+
+    // Check that row height was updated in store
+    const sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)
+    expect(sheet?.rowHeights?.[1]).toBeDefined()
+  })
+
+  it('generates row height styles for custom heights', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU' }],
+      [{ v: 'SKU-001' }],
+    ]
+    const sheetId = createSheetWithColumns('Products', data, columns, [])
+
+    // Set a custom row height
+    useSheetsStore.setState(state => ({
+      sheets: state.sheets.map(s =>
+        s.id === sheetId
+          ? { ...s, rowHeights: { 1: 60 } }
+          : s
+      )
+    }))
+
+    render(<SpreadsheetContainer />)
+
+    // Check that row height styles are generated
+    const styleElement = document.querySelector('[data-testid="row-height-styles"]')
+    expect(styleElement).toBeInTheDocument()
+    expect(styleElement?.textContent).toContain('height: 60px')
+  })
+
+  it('preserves row heights after switching sheets and returning', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+    ]
+    const data1: CellData[][] = [
+      [{ v: 'SKU' }],
+      [{ v: 'SKU-001' }],
+    ]
+    const data2: CellData[][] = [
+      [{ v: 'SKU' }],
+      [{ v: 'SKU-A' }],
+    ]
+
+    // Create first sheet with custom row height
+    const sheetId1 = createSheetWithColumns('Products', data1, columns, [])
+    useSheetsStore.setState(state => ({
+      sheets: state.sheets.map(s =>
+        s.id === sheetId1
+          ? { ...s, rowHeights: { 1: 50 } }
+          : s
+      )
+    }))
+
+    // Create second sheet
+    createSheetWithColumns('Other', data2, columns, [])
+
+    render(<SpreadsheetContainer />)
+
+    // Switch to first sheet
+    useSheetsStore.setState({ activeSheetId: sheetId1 })
+
+    // Verify row height is still 50
+    const sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId1)
+    expect(sheet?.rowHeights?.[1]).toBe(50)
+  })
+
+  it('enforces minimum row height of 24px', async () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU' }],
+      [{ v: 'SKU-001' }],
+    ]
+    const sheetId = createSheetWithColumns('Products', data, columns, [])
+
+    render(<SpreadsheetContainer />)
+
+    const handle = screen.getByTestId('row-resize-handle-1')
+
+    // Start resize
+    fireEvent.mouseDown(handle, { clientY: 100 })
+
+    // Drag up significantly to try to make height negative
+    const mouseMoveEvent = new MouseEvent('mousemove', {
+      clientY: 20, // Very high up - would result in negative delta
+      bubbles: true,
+    })
+    document.dispatchEvent(mouseMoveEvent)
+
+    // End resize
+    const mouseUpEvent = new MouseEvent('mouseup', { bubbles: true })
+    document.dispatchEvent(mouseUpEvent)
+
+    // Check that row height is clamped to minimum
+    const sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)
+    expect(sheet?.rowHeights?.[1]).toBe(24) // Minimum enforced
+  })
+
+  it('uses default row height (32px) for rows without custom height', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU' }],
+      [{ v: 'SKU-001' }],
+      [{ v: 'SKU-002' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [])
+
+    render(<SpreadsheetContainer />)
+
+    // Row height styles should include default height (32px) for rows without custom height
+    const styleElement = document.querySelector('[data-testid="row-height-styles"]')
+    expect(styleElement).toBeInTheDocument()
+    expect(styleElement?.textContent).toContain('height: 32px')
   })
 })

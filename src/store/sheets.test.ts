@@ -1607,4 +1607,102 @@ describe('useSheetsStore', () => {
       expect(sheet.columns[1].width).toBe(250);
     });
   });
+
+  describe('updateRowHeight', () => {
+    const createSheetWithData = (): { sheetId: string } => {
+      const { addSheet } = useSheetsStore.getState();
+      const sheetId = addSheet('Test Sheet');
+
+      // Set up some data rows
+      useSheetsStore.setState((state) => ({
+        sheets: state.sheets.map((s) =>
+          s.id === sheetId
+            ? {
+                ...s,
+                data: [
+                  [{ v: 'SKU' }],           // Header row (index 0)
+                  [{ v: 'SKU-001' }],        // Data row 1 (index 1)
+                  [{ v: 'SKU-002' }],        // Data row 2 (index 2)
+                  [{ v: 'SKU-003' }],        // Data row 3 (index 3)
+                ],
+              }
+            : s
+        ),
+      }));
+
+      return { sheetId };
+    };
+
+    it('should update row height', () => {
+      const { sheetId } = createSheetWithData();
+      const { updateRowHeight } = useSheetsStore.getState();
+
+      const result = updateRowHeight(sheetId, 1, 50);
+      expect(result).toBe(true);
+
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.rowHeights?.[1]).toBe(50);
+    });
+
+    it('should enforce minimum height of 24px', () => {
+      const { sheetId } = createSheetWithData();
+      const { updateRowHeight } = useSheetsStore.getState();
+
+      const result = updateRowHeight(sheetId, 1, 10);
+      expect(result).toBe(true);
+
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.rowHeights?.[1]).toBe(24);
+    });
+
+    it('should return false for non-existent sheet', () => {
+      const { updateRowHeight } = useSheetsStore.getState();
+      const result = updateRowHeight('non-existent', 0, 50);
+      expect(result).toBe(false);
+    });
+
+    it('should return false for invalid row index', () => {
+      const { sheetId } = createSheetWithData();
+      const { updateRowHeight } = useSheetsStore.getState();
+
+      expect(updateRowHeight(sheetId, -1, 50)).toBe(false);
+      expect(updateRowHeight(sheetId, 10, 50)).toBe(false);
+    });
+
+    it('should allow updating height of header row (row 0)', () => {
+      const { sheetId } = createSheetWithData();
+      const { updateRowHeight } = useSheetsStore.getState();
+
+      const result = updateRowHeight(sheetId, 0, 40);
+      expect(result).toBe(true);
+
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.rowHeights?.[0]).toBe(40);
+    });
+
+    it('should not affect other rows when updating one', () => {
+      const { sheetId } = createSheetWithData();
+      const { updateRowHeight } = useSheetsStore.getState();
+
+      updateRowHeight(sheetId, 1, 50);
+      updateRowHeight(sheetId, 2, 60);
+
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.rowHeights?.[0]).toBeUndefined();
+      expect(sheet.rowHeights?.[1]).toBe(50);
+      expect(sheet.rowHeights?.[2]).toBe(60);
+      expect(sheet.rowHeights?.[3]).toBeUndefined();
+    });
+
+    it('should persist height after refresh (via Zustand persist)', () => {
+      const { sheetId } = createSheetWithData();
+      const { updateRowHeight } = useSheetsStore.getState();
+
+      updateRowHeight(sheetId, 1, 75);
+
+      // Zustand persist is set up, so height should be in state
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.rowHeights?.[1]).toBe(75);
+    });
+  });
 });

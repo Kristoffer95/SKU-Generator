@@ -1,3 +1,43 @@
+## row-resizing - COMPLETED
+Add ability to resize row heights by dragging
+
+### Key decisions
+- Extended SheetConfig interface with 'rowHeights?: Record<number, number>' field in src/types/index.ts
+- Added updateRowHeight(sheetId, rowIndex, height) method to useSheetsStore with 24px minimum enforcement
+- Created ResizableRowIndicators component that overlays resize handles on the spreadsheet's row indicator column
+- Resize handles are thin (h-1) horizontal divs at bottom edge of each row with row-resize cursor
+- Drag-to-resize: mousedown captures starting Y position and row height, mousemove updates height in real-time
+- Document-level event listeners for mousemove/mouseup ensure smooth resizing across element boundaries
+- Double-click auto-fit: measures content height of all cells in row, adds padding, sets optimal height (max 100px)
+- Row heights synced to react-spreadsheet via dynamic CSS injection (<style> element with nth-child selectors)
+- Heights persisted via Zustand persist (stored in SheetConfig.rowHeights Record)
+- Default row height remains 32px, minimum 24px enforced
+
+### Files changed
+- src/types/index.ts (added rowHeights?: Record<number, number> to SheetConfig interface)
+- src/store/sheets.ts (added updateRowHeight method to interface and implementation)
+- src/store/sheets.test.ts (+7 tests for updateRowHeight)
+- src/components/spreadsheet/ResizableRowIndicators.tsx (new, ~175 lines)
+- src/components/spreadsheet/ResizableRowIndicators.test.tsx (new, 14 tests)
+- src/components/SpreadsheetContainer.tsx (added handleRowResize, rowHeightStyles, ResizableRowIndicators integration)
+- src/components/SpreadsheetContainer.test.tsx (+8 tests for row resizing)
+- src/index.css (added CSS for row resize handles)
+
+### Notes
+- All 8 stepsToVerify criteria met:
+  1. SheetConfig has 'rowHeights?: Record<number, number>' field ✓
+  2. Hover near bottom edge of row indicator shows resize cursor ✓
+  3. Dragging adjusts row height in real-time ✓
+  4. Releasing mouse commits the new height ✓
+  5. Height persists after page refresh ✓ (via localStorage)
+  6. Default height for new rows is 32px ✓
+  7. Minimum height constraint (24px) is enforced ✓
+  8. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (891 tests, +28 new)
+- npm run build passes
+
 ## column-resizing - COMPLETED
 Add ability to resize column widths by dragging
 
