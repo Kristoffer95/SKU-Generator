@@ -49,6 +49,14 @@ export interface SpreadsheetToolbarProps {
 }
 
 /**
+ * Prevent focus from leaving the spreadsheet when clicking toolbar buttons
+ * This preserves cell selection after toolbar actions
+ */
+function preventFocusLoss(e: React.MouseEvent) {
+  e.preventDefault()
+}
+
+/**
  * Toolbar component for spreadsheet actions
  * Includes: Undo/Redo, Add Row
  * Note: Import/Export functionality is in AppLayout header
@@ -170,6 +178,7 @@ export function SpreadsheetToolbar({
           variant="ghost"
           size="sm"
           onClick={() => onBoldChange(!isBold)}
+          onMouseDown={preventFocusLoss}
           disabled={!hasSelection}
           title="Bold"
           data-testid="spreadsheet-toolbar-bold"
@@ -185,6 +194,7 @@ export function SpreadsheetToolbar({
           variant="ghost"
           size="sm"
           onClick={() => onItalicChange(!isItalic)}
+          onMouseDown={preventFocusLoss}
           disabled={!hasSelection}
           title="Italic"
           data-testid="spreadsheet-toolbar-italic"
@@ -201,6 +211,7 @@ export function SpreadsheetToolbar({
             variant="ghost"
             size="sm"
             onClick={() => onAlignChange("left")}
+            onMouseDown={preventFocusLoss}
             disabled={!hasSelection}
             title="Align Left"
             data-testid="spreadsheet-toolbar-align-left"
@@ -212,6 +223,7 @@ export function SpreadsheetToolbar({
             variant="ghost"
             size="sm"
             onClick={() => onAlignChange("center")}
+            onMouseDown={preventFocusLoss}
             disabled={!hasSelection}
             title="Align Center"
             data-testid="spreadsheet-toolbar-align-center"
@@ -223,6 +235,7 @@ export function SpreadsheetToolbar({
             variant="ghost"
             size="sm"
             onClick={() => onAlignChange("right")}
+            onMouseDown={preventFocusLoss}
             disabled={!hasSelection}
             title="Align Right"
             data-testid="spreadsheet-toolbar-align-right"

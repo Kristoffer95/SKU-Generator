@@ -218,4 +218,58 @@ describe("CellColorPicker", () => {
       }
     })
   })
+
+  describe("focus preservation (selection should be maintained)", () => {
+    it("trigger button prevents focus change on mousedown", () => {
+      render(<CellColorPicker onColorSelect={vi.fn()} />)
+
+      const trigger = screen.getByTestId("cell-color-picker-trigger")
+      const mouseDownEvent = new MouseEvent("mousedown", { bubbles: true, cancelable: true })
+      const preventDefaultSpy = vi.spyOn(mouseDownEvent, "preventDefault")
+
+      trigger.dispatchEvent(mouseDownEvent)
+
+      expect(preventDefaultSpy).toHaveBeenCalled()
+    })
+
+    it("clear color button prevents focus change on mousedown", async () => {
+      const user = userEvent.setup()
+      render(<CellColorPicker onColorSelect={vi.fn()} />)
+
+      const trigger = screen.getByTestId("cell-color-picker-trigger")
+      await user.click(trigger)
+
+      await waitFor(() => {
+        expect(screen.getByTestId("cell-color-clear")).toBeInTheDocument()
+      })
+
+      const clearButton = screen.getByTestId("cell-color-clear")
+      const mouseDownEvent = new MouseEvent("mousedown", { bubbles: true, cancelable: true })
+      const preventDefaultSpy = vi.spyOn(mouseDownEvent, "preventDefault")
+
+      clearButton.dispatchEvent(mouseDownEvent)
+
+      expect(preventDefaultSpy).toHaveBeenCalled()
+    })
+
+    it("color swatch buttons prevent focus change on mousedown", async () => {
+      const user = userEvent.setup()
+      render(<CellColorPicker onColorSelect={vi.fn()} />)
+
+      const trigger = screen.getByTestId("cell-color-picker-trigger")
+      await user.click(trigger)
+
+      await waitFor(() => {
+        expect(screen.getByTestId("cell-color-swatch-fce4ec")).toBeInTheDocument()
+      })
+
+      const swatch = screen.getByTestId("cell-color-swatch-fce4ec")
+      const mouseDownEvent = new MouseEvent("mousedown", { bubbles: true, cancelable: true })
+      const preventDefaultSpy = vi.spyOn(mouseDownEvent, "preventDefault")
+
+      swatch.dispatchEvent(mouseDownEvent)
+
+      expect(preventDefaultSpy).toHaveBeenCalled()
+    })
+  })
 })

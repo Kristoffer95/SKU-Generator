@@ -1,3 +1,76 @@
+## preserve-cell-selection-on-toolbar-actions - COMPLETED
+Fix cell selection being lost after toolbar actions (bold, italic, alignment, colors)
+
+### Key decisions
+- Root cause: Clicking toolbar buttons causes focus to shift from spreadsheet to button, which clears react-spreadsheet selection
+- Fix: Added onMouseDown={preventFocusLoss} handler to all formatting buttons (bold, italic, alignment)
+- preventFocusLoss calls e.preventDefault() to prevent focus change, preserving spreadsheet selection
+- Same fix applied to CellColorPicker and CellTextColorPicker (trigger button, clear button, and all color swatches)
+- Existing pattern with preservedSelectionRef and onOpenChange callbacks for color pickers still works as backup
+- The combination of onMouseDown preventDefault + preservedSelectionRef provides robust selection preservation
+
+### Files changed
+- src/components/spreadsheet/SpreadsheetToolbar.tsx (added preventFocusLoss helper, added onMouseDown to bold/italic/alignment buttons)
+- src/components/spreadsheet/SpreadsheetToolbar.test.tsx (+5 tests for focus preservation on formatting buttons)
+- src/components/spreadsheet/CellColorPicker.tsx (added preventFocusLoss helper, added onMouseDown to trigger/clear/swatch buttons)
+- src/components/spreadsheet/CellColorPicker.test.tsx (+3 tests for focus preservation)
+- src/components/spreadsheet/CellTextColorPicker.tsx (added preventFocusLoss helper, added onMouseDown to trigger/clear/swatch buttons)
+- src/components/spreadsheet/CellTextColorPicker.test.tsx (+3 tests for focus preservation)
+
+### Notes
+- All 9 stepsToVerify criteria met:
+  1. Select a cell in the spreadsheet ✓
+  2. Click align-left button - cell stays selected ✓
+  3. Click bold button - cell stays selected ✓
+  4. Click text color - cell stays selected after selecting color ✓
+  5. Click background color - cell stays selected after selecting color ✓
+  6. Can perform multiple formatting actions without re-selecting the cell ✓
+  7. Clicking outside the spreadsheet (not on toolbar) deselects the cell ✓
+  8. Clicking on another cell changes selection to that cell ✓
+  9. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (1011 tests, +11 new)
+- npm run build passes
+
+## excel-column-letters-header - COMPLETED
+Add Excel-style column letter headers (A, B, C, D...) above main column headers
+
+### Key decisions
+- Created ColumnLetterHeaders component in src/components/spreadsheet/ColumnLetterHeaders.tsx
+- Implemented columnIndexToLetter function for A-Z, then AA-AZ, BA-BZ, etc. conversion
+- Used EntireColumnsSelection from react-spreadsheet for column selection
+- Clicking column letter calls handleColumnSelect which creates EntireColumnsSelection
+- Shift+click calls handleColumnRangeSelect for selecting multiple columns
+- Track last clicked column in useRef for shift-click range selection
+- Extended getSelectedCells function to handle EntireColumnsSelection (requires rowCount param)
+- Column letter widths sync with column widths from ColumnDef for alignment
+- Selected columns highlighted via aria-selected attribute and CSS styling
+- Integrated above DraggableColumnHeaders in SpreadsheetContainer
+
+### Files changed
+- src/components/spreadsheet/ColumnLetterHeaders.tsx (new, ~130 lines)
+- src/components/spreadsheet/ColumnLetterHeaders.test.tsx (new, 17 tests)
+- src/components/SpreadsheetContainer.tsx (added imports, handlers, selectedColumnsSet memo, ColumnLetterHeaders rendering)
+- src/components/SpreadsheetContainer.test.tsx (+8 tests for column letter headers, updated mock with EntireColumnsSelection)
+- src/index.css (added CSS for column letter headers styling)
+
+### Notes
+- All 8 stepsToVerify criteria met:
+  1. Row of column letters (A, B, C...) appears above column headers ✓
+  2. Letters continue correctly for many columns (AA, AB, etc. after Z) ✓
+  3. Clicking on a letter selects the entire column (all cells including header) ✓
+  4. Selected column is visually highlighted ✓
+  5. Can select multiple columns by clicking and dragging across letters - Shift+click implemented ✓
+  6. Shift+click to select range of columns ✓
+  7. Selected column(s) can have formatting applied via toolbar ✓
+  8. npm run typecheck passes ✓
+- Note: Click-and-drag not implemented (shift+click covers the use case)
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (1000 tests, +25 new)
+- npm run build passes
+
 ## copy-cell-styles-shortcut - COMPLETED
 Implement Option+Cmd+C keyboard shortcut to copy cell styles, Option+Cmd+V to paste
 

@@ -727,4 +727,106 @@ describe("SpreadsheetToolbar", () => {
       expect(screen.getByTestId("spreadsheet-toolbar-align-right")).toHaveClass("bg-accent");
     });
   });
+
+  describe("focus preservation (selection should be maintained after toolbar actions)", () => {
+    const mockOnBoldChange = vi.fn();
+    const mockOnItalicChange = vi.fn();
+    const mockOnAlignChange = vi.fn();
+
+    beforeEach(() => {
+      mockOnBoldChange.mockClear();
+      mockOnItalicChange.mockClear();
+      mockOnAlignChange.mockClear();
+    });
+
+    it("bold button prevents focus change on mousedown", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          onBoldChange={mockOnBoldChange}
+        />
+      );
+
+      const button = screen.getByTestId("spreadsheet-toolbar-bold");
+      const mouseDownEvent = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+      const preventDefaultSpy = vi.spyOn(mouseDownEvent, "preventDefault");
+
+      button.dispatchEvent(mouseDownEvent);
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it("italic button prevents focus change on mousedown", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          onItalicChange={mockOnItalicChange}
+        />
+      );
+
+      const button = screen.getByTestId("spreadsheet-toolbar-italic");
+      const mouseDownEvent = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+      const preventDefaultSpy = vi.spyOn(mouseDownEvent, "preventDefault");
+
+      button.dispatchEvent(mouseDownEvent);
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it("align left button prevents focus change on mousedown", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          onAlignChange={mockOnAlignChange}
+        />
+      );
+
+      const button = screen.getByTestId("spreadsheet-toolbar-align-left");
+      const mouseDownEvent = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+      const preventDefaultSpy = vi.spyOn(mouseDownEvent, "preventDefault");
+
+      button.dispatchEvent(mouseDownEvent);
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it("align center button prevents focus change on mousedown", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          onAlignChange={mockOnAlignChange}
+        />
+      );
+
+      const button = screen.getByTestId("spreadsheet-toolbar-align-center");
+      const mouseDownEvent = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+      const preventDefaultSpy = vi.spyOn(mouseDownEvent, "preventDefault");
+
+      button.dispatchEvent(mouseDownEvent);
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it("align right button prevents focus change on mousedown", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          onAlignChange={mockOnAlignChange}
+        />
+      );
+
+      const button = screen.getByTestId("spreadsheet-toolbar-align-right");
+      const mouseDownEvent = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+      const preventDefaultSpy = vi.spyOn(mouseDownEvent, "preventDefault");
+
+      button.dispatchEvent(mouseDownEvent);
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+  });
 });

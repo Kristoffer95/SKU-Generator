@@ -7,6 +7,14 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 /**
+ * Prevent focus from leaving the spreadsheet when clicking color picker buttons
+ * This preserves cell selection after applying colors
+ */
+function preventFocusLoss(e: React.MouseEvent) {
+  e.preventDefault()
+}
+
+/**
  * Predefined color palette for cell backgrounds
  * Colors are chosen to be easily distinguishable and not clash with
  * read-only (gray-blue #f1f5f9) or duplicate warning (amber #fef3c7) styling
@@ -69,6 +77,7 @@ export function CellColorPicker({
           title="Cell background color"
           className={className}
           data-testid="cell-color-picker-trigger"
+          onMouseDown={preventFocusLoss}
         >
           <div className="relative">
             <Paintbrush className="h-4 w-4" />
@@ -92,6 +101,7 @@ export function CellColorPicker({
         <button
           type="button"
           onClick={() => onColorSelect(null)}
+          onMouseDown={preventFocusLoss}
           className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
           data-testid="cell-color-clear"
         >
@@ -106,6 +116,7 @@ export function CellColorPicker({
               key={color}
               type="button"
               onClick={() => onColorSelect(color)}
+              onMouseDown={preventFocusLoss}
               className="h-6 w-6 rounded-sm border border-border hover:ring-2 hover:ring-ring hover:ring-offset-1"
               style={{ backgroundColor: color }}
               title={color}

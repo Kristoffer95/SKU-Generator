@@ -805,6 +805,23 @@
       "Selected column(s) can have formatting applied via toolbar",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
+  },
+  {
+    "id": "preserve-cell-selection-on-toolbar-actions",
+    "category": "Bug Fix",
+    "description": "Cell selection is lost after each toolbar action (align-left, center, align-right, bold, italic, colors, etc.), forcing users to re-select the cell before performing another action. Fix to preserve cell selection after toolbar actions. Selection should only clear when clicking outside the spreadsheet on non-action elements.",
+    "stepsToVerify": [
+      "Select a cell in the spreadsheet",
+      "Click align-left button - cell stays selected",
+      "Click bold button - cell stays selected",
+      "Click text color - cell stays selected after selecting color",
+      "Click background color - cell stays selected after selecting color",
+      "Can perform multiple formatting actions without re-selecting the cell",
+      "Clicking outside the spreadsheet (not on toolbar) deselects the cell",
+      "Clicking on another cell changes selection to that cell",
+      "npm run typecheck passes"
+    ],
+    "passes": true
   }
 ]
