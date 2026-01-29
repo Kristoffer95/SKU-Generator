@@ -102,7 +102,7 @@ vi.mock('react-spreadsheet', () => {
             <tbody>
               {data?.map((row: unknown[], rowIdx: number) => (
                 <tr key={rowIdx} data-testid={`row-${rowIdx}`}>
-                  <th>Row {rowIdx}</th>
+                  <th data-testid={`row-indicator-${rowIdx}`}>Row {rowIdx}</th>
                   {Array.isArray(row) && row.map((cell: unknown, colIdx: number) => {
                     const cellObj = cell as { value?: string | number | null; readOnly?: boolean; className?: string } | null
                     return (
@@ -2721,5 +2721,301 @@ describe('SpreadsheetContainer column drag-and-drop (column-drag-reorder)', () =
     const activeSheet = useSheetsStore.getState().getActiveSheet()
     expect(activeSheet!.columns[0].header).toBe('SKU')
     expect(activeSheet!.columns[1].header).toBe('Color')
+  })
+})
+
+/**
+ * Tests for row-deletion PRD task
+ * Add ability to delete rows from the spreadsheet with right-click context menu
+ */
+describe('SpreadsheetContainer row deletion (row-deletion)', () => {
+  const colorSpec: Specification = {
+    id: 'color-spec',
+    name: 'Color',
+    order: 0,
+    values: [
+      { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+      { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+    ],
+  }
+
+  beforeEach(() => {
+    localStorage.clear()
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+    capturedOnChange = null
+    capturedOnSelect = null
+    capturedData = []
+    capturedSelected = null
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('does not show row context menu initially', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+      [{ v: 'B', m: 'B' }, { v: 'Blue', m: 'Blue' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    expect(screen.queryByTestId('row-context-menu')).not.toBeInTheDocument()
+  })
+
+  it('shows row context menu on right-click row indicator for data row', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+      [{ v: 'B', m: 'B' }, { v: 'Blue', m: 'Blue' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Right-click on row indicator for row 1 (first data row)
+    const rowIndicator = screen.getByTestId('row-indicator-1')
+    fireEvent.contextMenu(rowIndicator, { clientX: 50, clientY: 100 })
+
+    expect(screen.getByTestId('row-context-menu')).toBeInTheDocument()
+    expect(screen.getByTestId('context-menu-delete-row')).toBeInTheDocument()
+  })
+
+  it('does NOT show row context menu on right-click header row indicator', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Right-click on header row indicator (row 0)
+    const headerRowIndicator = screen.getByTestId('row-indicator-0')
+    fireEvent.contextMenu(headerRowIndicator, { clientX: 50, clientY: 50 })
+
+    // Row context menu should NOT appear for header row
+    expect(screen.queryByTestId('row-context-menu')).not.toBeInTheDocument()
+  })
+
+  it('opens delete confirmation dialog when "Delete row" clicked', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+      [{ v: 'B', m: 'B' }, { v: 'Blue', m: 'Blue' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Right-click on row 1 indicator
+    const rowIndicator = screen.getByTestId('row-indicator-1')
+    fireEvent.contextMenu(rowIndicator, { clientX: 50, clientY: 100 })
+
+    // Click "Delete row"
+    fireEvent.click(screen.getByTestId('context-menu-delete-row'))
+
+    // Delete row confirmation dialog should be open
+    expect(screen.getByTestId('delete-row-dialog')).toBeInTheDocument()
+  })
+
+  it('deletes row when confirming deletion', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+      [{ v: 'B', m: 'B' }, { v: 'Blue', m: 'Blue' }],
+      [{ v: 'G', m: 'G' }, { v: 'Green', m: 'Green' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Verify initial state (4 rows: header + 3 data rows)
+    const initialSheet = useSheetsStore.getState().getActiveSheet()
+    expect(initialSheet!.data.length).toBe(4)
+
+    // Right-click on row 2 indicator (second data row)
+    const rowIndicator = screen.getByTestId('row-indicator-2')
+    fireEvent.contextMenu(rowIndicator, { clientX: 50, clientY: 100 })
+
+    // Click "Delete row"
+    fireEvent.click(screen.getByTestId('context-menu-delete-row'))
+
+    // Confirm deletion
+    fireEvent.click(screen.getByTestId('delete-row-confirm'))
+
+    // Verify row was deleted
+    const activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet).toBeDefined()
+    expect(activeSheet!.data.length).toBe(3) // Was 4, now 3
+    // Row with Blue (was row 2) should be gone, Green (was row 3) should now be row 2
+    expect(activeSheet!.data[1][0].v).toBe('R') // Row 1 still has Red
+    expect(activeSheet!.data[2][0].v).toBe('G') // Row 2 now has Green (was row 3)
+  })
+
+  it('does NOT delete row when canceling deletion', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+      [{ v: 'B', m: 'B' }, { v: 'Blue', m: 'Blue' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Right-click on row 1 indicator
+    const rowIndicator = screen.getByTestId('row-indicator-1')
+    fireEvent.contextMenu(rowIndicator, { clientX: 50, clientY: 100 })
+
+    // Click "Delete row"
+    fireEvent.click(screen.getByTestId('context-menu-delete-row'))
+
+    // Cancel deletion
+    fireEvent.click(screen.getByTestId('delete-row-cancel'))
+
+    // Verify row was NOT deleted
+    const activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet).toBeDefined()
+    expect(activeSheet!.data.length).toBe(3) // Still has all 3 rows
+    expect(activeSheet!.data[1][0].v).toBe('R')
+    expect(activeSheet!.data[2][0].v).toBe('B')
+  })
+
+  it('undo restores deleted row', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+      [{ v: 'B', m: 'B' }, { v: 'Blue', m: 'Blue' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Delete row 1
+    const rowIndicator = screen.getByTestId('row-indicator-1')
+    fireEvent.contextMenu(rowIndicator, { clientX: 50, clientY: 100 })
+    fireEvent.click(screen.getByTestId('context-menu-delete-row'))
+    fireEvent.click(screen.getByTestId('delete-row-confirm'))
+
+    // Verify row was deleted
+    let activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data.length).toBe(2)
+
+    // Click Undo button
+    const undoButton = screen.getByTestId('spreadsheet-toolbar-undo')
+    fireEvent.click(undoButton)
+
+    // Verify row was restored
+    activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data.length).toBe(3)
+    expect(activeSheet!.data[1][0].v).toBe('R')
+    expect(activeSheet!.data[2][0].v).toBe('B')
+  })
+
+  it('redo re-deletes row after undo', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
+      [{ v: 'B', m: 'B' }, { v: 'Blue', m: 'Blue' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Delete row 1
+    const rowIndicator = screen.getByTestId('row-indicator-1')
+    fireEvent.contextMenu(rowIndicator, { clientX: 50, clientY: 100 })
+    fireEvent.click(screen.getByTestId('context-menu-delete-row'))
+    fireEvent.click(screen.getByTestId('delete-row-confirm'))
+
+    // Undo
+    fireEvent.click(screen.getByTestId('spreadsheet-toolbar-undo'))
+
+    // Verify row was restored
+    let activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data.length).toBe(3)
+
+    // Redo
+    fireEvent.click(screen.getByTestId('spreadsheet-toolbar-redo'))
+
+    // Verify row was deleted again
+    activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data.length).toBe(2)
+    expect(activeSheet!.data[1][0].v).toBe('B') // Row with Blue is now at index 1
+  })
+
+  it('works correctly with any number of rows', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+      [{ v: '1', m: '1' }, { v: 'Row1', m: 'Row1' }],
+      [{ v: '2', m: '2' }, { v: 'Row2', m: 'Row2' }],
+      [{ v: '3', m: '3' }, { v: 'Row3', m: 'Row3' }],
+      [{ v: '4', m: '4' }, { v: 'Row4', m: 'Row4' }],
+      [{ v: '5', m: '5' }, { v: 'Row5', m: 'Row5' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [colorSpec])
+
+    render(<SpreadsheetContainer />)
+
+    // Delete row 3 (middle row)
+    let rowIndicator = screen.getByTestId('row-indicator-3')
+    fireEvent.contextMenu(rowIndicator, { clientX: 50, clientY: 100 })
+    fireEvent.click(screen.getByTestId('context-menu-delete-row'))
+    fireEvent.click(screen.getByTestId('delete-row-confirm'))
+
+    // Verify row was deleted
+    let activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data.length).toBe(5)
+    expect(activeSheet!.data[3][0].v).toBe('4') // Row4 moved up
+
+    // Delete first data row (row 1)
+    rowIndicator = screen.getByTestId('row-indicator-1')
+    fireEvent.contextMenu(rowIndicator, { clientX: 50, clientY: 100 })
+    fireEvent.click(screen.getByTestId('context-menu-delete-row'))
+    fireEvent.click(screen.getByTestId('delete-row-confirm'))
+
+    // Verify another row was deleted
+    activeSheet = useSheetsStore.getState().getActiveSheet()
+    expect(activeSheet!.data.length).toBe(4)
+    expect(activeSheet!.data[1][0].v).toBe('2') // Row2 is now first data row
   })
 })

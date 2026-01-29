@@ -604,7 +604,7 @@
       "Works correctly with any number of rows",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "cell-background-color",

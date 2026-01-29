@@ -9,9 +9,11 @@ import { SheetTabs } from "@/components/spreadsheet/SheetTabs"
 import { SpreadsheetToolbar } from "@/components/spreadsheet/SpreadsheetToolbar"
 import { DropdownEditor } from "@/components/spreadsheet/DropdownEditor"
 import { ColumnHeaderContextMenu, ContextMenuPosition } from "@/components/spreadsheet/ColumnHeaderContextMenu"
+import { RowContextMenu, RowContextMenuPosition } from "@/components/spreadsheet/RowContextMenu"
 import { DraggableColumnHeaders } from "@/components/spreadsheet/DraggableColumnHeaders"
 import { AddColumnDialog } from "@/components/AddColumnDialog"
 import { DeleteColumnConfirmDialog } from "@/components/DeleteColumnConfirmDialog"
+import { DeleteRowConfirmDialog } from "@/components/DeleteRowConfirmDialog"
 import { convertToSpreadsheetData, convertFromSpreadsheetData } from "@/lib/spreadsheet-adapter"
 import type { CellData, ColumnDef } from "@/types"
 import type { SKUMatrix } from "@/types/spreadsheet"
@@ -124,6 +126,14 @@ export function SpreadsheetContainer() {
   // Delete column confirmation dialog state
   const [deleteColumnDialogOpen, setDeleteColumnDialogOpen] = useState(false)
   const [columnToDelete, setColumnToDelete] = useState<{ index: number; column: ColumnDef } | null>(null)
+
+  // Row context menu state
+  const [rowContextMenuPosition, setRowContextMenuPosition] = useState<RowContextMenuPosition | null>(null)
+  const [rowContextMenuRowIndex, setRowContextMenuRowIndex] = useState<number>(0)
+
+  // Delete row confirmation dialog state
+  const [deleteRowDialogOpen, setDeleteRowDialogOpen] = useState(false)
+  const [rowToDelete, setRowToDelete] = useState<number | null>(null)
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -323,9 +333,8 @@ export function SpreadsheetContainer() {
     }, 0)
   }, [])
 
-  // Handle right-click on column headers to show context menu
+  // Handle right-click on column headers or row indicators to show context menu
   const handleContextMenu = useCallback((event: React.MouseEvent) => {
-    // Find if the click target is within the header row (row 0)
     const target = event.target as HTMLElement
     const cell = target.closest("td, th")
     if (!cell) return
@@ -334,16 +343,28 @@ export function SpreadsheetContainer() {
     const row = cell.closest("tr")
     if (!row) return
 
-    // Check if this is in the first row (header row) - tbody row 0
     const tbody = row.closest("tbody")
     if (!tbody) return
 
     const rowIndex = Array.from(tbody.querySelectorAll("tr")).indexOf(row)
-    if (rowIndex !== 0) return // Only show context menu for header row
 
-    // Get column index (subtract 1 for row indicator column)
+    // Get cell index to determine if it's the row indicator (first cell) or a data cell
     const cells = Array.from(row.querySelectorAll("th, td"))
     const cellIndex = cells.indexOf(cell)
+
+    // Check if this is a row indicator (first cell, cellIndex === 0)
+    // Row indicator is the leftmost cell showing row numbers
+    // Only show row context menu for data rows (rowIndex > 0), not header row
+    if (cellIndex === 0 && rowIndex > 0) {
+      event.preventDefault()
+      setRowContextMenuPosition({ x: event.clientX, y: event.clientY })
+      setRowContextMenuRowIndex(rowIndex)
+      return
+    }
+
+    // Otherwise, check if this is the header row for column context menu
+    if (rowIndex !== 0) return // Only show column context menu for header row
+
     if (cellIndex <= 0) return // Skip row indicator column (index 0)
 
     const columnIndex = cellIndex - 1 // Adjust for row indicator column
@@ -356,10 +377,15 @@ export function SpreadsheetContainer() {
     setContextMenuColumnIndex(columnIndex)
   }, [columns])
 
-  // Close context menu
+  // Close column context menu
   const handleContextMenuClose = useCallback(() => {
     setContextMenuPosition(null)
     setContextMenuColumn(null)
+  }, [])
+
+  // Close row context menu
+  const handleRowContextMenuClose = useCallback(() => {
+    setRowContextMenuPosition(null)
   }, [])
 
   // Handle insert column before
@@ -416,6 +442,56 @@ export function SpreadsheetContainer() {
     // Clear the column to delete state
     setColumnToDelete(null)
   }, [activeSheet, columnToDelete, columns])
+
+  // Handle delete row request (opens confirmation dialog)
+  const handleDeleteRowRequest = useCallback((rowIndex: number) => {
+    // rowIndex is the data array index, where 0 is header row
+    // Header row (row 0) cannot be deleted - this should never be called for row 0
+    if (rowIndex === 0) return
+    setRowToDelete(rowIndex)
+    setDeleteRowDialogOpen(true)
+  }, [])
+
+  // Handle delete row confirmation
+  const handleDeleteRowConfirm = useCallback(() => {
+    if (!activeSheet || rowToDelete === null || rowToDelete === 0) return
+
+    // Save current state for undo
+    const oldEntry: HistoryEntry = {
+      data: activeSheet.data,
+      columns: activeSheet.columns,
+    }
+    const currentHistoryIndex = historyIndexRef.current
+
+    // Remove the row from data
+    const newData = activeSheet.data.filter((_, i) => i !== rowToDelete)
+
+    // Update the sheet with new data
+    useSheetsStore.setState(state => ({
+      sheets: state.sheets.map(sheet =>
+        sheet.id === activeSheet.id
+          ? { ...sheet, data: newData }
+          : sheet
+      )
+    }))
+
+    // Track history for undo/redo
+    setHistory(prev => {
+      if (currentHistoryIndex === -1) {
+        // At latest state - append the old state before this change
+        return [...prev, oldEntry]
+      } else {
+        // In middle of history - truncate redo states only
+        return prev.slice(0, currentHistoryIndex + 1)
+      }
+    })
+    // Reset to latest state
+    setHistoryIndex(-1)
+    historyIndexRef.current = -1
+
+    // Clear the row to delete state
+    setRowToDelete(null)
+  }, [activeSheet, rowToDelete])
 
   // Handle column reorder via drag-and-drop
   const handleColumnReorder = useCallback((oldIndex: number, newIndex: number) => {
@@ -556,6 +632,22 @@ export function SpreadsheetContainer() {
         onOpenChange={setDeleteColumnDialogOpen}
         column={columnToDelete?.column ?? null}
         onConfirm={handleDeleteColumnConfirm}
+      />
+
+      {/* Row context menu */}
+      <RowContextMenu
+        position={rowContextMenuPosition}
+        rowIndex={rowContextMenuRowIndex}
+        onClose={handleRowContextMenuClose}
+        onDelete={handleDeleteRowRequest}
+      />
+
+      {/* Delete row confirmation dialog */}
+      <DeleteRowConfirmDialog
+        open={deleteRowDialogOpen}
+        onOpenChange={setDeleteRowDialogOpen}
+        rowIndex={rowToDelete}
+        onConfirm={handleDeleteRowConfirm}
       />
     </div>
   )

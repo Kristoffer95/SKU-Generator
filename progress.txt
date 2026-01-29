@@ -1,3 +1,38 @@
+## row-deletion - COMPLETED
+Add ability to delete rows from the spreadsheet with right-click context menu
+
+### Key decisions
+- Created DeleteRowConfirmDialog component following DeleteColumnConfirmDialog pattern
+- Created RowContextMenu component following ColumnHeaderContextMenu pattern
+- Extended handleContextMenu in SpreadsheetContainer to detect row indicator clicks (cellIndex === 0 && rowIndex > 0)
+- Row deletion saves state to history before deletion for undo support
+- Header row (row 0) cannot be deleted - context menu doesn't appear for header row
+- Added row-indicator-{N} testid to mock spreadsheet for testing row context menu
+
+### Files changed
+- src/components/DeleteRowConfirmDialog.tsx (new, ~55 lines)
+- src/components/DeleteRowConfirmDialog.test.tsx (new, 10 tests)
+- src/components/spreadsheet/RowContextMenu.tsx (new, ~95 lines)
+- src/components/spreadsheet/RowContextMenu.test.tsx (new, 10 tests)
+- src/components/SpreadsheetContainer.tsx (extended handleContextMenu, added row deletion handlers)
+- src/components/SpreadsheetContainer.test.tsx (added row-indicator-{N} testid to mock, +9 tests)
+
+### Notes
+- All 9 stepsToVerify criteria met:
+  1. Right-click on row indicator shows context menu ✓
+  2. Context menu has 'Delete Row' option ✓
+  3. Clicking 'Delete Row' shows confirmation dialog ✓
+  4. Confirming deletes the row from sheet data ✓
+  5. Header row (row 0) does not show delete option ✓
+  6. Undo restores the deleted row ✓
+  7. Redo re-deletes the row ✓
+  8. Works correctly with any number of rows ✓
+  9. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (780 tests, +29 new)
+- npm run build passes
+
 ## spec-deletion-removes-column - COMPLETED
 Fix stale closure bug causing deleted columns to reappear after spec deletion
 
