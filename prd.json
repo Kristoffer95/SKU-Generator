@@ -413,5 +413,164 @@
       "npm run typecheck passes"
     ],
     "passes": true
+  },
+  {
+    "id": "remotion-setup",
+    "category": "Remotion Video",
+    "description": "Set up Remotion alongside the existing Vite project. Install dependencies (remotion, @remotion/cli, @remotion/transitions, @remotion/tailwind). Create remotion.config.ts with Tailwind support. Create remotion/index.ts entry point and remotion/Root.tsx composition registration. Add npm scripts for development and rendering.",
+    "stepsToVerify": [
+      "package.json contains remotion, @remotion/cli, @remotion/transitions dependencies",
+      "remotion.config.ts exists with Tailwind configuration",
+      "remotion/index.ts exists with registerRoot call",
+      "remotion/Root.tsx exists with SKUDemo composition registered",
+      "package.json has 'remotion:dev' script: 'remotion studio remotion/index.ts'",
+      "package.json has 'remotion:build' script for rendering",
+      "npm run remotion:dev opens Remotion Studio without errors"
+    ],
+    "passes": true
+  },
+  {
+    "id": "remotion-animation-utils",
+    "category": "Remotion Video",
+    "description": "Create reusable animation utilities and foundation components. Create remotion/utils/animations.ts with fadeIn, slideIn, springScale, typewriter helpers. Create AnimatedText.tsx for fade/slide text, TypewriterText.tsx for character reveal, and FeatureHighlight.tsx for spotlight/callout effects.",
+    "stepsToVerify": [
+      "remotion/utils/animations.ts exports fadeIn, slideIn, springScale, typewriter functions",
+      "remotion/components/AnimatedText.tsx renders text with fade and slide animations",
+      "remotion/components/TypewriterText.tsx reveals text character-by-character",
+      "remotion/components/FeatureHighlight.tsx renders animated spotlight/callout box",
+      "All animations use useCurrentFrame() not CSS transitions",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "remotion-mockup-components",
+    "category": "Remotion Video",
+    "description": "Create mockup components that visually match the SKU Generator app. Create AppFrame.tsx (browser chrome), MockSidebar.tsx, MockSpecCard.tsx (expandable), MockSpreadsheet.tsx (grid with cells), MockSheetTabs.tsx, MockSettingsDialog.tsx, and MockValidationPanel.tsx. Use same Tailwind classes and shadcn/ui styling as the main app.",
+    "stepsToVerify": [
+      "remotion/components/AppFrame.tsx renders browser window frame with title bar",
+      "remotion/components/MockSidebar.tsx renders sidebar with spec cards matching app style",
+      "remotion/components/MockSpecCard.tsx has expandable animation driven by frame",
+      "remotion/components/MockSpreadsheet.tsx renders grid with SKU and spec columns",
+      "remotion/components/MockSheetTabs.tsx renders tab bar matching app style",
+      "remotion/components/MockSettingsDialog.tsx renders settings modal with delimiter options",
+      "remotion/components/MockValidationPanel.tsx renders error panel with items",
+      "All components use Tailwind classes consistent with main app"
+    ],
+    "passes": false
+  },
+  {
+    "id": "remotion-intro-scene",
+    "category": "Remotion Video",
+    "description": "Create IntroScene.tsx (~4 seconds, 120 frames at 30fps). Animate app logo with spring scale from 0 to 1. Display title 'SKU Generator' with typewriter effect. Fade in tagline after title completes. Use subtle background gradient.",
+    "stepsToVerify": [
+      "remotion/scenes/IntroScene.tsx exports IntroScene component",
+      "Logo animates with spring scale (damping: 15 for slight bounce)",
+      "Title 'SKU Generator' appears character-by-character",
+      "Tagline fades in with upward slide after title",
+      "Scene duration is approximately 120 frames",
+      "Visual style matches app branding"
+    ],
+    "passes": false
+  },
+  {
+    "id": "remotion-spec-management-scene",
+    "category": "Remotion Video",
+    "description": "Create SpecManagementScene.tsx (~7 seconds, 210 frames). Show sidebar sliding in from left with spring animation. Animate spec cards appearing with staggered fade-in. Show card expansion animation. Simulate drag-to-reorder with ghost card moving and other cards shifting.",
+    "stepsToVerify": [
+      "remotion/scenes/SpecManagementScene.tsx exports SpecManagementScene component",
+      "Sidebar slides in from left using spring animation",
+      "Spec cards (Color, Size, Material) appear with staggered timing",
+      "One card expands to show values with height animation",
+      "Drag reorder simulation shows card moving and others shifting",
+      "SKU fragment badges are highlighted during expansion"
+    ],
+    "passes": false
+  },
+  {
+    "id": "remotion-spreadsheet-scene",
+    "category": "Remotion Video",
+    "description": "Create SpreadsheetScene.tsx (~10 seconds, 300 frames). Show browser frame sliding in. Animate cell selection with ring highlight. Show dropdown opening with height animation and options appearing. Animate value selection and dropdown closing. Show SKU auto-generation with character-by-character fill in Column A. Demonstrate multiple rows with staggered updates.",
+    "stepsToVerify": [
+      "remotion/scenes/SpreadsheetScene.tsx exports SpreadsheetScene component",
+      "Browser frame enters with slide animation",
+      "Cell selection shows animated ring around cell",
+      "Dropdown opens with spring height animation",
+      "Value selection highlights option before closing",
+      "SKU in Column A fills character-by-character with typing cursor",
+      "Multiple rows show different SKU combinations"
+    ],
+    "passes": false
+  },
+  {
+    "id": "remotion-settings-scene",
+    "category": "Remotion Video",
+    "description": "Create SettingsScene.tsx (~4 seconds, 120 frames). Show settings dialog scaling in from center with spring animation. Highlight delimiter options with spotlight effect. Animate button state change when selecting new delimiter. Show all visible SKUs updating simultaneously with flash effect.",
+    "stepsToVerify": [
+      "remotion/scenes/SettingsScene.tsx exports SettingsScene component",
+      "Dialog appears with spring scale from center",
+      "Delimiter options are highlighted with spotlight",
+      "Button click shows state change animation",
+      "SKU cascade update shows all SKUs changing with flash",
+      "New SKU format reflects changed delimiter"
+    ],
+    "passes": false
+  },
+  {
+    "id": "remotion-validation-scene",
+    "category": "Remotion Video",
+    "description": "Create ValidationScene.tsx (~5 seconds, 150 frames). Show sheet tabs area with zoom focus. Animate tab click and sheet switch. Show validation panel sliding up from bottom. Error list items fade in sequentially. Demonstrate click-to-navigate animation from error to cell.",
+    "stepsToVerify": [
+      "remotion/scenes/ValidationScene.tsx exports ValidationScene component",
+      "Sheet tabs area receives focus with zoom",
+      "Tab click shows cursor and tab switches",
+      "Validation panel slides up from bottom",
+      "Error items appear with staggered fade-in",
+      "Navigate animation shows cursor moving from error to cell"
+    ],
+    "passes": false
+  },
+  {
+    "id": "remotion-outro-scene",
+    "category": "Remotion Video",
+    "description": "Create OutroScene.tsx (~2.5 seconds, 75 frames). Feature bullet list slides in from right with staggered timing. CTA text 'Try it now' animates with scale and glow effect. App logo fades back in at corner position.",
+    "stepsToVerify": [
+      "remotion/scenes/OutroScene.tsx exports OutroScene component",
+      "Feature bullets slide in from right with stagger",
+      "CTA text has scale animation with glow effect",
+      "Logo fades in at corner",
+      "Scene provides clear call-to-action"
+    ],
+    "passes": false
+  },
+  {
+    "id": "remotion-main-composition",
+    "category": "Remotion Video",
+    "description": "Create SKUDemo.tsx main composition assembling all scenes. Use TransitionSeries for smooth scene transitions (fade, slide). Configure proper timing for each scene. Total duration ~35 seconds (1050 frames at 30fps). Register composition in Root.tsx with 1920x1080 resolution.",
+    "stepsToVerify": [
+      "remotion/compositions/SKUDemo.tsx exports SKUDemo component",
+      "All 6 scenes are imported and sequenced",
+      "TransitionSeries used with fade/slide transitions between scenes",
+      "Total duration is approximately 1050 frames",
+      "Root.tsx registers SKUDemo with 1920x1080 resolution and 30fps",
+      "Full video plays through all scenes in Remotion Studio",
+      "Transitions are smooth with no visual glitches"
+    ],
+    "passes": false
+  },
+  {
+    "id": "remotion-render-output",
+    "category": "Remotion Video",
+    "description": "Render final video and verify quality. Run npm run remotion:build to generate MP4. Verify video is ~35 seconds, 1920x1080, plays smoothly. All animations render correctly. Scene transitions are seamless.",
+    "stepsToVerify": [
+      "npm run remotion:build completes without errors",
+      "Output file out/sku-demo.mp4 exists",
+      "Video duration is approximately 35 seconds",
+      "Video resolution is 1920x1080",
+      "All animations render as expected (no frame drops)",
+      "Scene transitions play smoothly",
+      "Video file size is reasonable for quality"
+    ],
+    "passes": false
   }
 ]

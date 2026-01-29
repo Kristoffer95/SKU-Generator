@@ -1,3 +1,41 @@
+## remotion-setup - COMPLETED
+Set up Remotion alongside the existing Vite project
+
+### Key decisions
+- Installed remotion, @remotion/cli, @remotion/transitions, @remotion/tailwind as dependencies
+- Created remotion.config.ts with Tailwind support via enableTailwind()
+- Added webpack extensionAlias config to resolve .js imports to .ts/.tsx for NodeNext compatibility
+- Created remotion/index.ts entry point with registerRoot call
+- Created remotion/Root.tsx with SKUDemo composition registered (1920x1080, 30fps, 1050 frames ~35s)
+- Created placeholder remotion/compositions/SKUDemo.tsx component
+- Created remotion/tsconfig.json with NodeNext module resolution (required for remotion types to resolve correctly)
+- Main tsconfig.json uses bundler resolution, remotion uses NodeNext - separate configs required
+- Import paths in remotion files use .js extension (TypeScript NodeNext requirement, webpack resolves to .tsx)
+- Added npm scripts: remotion:dev, remotion:build
+- Updated main typecheck script to also check remotion directory
+
+### Files changed
+- package.json (added dependencies, scripts, updated typecheck)
+- remotion.config.ts (new, Tailwind + extensionAlias config)
+- remotion/index.ts (new, entry point)
+- remotion/Root.tsx (new, composition registration)
+- remotion/compositions/SKUDemo.tsx (new, placeholder component)
+- remotion/tsconfig.json (new, NodeNext resolution for remotion types)
+- tailwind.config.js (added remotion/**/* to content paths)
+
+### Notes
+- All 7 stepsToVerify criteria met:
+  1. package.json contains remotion, @remotion/cli, @remotion/transitions dependencies ✓
+  2. remotion.config.ts exists with Tailwind configuration ✓
+  3. remotion/index.ts exists with registerRoot call ✓
+  4. remotion/Root.tsx exists with SKUDemo composition registered ✓
+  5. package.json has 'remotion:dev' script ✓
+  6. package.json has 'remotion:build' script for rendering ✓
+  7. npm run remotion:dev opens Remotion Studio without errors ✓
+- npm run typecheck passes (both main and remotion)
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (747 tests)
+
 ## spec-value-sku-reactivity - COMPLETED
 Fix SKU reactivity when spec value's skuFragment is edited in sidebar
 

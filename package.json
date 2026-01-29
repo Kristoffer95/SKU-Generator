@@ -8,9 +8,11 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p remotion/tsconfig.json",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "remotion:dev": "remotion studio remotion/index.ts",
+    "remotion:build": "remotion render remotion/index.ts SKUDemo out/sku-demo.mp4"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.4",
@@ -22,6 +24,9 @@
     "@radix-ui/react-slot": "^1.1.1",
     "@radix-ui/react-tabs": "^1.1.2",
     "@radix-ui/react-tooltip": "^1.1.6",
+    "@remotion/cli": "^4.0.410",
+    "@remotion/tailwind": "^4.0.410",
+    "@remotion/transitions": "^4.0.410",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "driver.js": "^1.4.0",
@@ -30,6 +35,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-spreadsheet": "^0.9.5",
+    "remotion": "^4.0.410",
     "scheduler": "^0.23.2",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
