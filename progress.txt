@@ -1,3 +1,32 @@
+## column-header-data-width-consistency - COMPLETED
+Fix column header/data width alignment (DraggableColumnHeaders mismatch)
+
+### Key decisions
+- Root cause: DraggableColumnHeaders divs lacked proper flex constraints, allowing them to grow/shrink
+- Headers had width and minWidth inline styles but NO maxWidth, allowing flex items to expand
+- Headers also lacked flex-shrink-0 and flex-grow-0, so they could change size within the flex container
+- Data cells via CSS had width, min-width, AND max-width all set, enforcing exact sizing
+- Fix: Added flex-shrink-0 and flex-grow-0 classes to column header divs
+- Fix: Added maxWidth: columnWidth to header style inline, matching data cell constraints
+
+### Files changed
+- src/components/spreadsheet/DraggableColumnHeaders.tsx (added flex-shrink-0 flex-grow-0 classes, added maxWidth to style)
+- src/components/spreadsheet/DraggableColumnHeaders.test.tsx (+4 tests for column width consistency)
+
+### Notes
+- All 7 stepsToVerify criteria met:
+  1. Column headers align perfectly with their data cells below ✓
+  2. SKU column remains fixed width ✓
+  3. Spec columns have consistent header/data width ✓
+  4. Free columns have consistent header/data width ✓
+  5. Alignment is maintained when scrolling horizontally ✓
+  6. Alignment is maintained after adding/removing columns ✓
+  7. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (938 tests, +4 new)
+- npm run build passes
+
 ## column-resize-full-column - COMPLETED
 Fix column resize to affect entire column (header and all data cells)
 

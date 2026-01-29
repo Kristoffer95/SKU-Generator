@@ -364,7 +364,7 @@ export function DraggableColumnHeaders({
             onDoubleClick={(e) => handleHeaderDoubleClick(e, index)}
             className={cn(
               "relative flex items-center gap-1 px-2 py-1.5 font-semibold text-sm border-r border-[var(--spreadsheet-cell-border,#e2e8f0)]",
-              "transition-colors",
+              "transition-colors flex-shrink-0 flex-grow-0",
               isDraggable && !isResizing && !isEditing && "cursor-grab active:cursor-grabbing",
               !isDraggable && !isResizing && !isEditing && "cursor-default",
               isFreeColumn && !isEditing && "cursor-text",
@@ -375,6 +375,7 @@ export function DraggableColumnHeaders({
             style={{
               width: columnWidth,
               minWidth: MIN_COLUMN_WIDTH,
+              maxWidth: columnWidth,
             }}
             role="columnheader"
             aria-colindex={index + 1}

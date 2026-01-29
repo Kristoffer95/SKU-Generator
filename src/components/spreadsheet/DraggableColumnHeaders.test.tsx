@@ -658,4 +658,64 @@ describe("DraggableColumnHeaders", () => {
       expect(mockOnEditingChange).toHaveBeenCalledWith(null)
     })
   })
+
+  describe("column width consistency", () => {
+    it("applies flex-shrink-0 and flex-grow-0 to prevent flex size changes", () => {
+      const columns = createColumns()
+      render(<DraggableColumnHeaders columns={columns} onReorder={mockOnReorder} />)
+
+      // Each column header should have flex-shrink-0 and flex-grow-0 to prevent flex resizing
+      columns.forEach((_, index) => {
+        const header = screen.getByTestId(`column-header-${index}`)
+        expect(header).toHaveClass("flex-shrink-0")
+        expect(header).toHaveClass("flex-grow-0")
+      })
+    })
+
+    it("sets maxWidth equal to width on column headers", () => {
+      const columns: ColumnDef[] = [
+        { id: "col-1", type: "sku", header: "SKU", width: 100 },
+        { id: "col-2", type: "spec", specId: "spec-1", header: "Color", width: 150 },
+        { id: "col-3", type: "free", header: "Notes", width: 200 },
+      ]
+      render(<DraggableColumnHeaders columns={columns} onReorder={mockOnReorder} />)
+
+      // Each header should have maxWidth matching its width
+      expect(screen.getByTestId("column-header-0")).toHaveStyle({ maxWidth: "100px" })
+      expect(screen.getByTestId("column-header-1")).toHaveStyle({ maxWidth: "150px" })
+      expect(screen.getByTestId("column-header-2")).toHaveStyle({ maxWidth: "200px" })
+    })
+
+    it("uses default width for maxWidth when column has no explicit width", () => {
+      const columns: ColumnDef[] = [
+        { id: "col-1", type: "sku", header: "SKU" }, // No explicit width
+        { id: "col-2", type: "spec", specId: "spec-1", header: "Color" },
+      ]
+      const defaultWidth = 120
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          defaultColumnWidth={defaultWidth}
+        />
+      )
+
+      // Headers without explicit width should use defaultColumnWidth for maxWidth
+      expect(screen.getByTestId("column-header-0")).toHaveStyle({ maxWidth: "120px" })
+      expect(screen.getByTestId("column-header-1")).toHaveStyle({ maxWidth: "120px" })
+    })
+
+    it("sets width and minWidth consistently", () => {
+      const columns: ColumnDef[] = [
+        { id: "col-1", type: "sku", header: "SKU", width: 150 },
+      ]
+      render(<DraggableColumnHeaders columns={columns} onReorder={mockOnReorder} />)
+
+      const header = screen.getByTestId("column-header-0")
+      // width, minWidth, and maxWidth should all create consistent constraints
+      expect(header).toHaveStyle({ width: "150px" })
+      expect(header).toHaveStyle({ minWidth: "80px" }) // MIN_COLUMN_WIDTH constant
+      expect(header).toHaveStyle({ maxWidth: "150px" })
+    })
+  })
 })

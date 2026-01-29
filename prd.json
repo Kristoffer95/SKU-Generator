@@ -772,7 +772,7 @@
       "Alignment is maintained after adding/removing columns",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "text-formatting-options",
