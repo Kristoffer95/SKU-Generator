@@ -1,3 +1,43 @@
+## remotion-mockup-components - COMPLETED
+Create mockup components that visually match the SKU Generator app
+
+### Key decisions
+- Created 7 mockup components matching the app's visual style and color palette
+- AppFrame.tsx: browser window chrome with traffic lights, URL bar, app header, spring scale animation
+- MockSidebar.tsx: sidebar with header, content area, add spec button, spring slide-in from left
+- MockSpecCard.tsx: expandable spec card with chevron rotation, staggered value appearance, drag state
+- MockSpreadsheet.tsx: grid with toolbar, header row, data cells, SKU column read-only styling, dropdown overlay
+- MockSheetTabs.tsx: tab bar with active/inactive states, click animation, staggered tab appearance
+- MockSettingsDialog.tsx: modal with delimiter options, prefix/suffix inputs, SKU preview, spring scale
+- MockValidationPanel.tsx: slide-up panel with error list, type-based icons (amber/red), navigate animation
+- All components use useCurrentFrame() and spring() from remotion for animations
+- Color palette matches app: primary navy, muted gray, amber warnings, red errors
+- Tailwind classes consistent with main app (rounded-md, border, text-sm, px/py spacing)
+
+### Files changed
+- remotion/components/AppFrame.tsx (new, ~115 lines)
+- remotion/components/MockSidebar.tsx (new, ~85 lines)
+- remotion/components/MockSpecCard.tsx (new, ~175 lines)
+- remotion/components/MockSpreadsheet.tsx (new, ~230 lines)
+- remotion/components/MockSheetTabs.tsx (new, ~125 lines)
+- remotion/components/MockSettingsDialog.tsx (new, ~230 lines)
+- remotion/components/MockValidationPanel.tsx (new, ~190 lines)
+
+### Notes
+- All 8 stepsToVerify criteria met:
+  1. remotion/components/AppFrame.tsx renders browser window frame with title bar ✓
+  2. remotion/components/MockSidebar.tsx renders sidebar with spec cards matching app style ✓
+  3. remotion/components/MockSpecCard.tsx has expandable animation driven by frame ✓
+  4. remotion/components/MockSpreadsheet.tsx renders grid with SKU and spec columns ✓
+  5. remotion/components/MockSheetTabs.tsx renders tab bar matching app style ✓
+  6. remotion/components/MockSettingsDialog.tsx renders settings modal with delimiter options ✓
+  7. remotion/components/MockValidationPanel.tsx renders error panel with items ✓
+  8. All components use Tailwind classes consistent with main app ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (747 tests)
+- npm run build passes
+
 ## remotion-animation-utils - COMPLETED
 Create reusable animation utilities and foundation components
 

@@ -457,7 +457,7 @@
       "remotion/components/MockValidationPanel.tsx renders error panel with items",
       "All components use Tailwind classes consistent with main app"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "remotion-intro-scene",
