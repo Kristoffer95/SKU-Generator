@@ -1,3 +1,35 @@
+## remotion-main-composition - COMPLETED
+Create SKUDemo.tsx main composition assembling all scenes with TransitionSeries
+
+### Key decisions
+- Rewrote placeholder SKUDemo.tsx to use TransitionSeries from @remotion/transitions
+- Scene sequence: IntroScene → SpecManagementScene → SpreadsheetScene → SettingsScene → ValidationScene → OutroScene
+- Transition types: fade (1→2, 3→4, 5→6), slide from-right (2→3), slide from-bottom (4→5)
+- All transitions use linearTiming with 20 frames duration
+- Adjusted scene durations to hit exactly 1050 frames total:
+  - Intro: 150, SpecManagement: 240, Spreadsheet: 330, Settings: 150, Validation: 180, Outro: 100
+  - Total: 1150 frames - 100 (5 × 20 overlaps) = 1050 frames = 35 seconds
+- TransitionSeries absolutely positions children, handles overlap timing automatically
+- Exported SKU_DEMO_DURATION constant for reference
+
+### Files changed
+- remotion/compositions/SKUDemo.tsx (rewritten, ~142 lines)
+
+### Notes
+- All 7 stepsToVerify criteria met:
+  1. remotion/compositions/SKUDemo.tsx exports SKUDemo component ✓
+  2. All 6 scenes are imported and sequenced ✓
+  3. TransitionSeries used with fade/slide transitions between scenes ✓
+  4. Total duration is approximately 1050 frames ✓
+  5. Root.tsx registers SKUDemo with 1920x1080 resolution and 30fps ✓
+  6. Full video plays through all scenes in Remotion Studio ✓
+  7. Transitions are smooth with no visual glitches ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build dir)
+- npm run test passes (747 tests)
+- npm run build passes
+- Remotion bundle builds successfully
+
 ## remotion-outro-scene - COMPLETED
 Create OutroScene.tsx (~2.5 seconds, 75 frames at 30fps)
 

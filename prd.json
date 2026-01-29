@@ -556,7 +556,7 @@
       "Full video plays through all scenes in Remotion Studio",
       "Transitions are smooth with no visual glitches"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "remotion-render-output",
