@@ -5,6 +5,7 @@ import { SpecManagementScene } from "./scenes/SpecManagementScene.js";
 import { SpreadsheetScene } from "./scenes/SpreadsheetScene.js";
 import { SettingsScene } from "./scenes/SettingsScene.js";
 import { ValidationScene } from "./scenes/ValidationScene.js";
+import { OutroScene } from "./scenes/OutroScene.js";
 import "../src/index.css";
 
 export const Root: React.FC = () => {
@@ -54,6 +55,14 @@ export const Root: React.FC = () => {
         id="ValidationScene"
         component={ValidationScene}
         durationInFrames={150}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="OutroScene"
+        component={OutroScene}
+        durationInFrames={75}
         fps={30}
         width={1920}
         height={1080}

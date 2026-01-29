@@ -541,7 +541,7 @@
       "Logo fades in at corner",
       "Scene provides clear call-to-action"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "remotion-main-composition",
