@@ -471,7 +471,7 @@
       "Scene duration is approximately 120 frames",
       "Visual style matches app branding"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "remotion-spec-management-scene",

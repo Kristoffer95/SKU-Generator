@@ -1,3 +1,34 @@
+## remotion-intro-scene - COMPLETED
+Create IntroScene.tsx (~4 seconds, 120 frames at 30fps)
+
+### Key decisions
+- Created IntroScene component with 3 main animated elements
+- Logo: Custom SVG icon representing spreadsheet with barcode-like SKU elements in first column
+- Logo animation uses springScale with damping=15 for subtle bounce (0 to 1 scale)
+- Logo fade-in over 15 frames complements the spring scale
+- Title "SKU Generator" uses TypewriterText with 3 frames per character (starts frame 20)
+- Tagline "Auto-generate SKU codes with ease" fades in with upward slide (starts frame 75)
+- Background: subtle gradient using app's dark theme colors (hsl values from index.css)
+- Animation timeline: Logo (0-40), Title (20-70), Tagline (75-120) = ~4 seconds total
+- Registered IntroScene as standalone composition in Root.tsx for testing/preview
+
+### Files changed
+- remotion/scenes/IntroScene.tsx (new, ~230 lines)
+- remotion/Root.tsx (added IntroScene composition for preview)
+
+### Notes
+- All 6 stepsToVerify criteria met:
+  1. remotion/scenes/IntroScene.tsx exports IntroScene component ✓
+  2. Logo animates with spring scale (damping: 15 for slight bounce) ✓
+  3. Title 'SKU Generator' appears character-by-character ✓
+  4. Tagline fades in with upward slide after title ✓
+  5. Scene duration is approximately 120 frames ✓
+  6. Visual style matches app branding ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (747 tests)
+- Remotion bundle builds successfully (browser launch N/A in CLI environment)
+
 ## remotion-mockup-components - COMPLETED
 Create mockup components that visually match the SKU Generator app
 
