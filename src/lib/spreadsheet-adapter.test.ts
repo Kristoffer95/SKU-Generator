@@ -137,6 +137,34 @@ describe('spreadsheet-adapter', () => {
       expect(result[1][0]?.className).toBe('bg-[#fef3c7]');
     });
 
+    it('preserves font color as className', () => {
+      const skuOnlyColumns: ColumnDef[] = [
+        { id: 'col-sku', type: 'sku', header: 'SKU' },
+      ];
+      const data: CellData[][] = [
+        [{ v: 'SKU' }],
+        [{ v: 'SKU-001', fc: '#dc2626' }], // red text
+      ];
+
+      const result = convertToSpreadsheetData(data, skuOnlyColumns, mockSpecifications);
+
+      expect(result[1][0]?.className).toBe('text-[#dc2626]');
+    });
+
+    it('preserves both background and font color as combined className', () => {
+      const skuOnlyColumns: ColumnDef[] = [
+        { id: 'col-sku', type: 'sku', header: 'SKU' },
+      ];
+      const data: CellData[][] = [
+        [{ v: 'SKU' }],
+        [{ v: 'SKU-001', bg: '#fce4ec', fc: '#dc2626' }], // pink bg, red text
+      ];
+
+      const result = convertToSpreadsheetData(data, skuOnlyColumns, mockSpecifications);
+
+      expect(result[1][0]?.className).toBe('bg-[#fce4ec] text-[#dc2626]');
+    });
+
     it('handles cells with only m (display text) value', () => {
       const skuOnlyColumns: ColumnDef[] = [
         { id: 'col-sku', type: 'sku', header: 'SKU' },
@@ -241,6 +269,26 @@ describe('spreadsheet-adapter', () => {
       const result = convertFromSpreadsheetData(matrix);
 
       expect(result[0][0]).toEqual({ v: 'SKU-001', m: 'SKU-001', bg: '#fef3c7' });
+    });
+
+    it('converts className back to fc (font color)', () => {
+      const matrix: SKUMatrix = [
+        [{ value: 'SKU-001', className: 'text-[#dc2626]' }],
+      ];
+
+      const result = convertFromSpreadsheetData(matrix);
+
+      expect(result[0][0]).toEqual({ v: 'SKU-001', m: 'SKU-001', fc: '#dc2626' });
+    });
+
+    it('converts className with both bg and fc colors', () => {
+      const matrix: SKUMatrix = [
+        [{ value: 'SKU-001', className: 'bg-[#fce4ec] text-[#dc2626]' }],
+      ];
+
+      const result = convertFromSpreadsheetData(matrix);
+
+      expect(result[0][0]).toEqual({ v: 'SKU-001', m: 'SKU-001', bg: '#fce4ec', fc: '#dc2626' });
     });
 
     it('handles numeric values', () => {

@@ -1,5 +1,7 @@
 import { Undo2, Redo2, Plus, Columns } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CellColorPicker } from "@/components/spreadsheet/CellColorPicker";
+import { CellTextColorPicker } from "@/components/spreadsheet/CellTextColorPicker";
 import { cn } from "@/lib/utils";
 
 export interface SpreadsheetToolbarProps {
@@ -15,6 +17,16 @@ export interface SpreadsheetToolbarProps {
   onAddRow: () => void;
   /** Called when add column button is clicked */
   onAddColumn: () => void;
+  /** Whether cells are currently selected (enables formatting options) */
+  hasSelection?: boolean;
+  /** Current background color of selected cells (or undefined if mixed/none) */
+  selectedCellColor?: string;
+  /** Called when a background color is selected */
+  onCellColorChange?: (color: string | null) => void;
+  /** Current text color of selected cells (or undefined if mixed/none) */
+  selectedTextColor?: string;
+  /** Called when a text color is selected */
+  onTextColorChange?: (color: string | null) => void;
   /** Optional additional class name */
   className?: string;
 }
@@ -31,6 +43,11 @@ export function SpreadsheetToolbar({
   onRedo,
   onAddRow,
   onAddColumn,
+  hasSelection = false,
+  selectedCellColor,
+  onCellColorChange,
+  selectedTextColor,
+  onTextColorChange,
   className,
 }: SpreadsheetToolbarProps) {
   return (
@@ -93,6 +110,27 @@ export function SpreadsheetToolbar({
         <Columns className="h-4 w-4" />
         <span className="ml-1">Add Column</span>
       </Button>
+
+      {/* Separator before formatting options */}
+      <div className="mx-1 h-6 w-px bg-border" />
+
+      {/* Cell background color picker */}
+      {onCellColorChange && (
+        <CellColorPicker
+          disabled={!hasSelection}
+          currentColor={selectedCellColor}
+          onColorSelect={onCellColorChange}
+        />
+      )}
+
+      {/* Cell text color picker */}
+      {onTextColorChange && (
+        <CellTextColorPicker
+          disabled={!hasSelection}
+          currentColor={selectedTextColor}
+          onColorSelect={onTextColorChange}
+        />
+      )}
     </div>
   );
 }

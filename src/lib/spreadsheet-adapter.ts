@@ -99,9 +99,16 @@ export function convertToSpreadsheetData(
 
       // Free columns: no special treatment (plain text input)
 
-      // Preserve background color as className if set
+      // Preserve background color and font color as className if set
+      const classNames: string[] = [];
       if (cell.bg) {
-        skuCell.className = `bg-[${cell.bg}]`;
+        classNames.push(`bg-[${cell.bg}]`);
+      }
+      if (cell.fc) {
+        classNames.push(`text-[${cell.fc}]`);
+      }
+      if (classNames.length > 0) {
+        skuCell.className = classNames.join(' ');
       }
 
       resultRow.push(skuCell);
@@ -144,11 +151,15 @@ export function convertFromSpreadsheetData(matrix: SKUMatrix): CellData[][] {
         cellData.m = String(cell.value);
       }
 
-      // Convert className back to bg if it's a Tailwind bg color
+      // Convert className back to bg and fc if they're Tailwind color classes
       if (cell.className) {
         const bgMatch = cell.className.match(/bg-\[([#\w]+)\]/);
         if (bgMatch) {
           cellData.bg = bgMatch[1];
+        }
+        const fcMatch = cell.className.match(/text-\[([#\w]+)\]/);
+        if (fcMatch) {
+          cellData.fc = fcMatch[1];
         }
       }
 
