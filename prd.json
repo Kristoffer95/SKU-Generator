@@ -514,7 +514,7 @@
       "SKU cascade update shows all SKUs changing with flash",
       "New SKU format reflects changed delimiter"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "remotion-validation-scene",
