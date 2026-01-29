@@ -441,7 +441,7 @@
       "All animations use useCurrentFrame() not CSS transitions",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "remotion-mockup-components",

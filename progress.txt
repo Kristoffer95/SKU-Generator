@@ -1,3 +1,38 @@
+## remotion-animation-utils - COMPLETED
+Create reusable animation utilities and foundation components
+
+### Key decisions
+- Created remotion/utils/animations.ts with animation helper functions
+- fadeIn/fadeOut: opacity interpolation with configurable start frame and duration
+- slideIn: transform offset calculation with direction (left/right/up/down) and distance
+- springScale: spring physics scale animation using remotion's spring() function
+- typewriter/typewriterProgress: character reveal calculation based on frame
+- Additional helpers: stagger, isVisible, easeOutCubic, easeInOutCubic
+- Created AnimatedText.tsx: configurable fade/slide/spring text component
+- Created TypewriterText.tsx: character-by-character reveal with cursor support
+- Also created TypewriterLines for multi-line sequential reveal
+- Created FeatureHighlight.tsx: 4 variants (spotlight, callout, pulse, glow)
+- Also created CalloutArrow for directional feature pointing
+- All animations use useCurrentFrame() from remotion, not CSS transitions
+- Import paths use .js extension (NodeNext module resolution requirement)
+
+### Files changed
+- remotion/utils/animations.ts (new, ~200 lines)
+- remotion/components/AnimatedText.tsx (new, ~90 lines)
+- remotion/components/TypewriterText.tsx (new, ~160 lines with TypewriterLines)
+- remotion/components/FeatureHighlight.tsx (new, ~250 lines with CalloutArrow)
+
+### Notes
+- All 6 stepsToVerify criteria met:
+  1. remotion/utils/animations.ts exports fadeIn, slideIn, springScale, typewriter functions ✓
+  2. remotion/components/AnimatedText.tsx renders text with fade and slide animations ✓
+  3. remotion/components/TypewriterText.tsx reveals text character-by-character ✓
+  4. remotion/components/FeatureHighlight.tsx renders animated spotlight/callout box ✓
+  5. All animations use useCurrentFrame() not CSS transitions ✓
+  6. npm run typecheck passes ✓
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (747 tests)
+
 ## remotion-setup - COMPLETED
 Set up Remotion alongside the existing Vite project
 
