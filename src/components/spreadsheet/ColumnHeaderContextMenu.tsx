@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from "react"
-import { Trash2, Plus } from "lucide-react"
+import { Trash2, Plus, Pencil } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { ColumnDef } from "@/types"
 
@@ -23,6 +23,8 @@ export interface ColumnHeaderContextMenuProps {
   onInsertAfter: (columnIndex: number) => void
   /** Called when user selects "Delete column" */
   onDelete: (columnIndex: number, column: ColumnDef) => void
+  /** Called when user selects "Rename" (only for free columns) */
+  onRename?: (columnIndex: number) => void
 }
 
 export function ColumnHeaderContextMenu({
@@ -33,6 +35,7 @@ export function ColumnHeaderContextMenu({
   onInsertBefore,
   onInsertAfter,
   onDelete,
+  onRename,
 }: ColumnHeaderContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -84,10 +87,19 @@ export function ColumnHeaderContextMenu({
     }
   }, [columnIndex, column, onDelete, onClose])
 
+  const handleRename = useCallback(() => {
+    if (onRename) {
+      onRename(columnIndex)
+      onClose()
+    }
+  }, [columnIndex, onRename, onClose])
+
   if (!position || !column) return null
 
   // SKU column (type === 'sku') cannot be deleted
   const canDelete = column.type !== "sku"
+  // Only free columns can be renamed via context menu
+  const canRename = column.type === "free" && onRename
 
   return (
     <div
@@ -104,6 +116,24 @@ export function ColumnHeaderContextMenu({
       aria-label="Column context menu"
       data-testid="column-context-menu"
     >
+      {canRename && (
+        <>
+          <button
+            className={cn(
+              "relative flex w-full cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
+              "hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+            )}
+            role="menuitem"
+            onClick={handleRename}
+            data-testid="context-menu-rename"
+          >
+            <Pencil className="h-4 w-4" />
+            Rename
+          </button>
+          <div className="-mx-1 my-1 h-px bg-muted" role="separator" />
+        </>
+      )}
+
       <button
         className={cn(
           "relative flex w-full cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",

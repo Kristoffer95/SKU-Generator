@@ -742,7 +742,7 @@
       "Renamed title persists after page refresh",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "column-resize-full-column",

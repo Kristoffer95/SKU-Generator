@@ -1705,4 +1705,109 @@ describe('useSheetsStore', () => {
       expect(sheet.rowHeights?.[1]).toBe(75);
     });
   });
+
+  describe('updateFreeColumnHeader', () => {
+    const createSheetWithFreeColumn = (): { sheetId: string } => {
+      const { addSheet } = useSheetsStore.getState();
+      const sheetId = addSheet('Test Sheet');
+
+      // Set up columns including a free column
+      useSheetsStore.setState((state) => ({
+        sheets: state.sheets.map((s) =>
+          s.id === sheetId
+            ? {
+                ...s,
+                columns: [
+                  { id: 'col-1', type: 'sku' as const, header: 'SKU' },
+                  { id: 'col-2', type: 'spec' as const, specId: 'spec-1', header: 'Color' },
+                  { id: 'col-3', type: 'free' as const, header: 'Notes' },
+                ],
+                data: [
+                  [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }, { v: 'Notes', m: 'Notes' }],
+                  [{ v: 'SKU-001', m: 'SKU-001' }, { v: 'Red', m: 'Red' }, { v: 'Note 1', m: 'Note 1' }],
+                ],
+              }
+            : s
+        ),
+      }));
+
+      return { sheetId };
+    };
+
+    it('should rename a free column header', () => {
+      const { sheetId } = createSheetWithFreeColumn();
+      const { updateFreeColumnHeader } = useSheetsStore.getState();
+
+      const result = updateFreeColumnHeader(sheetId, 2, 'Comments');
+
+      expect(result).toBe(true);
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.columns[2].header).toBe('Comments');
+      // Header row data should also be updated
+      expect(sheet.data[0][2].v).toBe('Comments');
+      expect(sheet.data[0][2].m).toBe('Comments');
+    });
+
+    it('should not rename a spec column', () => {
+      const { sheetId } = createSheetWithFreeColumn();
+      const { updateFreeColumnHeader } = useSheetsStore.getState();
+
+      const result = updateFreeColumnHeader(sheetId, 1, 'New Color');
+
+      expect(result).toBe(false);
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.columns[1].header).toBe('Color');
+    });
+
+    it('should not rename SKU column', () => {
+      const { sheetId } = createSheetWithFreeColumn();
+      const { updateFreeColumnHeader } = useSheetsStore.getState();
+
+      const result = updateFreeColumnHeader(sheetId, 0, 'ID');
+
+      expect(result).toBe(false);
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.columns[0].header).toBe('SKU');
+    });
+
+    it('should reject empty header name', () => {
+      const { sheetId } = createSheetWithFreeColumn();
+      const { updateFreeColumnHeader } = useSheetsStore.getState();
+
+      const result = updateFreeColumnHeader(sheetId, 2, '   ');
+
+      expect(result).toBe(false);
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.columns[2].header).toBe('Notes');
+    });
+
+    it('should trim whitespace from header name', () => {
+      const { sheetId } = createSheetWithFreeColumn();
+      const { updateFreeColumnHeader } = useSheetsStore.getState();
+
+      const result = updateFreeColumnHeader(sheetId, 2, '  Comments  ');
+
+      expect(result).toBe(true);
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.columns[2].header).toBe('Comments');
+    });
+
+    it('should return false for invalid column index', () => {
+      const { sheetId } = createSheetWithFreeColumn();
+      const { updateFreeColumnHeader } = useSheetsStore.getState();
+
+      const result = updateFreeColumnHeader(sheetId, 99, 'New Header');
+
+      expect(result).toBe(false);
+    });
+
+    it('should return false for invalid sheet ID', () => {
+      createSheetWithFreeColumn();
+      const { updateFreeColumnHeader } = useSheetsStore.getState();
+
+      const result = updateFreeColumnHeader('invalid-sheet-id', 2, 'New Header');
+
+      expect(result).toBe(false);
+    });
+  });
 });

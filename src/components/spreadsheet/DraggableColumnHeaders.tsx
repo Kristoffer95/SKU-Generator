@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import { GripVertical } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { ColumnDef } from "@/types"
@@ -15,12 +15,18 @@ export interface DraggableColumnHeadersProps {
   onReorder: (oldIndex: number, newIndex: number) => void
   /** Called when a column width is changed via resize handle */
   onColumnResize?: (columnIndex: number, newWidth: number) => void
+  /** Called when a free column header is renamed */
+  onRenameColumn?: (columnIndex: number, newHeader: string) => void
   /** Default width for columns without explicit width */
   defaultColumnWidth?: number
   /** Width of the row indicator column (leftmost column) */
   rowIndicatorWidth?: number
   /** Reference to the spreadsheet container for auto-fit measurement */
   spreadsheetRef?: React.RefObject<HTMLDivElement>
+  /** Controlled state: which column is being edited (for context menu integration) */
+  editingColumnIndex?: number | null
+  /** Callback when editing state changes (for context menu integration) */
+  onEditingColumnIndexChange?: (index: number | null) => void
 }
 
 /**
@@ -33,9 +39,12 @@ export function DraggableColumnHeaders({
   columns,
   onReorder,
   onColumnResize,
+  onRenameColumn,
   defaultColumnWidth = DEFAULT_COLUMN_WIDTH,
   rowIndicatorWidth = 40,
   spreadsheetRef,
+  editingColumnIndex: controlledEditingIndex,
+  onEditingColumnIndexChange,
 }: DraggableColumnHeadersProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)
@@ -45,6 +54,19 @@ export function DraggableColumnHeaders({
   const [resizingColumnIndex, setResizingColumnIndex] = useState<number | null>(null)
   const resizeStartXRef = useRef<number>(0)
   const resizeStartWidthRef = useRef<number>(0)
+
+  // Rename state - support both controlled and uncontrolled modes
+  const [internalEditingIndex, setInternalEditingIndex] = useState<number | null>(null)
+  const editingColumnIndex = controlledEditingIndex !== undefined ? controlledEditingIndex : internalEditingIndex
+  const setEditingColumnIndex = useCallback((index: number | null) => {
+    if (onEditingColumnIndexChange) {
+      onEditingColumnIndexChange(index)
+    } else {
+      setInternalEditingIndex(index)
+    }
+  }, [onEditingColumnIndexChange])
+  const [editValue, setEditValue] = useState<string>("")
+  const editInputRef = useRef<HTMLInputElement>(null)
 
   // Check if a column can be dragged (SKU column at index 0 cannot be moved)
   const canDragColumn = useCallback((index: number) => {
@@ -227,6 +249,82 @@ export function DraggableColumnHeaders({
     return column.width ?? defaultColumnWidth
   }, [defaultColumnWidth])
 
+  // Rename handlers for free columns
+  const canRenameColumn = useCallback((index: number) => {
+    const column = columns[index]
+    return column && column.type === "free"
+  }, [columns])
+
+  const handleStartRename = useCallback((index: number) => {
+    if (!canRenameColumn(index)) return
+    const column = columns[index]
+    setEditingColumnIndex(index)
+    setEditValue(column.header)
+    // Focus input after render
+    setTimeout(() => {
+      editInputRef.current?.focus()
+      editInputRef.current?.select()
+    }, 0)
+  }, [columns, canRenameColumn, setEditingColumnIndex])
+
+  // Effect to handle externally-triggered editing (from context menu)
+  const prevControlledEditingIndexRef = useRef<number | null>(null)
+  useEffect(() => {
+    // Only trigger when controlled index changes from null/different to a new value
+    if (
+      controlledEditingIndex !== undefined &&
+      controlledEditingIndex !== null &&
+      controlledEditingIndex !== prevControlledEditingIndexRef.current &&
+      canRenameColumn(controlledEditingIndex)
+    ) {
+      const column = columns[controlledEditingIndex]
+      setEditValue(column.header)
+      // Focus input after render
+      setTimeout(() => {
+        editInputRef.current?.focus()
+        editInputRef.current?.select()
+      }, 0)
+    }
+    prevControlledEditingIndexRef.current = controlledEditingIndex ?? null
+  }, [controlledEditingIndex, columns, canRenameColumn])
+
+  const handleSaveRename = useCallback(() => {
+    if (editingColumnIndex === null) return
+    const trimmedValue = editValue.trim()
+    if (trimmedValue && onRenameColumn) {
+      onRenameColumn(editingColumnIndex, trimmedValue)
+    }
+    setEditingColumnIndex(null)
+    setEditValue("")
+  }, [editingColumnIndex, editValue, onRenameColumn, setEditingColumnIndex])
+
+  const handleCancelRename = useCallback(() => {
+    setEditingColumnIndex(null)
+    setEditValue("")
+  }, [setEditingColumnIndex])
+
+  const handleRenameKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      handleSaveRename()
+    } else if (e.key === "Escape") {
+      e.preventDefault()
+      handleCancelRename()
+    }
+  }, [handleSaveRename, handleCancelRename])
+
+  const handleHeaderDoubleClick = useCallback((e: React.MouseEvent, index: number) => {
+    // Don't trigger rename if clicking on resize handle area
+    const target = e.target as HTMLElement
+    if (target.closest("[data-testid^='resize-handle']")) return
+
+    if (canRenameColumn(index)) {
+      e.preventDefault()
+      e.stopPropagation()
+      handleStartRename(index)
+    }
+  }, [canRenameColumn, handleStartRename])
+
   return (
     <div
       className="draggable-column-headers flex items-stretch border-b bg-[var(--spreadsheet-header-bg,#f8fafc)]"
@@ -247,6 +345,8 @@ export function DraggableColumnHeaders({
         const isDraggable = canDragColumn(index)
         const isSKUColumn = column.type === "sku"
         const isResizing = resizingColumnIndex === index
+        const isEditing = editingColumnIndex === index
+        const isFreeColumn = column.type === "free"
         const columnWidth = getColumnWidth(column)
 
         return (
@@ -255,17 +355,19 @@ export function DraggableColumnHeaders({
             data-column-header
             data-column-index={index}
             data-testid={`column-header-${index}`}
-            draggable={isDraggable && !isResizing}
+            draggable={isDraggable && !isResizing && !isEditing}
             onDragStart={(e) => handleDragStart(e, index)}
             onDragEnd={handleDragEnd}
             onDragOver={(e) => handleDragOver(e, index)}
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, index)}
+            onDoubleClick={(e) => handleHeaderDoubleClick(e, index)}
             className={cn(
               "relative flex items-center gap-1 px-2 py-1.5 font-semibold text-sm border-r border-[var(--spreadsheet-cell-border,#e2e8f0)]",
               "transition-colors",
-              isDraggable && !isResizing && "cursor-grab active:cursor-grabbing",
-              !isDraggable && !isResizing && "cursor-default",
+              isDraggable && !isResizing && !isEditing && "cursor-grab active:cursor-grabbing",
+              !isDraggable && !isResizing && !isEditing && "cursor-default",
+              isFreeColumn && !isEditing && "cursor-text",
               isDragging && "opacity-50 bg-muted",
               isDropTarget && !isDragging && "bg-primary/10 border-primary",
               isDropTarget && !isDragging && "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-primary"
@@ -277,8 +379,8 @@ export function DraggableColumnHeaders({
             role="columnheader"
             aria-colindex={index + 1}
           >
-            {/* Drag handle - only show for non-SKU columns */}
-            {isDraggable && (
+            {/* Drag handle - only show for non-SKU columns when not editing */}
+            {isDraggable && !isEditing && (
               <span
                 className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
                 data-testid={`drag-handle-${index}`}
@@ -293,10 +395,30 @@ export function DraggableColumnHeaders({
               <span className="flex-shrink-0 w-4" aria-hidden="true" />
             )}
 
-            {/* Column header text */}
-            <span className="flex-1 truncate" title={column.header}>
-              {column.header}
-            </span>
+            {/* Column header text or edit input */}
+            {isEditing ? (
+              <input
+                ref={editInputRef}
+                type="text"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onKeyDown={handleRenameKeyDown}
+                onBlur={handleSaveRename}
+                className="flex-1 min-w-0 px-1 py-0.5 text-sm font-semibold bg-background border border-primary rounded outline-none"
+                data-testid={`column-header-input-${index}`}
+                aria-label="Edit column name"
+              />
+            ) : (
+              <span
+                className={cn(
+                  "flex-1 truncate",
+                  isFreeColumn && "hover:bg-muted/50 rounded px-1 -ml-1"
+                )}
+                title={isFreeColumn ? `${column.header} (double-click to rename)` : column.header}
+              >
+                {column.header}
+              </span>
+            )}
 
             {/* Column type indicator */}
             {column.type === "spec" && (

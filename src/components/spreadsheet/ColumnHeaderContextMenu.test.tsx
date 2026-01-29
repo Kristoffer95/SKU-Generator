@@ -8,12 +8,14 @@ describe('ColumnHeaderContextMenu', () => {
   const mockOnInsertBefore = vi.fn()
   const mockOnInsertAfter = vi.fn()
   const mockOnDelete = vi.fn()
+  const mockOnRename = vi.fn()
 
   const defaultProps = {
     onClose: mockOnClose,
     onInsertBefore: mockOnInsertBefore,
     onInsertAfter: mockOnInsertAfter,
     onDelete: mockOnDelete,
+    onRename: mockOnRename,
   }
 
   beforeEach(() => {
@@ -154,6 +156,66 @@ describe('ColumnHeaderContextMenu', () => {
       )
       expect(screen.queryByTestId('context-menu-delete')).not.toBeInTheDocument()
     })
+
+    it('renders "Rename" option for free columns', () => {
+      const position: ContextMenuPosition = { x: 100, y: 100 }
+      const column: ColumnDef = { id: 'col-1', type: 'free', header: 'Notes' }
+      render(
+        <ColumnHeaderContextMenu
+          {...defaultProps}
+          position={position}
+          column={column}
+          columnIndex={1}
+        />
+      )
+      expect(screen.getByTestId('context-menu-rename')).toBeInTheDocument()
+      expect(screen.getByText('Rename')).toBeInTheDocument()
+    })
+
+    it('does NOT render "Rename" option for spec columns', () => {
+      const position: ContextMenuPosition = { x: 100, y: 100 }
+      const column: ColumnDef = { id: 'col-1', type: 'spec', header: 'Color', specId: 'spec-1' }
+      render(
+        <ColumnHeaderContextMenu
+          {...defaultProps}
+          position={position}
+          column={column}
+          columnIndex={1}
+        />
+      )
+      expect(screen.queryByTestId('context-menu-rename')).not.toBeInTheDocument()
+    })
+
+    it('does NOT render "Rename" option for SKU columns', () => {
+      const position: ContextMenuPosition = { x: 100, y: 100 }
+      const column: ColumnDef = { id: 'col-0', type: 'sku', header: 'SKU' }
+      render(
+        <ColumnHeaderContextMenu
+          {...defaultProps}
+          position={position}
+          column={column}
+          columnIndex={0}
+        />
+      )
+      expect(screen.queryByTestId('context-menu-rename')).not.toBeInTheDocument()
+    })
+
+    it('does NOT render "Rename" option when onRename is not provided', () => {
+      const position: ContextMenuPosition = { x: 100, y: 100 }
+      const column: ColumnDef = { id: 'col-1', type: 'free', header: 'Notes' }
+      render(
+        <ColumnHeaderContextMenu
+          onClose={mockOnClose}
+          onInsertBefore={mockOnInsertBefore}
+          onInsertAfter={mockOnInsertAfter}
+          onDelete={mockOnDelete}
+          position={position}
+          column={column}
+          columnIndex={1}
+        />
+      )
+      expect(screen.queryByTestId('context-menu-rename')).not.toBeInTheDocument()
+    })
   })
 
   describe('callbacks', () => {
@@ -202,6 +264,22 @@ describe('ColumnHeaderContextMenu', () => {
       )
       fireEvent.click(screen.getByTestId('context-menu-delete'))
       expect(mockOnDelete).toHaveBeenCalledWith(2, column)
+      expect(mockOnClose).toHaveBeenCalled()
+    })
+
+    it('calls onRename with column index when "Rename" clicked on free column', () => {
+      const position: ContextMenuPosition = { x: 100, y: 100 }
+      const column: ColumnDef = { id: 'col-1', type: 'free', header: 'Notes' }
+      render(
+        <ColumnHeaderContextMenu
+          {...defaultProps}
+          position={position}
+          column={column}
+          columnIndex={3}
+        />
+      )
+      fireEvent.click(screen.getByTestId('context-menu-rename'))
+      expect(mockOnRename).toHaveBeenCalledWith(3)
       expect(mockOnClose).toHaveBeenCalled()
     })
   })

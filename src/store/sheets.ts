@@ -63,6 +63,15 @@ interface SheetsState {
    * @param height - The new height in pixels (min: 24)
    */
   updateRowHeight: (sheetId: string, rowIndex: number, height: number) => boolean;
+
+  /**
+   * Update the header name of a free column.
+   * Only works for columns with type === 'free'.
+   * @param sheetId - The ID of the sheet
+   * @param columnIndex - The index of the column to rename
+   * @param header - The new header name
+   */
+  updateFreeColumnHeader: (sheetId: string, columnIndex: number, header: string) => boolean;
 }
 
 const generateId = () => crypto.randomUUID();
@@ -589,6 +598,52 @@ export const useSheetsStore = create<SheetsState>()(
                 }
               : s
           ),
+        }));
+
+        return true;
+      },
+
+      updateFreeColumnHeader: (sheetId: string, columnIndex: number, header: string) => {
+        const { sheets } = get();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        if (!sheet) return false;
+
+        const columns = sheet.columns ?? [];
+
+        // Validate column index
+        if (columnIndex < 0 || columnIndex >= columns.length) return false;
+
+        // Only allow renaming free columns
+        const column = columns[columnIndex];
+        if (column.type !== 'free') return false;
+
+        // Validate header is not empty
+        const trimmedHeader = header.trim();
+        if (!trimmedHeader) return false;
+
+        // Update both the column definition and the header row data
+        set((state) => ({
+          sheets: state.sheets.map((s) => {
+            if (s.id !== sheetId) return s;
+
+            // Update column definition
+            const updatedColumns = s.columns.map((col, idx) =>
+              idx === columnIndex ? { ...col, header: trimmedHeader } : col
+            );
+
+            // Update header row (row 0) cell
+            const updatedData = [...s.data];
+            if (updatedData.length > 0 && updatedData[0].length > columnIndex) {
+              updatedData[0] = [...updatedData[0]];
+              updatedData[0][columnIndex] = {
+                ...updatedData[0][columnIndex],
+                v: trimmedHeader,
+                m: trimmedHeader,
+              };
+            }
+
+            return { ...s, columns: updatedColumns, data: updatedData };
+          }),
         }));
 
         return true;

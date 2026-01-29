@@ -242,7 +242,8 @@ describe("DraggableColumnHeaders", () => {
     ]
     render(<DraggableColumnHeaders columns={columns} onReorder={mockOnReorder} />)
 
-    const longHeader = screen.getByTitle("Very Long Column Header Name That Should Be Truncated")
+    // Free columns show "(double-click to rename)" hint in title
+    const longHeader = screen.getByTitle("Very Long Column Header Name That Should Be Truncated (double-click to rename)")
     expect(longHeader).toBeInTheDocument()
   })
 
@@ -433,6 +434,228 @@ describe("DraggableColumnHeaders", () => {
 
       // After resize ends, column should be draggable again
       expect(colorHeader).toHaveAttribute("draggable", "true")
+    })
+  })
+
+  describe("column renaming", () => {
+    let mockOnRenameColumn: ReturnType<typeof vi.fn>
+
+    beforeEach(() => {
+      mockOnRenameColumn = vi.fn()
+    })
+
+    it("shows inline input on double-click for free columns", () => {
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onRenameColumn={mockOnRenameColumn}
+        />
+      )
+
+      const notesHeader = screen.getByTestId("column-header-3")
+      fireEvent.doubleClick(notesHeader)
+
+      // Should show input field
+      expect(screen.getByTestId("column-header-input-3")).toBeInTheDocument()
+      expect(screen.getByTestId("column-header-input-3")).toHaveValue("Notes")
+    })
+
+    it("does NOT show inline input on double-click for spec columns", () => {
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onRenameColumn={mockOnRenameColumn}
+        />
+      )
+
+      const colorHeader = screen.getByTestId("column-header-1")
+      fireEvent.doubleClick(colorHeader)
+
+      // Should NOT show input field
+      expect(screen.queryByTestId("column-header-input-1")).not.toBeInTheDocument()
+    })
+
+    it("does NOT show inline input on double-click for SKU column", () => {
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onRenameColumn={mockOnRenameColumn}
+        />
+      )
+
+      const skuHeader = screen.getByTestId("column-header-0")
+      fireEvent.doubleClick(skuHeader)
+
+      // Should NOT show input field
+      expect(screen.queryByTestId("column-header-input-0")).not.toBeInTheDocument()
+    })
+
+    it("calls onRenameColumn when Enter is pressed after editing", () => {
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onRenameColumn={mockOnRenameColumn}
+        />
+      )
+
+      const notesHeader = screen.getByTestId("column-header-3")
+      fireEvent.doubleClick(notesHeader)
+
+      const input = screen.getByTestId("column-header-input-3")
+      fireEvent.change(input, { target: { value: "Comments" } })
+      fireEvent.keyDown(input, { key: "Enter" })
+
+      expect(mockOnRenameColumn).toHaveBeenCalledWith(3, "Comments")
+    })
+
+    it("cancels editing on Escape press", () => {
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onRenameColumn={mockOnRenameColumn}
+        />
+      )
+
+      const notesHeader = screen.getByTestId("column-header-3")
+      fireEvent.doubleClick(notesHeader)
+
+      const input = screen.getByTestId("column-header-input-3")
+      fireEvent.change(input, { target: { value: "Changed" } })
+      fireEvent.keyDown(input, { key: "Escape" })
+
+      // Should close input without calling callback
+      expect(mockOnRenameColumn).not.toHaveBeenCalled()
+      expect(screen.queryByTestId("column-header-input-3")).not.toBeInTheDocument()
+      expect(screen.getByText("Notes")).toBeInTheDocument()
+    })
+
+    it("saves on blur", () => {
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onRenameColumn={mockOnRenameColumn}
+        />
+      )
+
+      const notesHeader = screen.getByTestId("column-header-3")
+      fireEvent.doubleClick(notesHeader)
+
+      const input = screen.getByTestId("column-header-input-3")
+      fireEvent.change(input, { target: { value: "Comments" } })
+      fireEvent.blur(input)
+
+      expect(mockOnRenameColumn).toHaveBeenCalledWith(3, "Comments")
+    })
+
+    it("does not call onRenameColumn if value is empty", () => {
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onRenameColumn={mockOnRenameColumn}
+        />
+      )
+
+      const notesHeader = screen.getByTestId("column-header-3")
+      fireEvent.doubleClick(notesHeader)
+
+      const input = screen.getByTestId("column-header-input-3")
+      fireEvent.change(input, { target: { value: "   " } })
+      fireEvent.keyDown(input, { key: "Enter" })
+
+      // Should NOT call callback for empty value
+      expect(mockOnRenameColumn).not.toHaveBeenCalled()
+    })
+
+    it("disables dragging while editing", () => {
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onRenameColumn={mockOnRenameColumn}
+        />
+      )
+
+      const notesHeader = screen.getByTestId("column-header-3")
+
+      // Before editing, should be draggable
+      expect(notesHeader).toHaveAttribute("draggable", "true")
+
+      fireEvent.doubleClick(notesHeader)
+
+      // During editing, should not be draggable
+      expect(notesHeader).toHaveAttribute("draggable", "false")
+
+      // Exit editing
+      const input = screen.getByTestId("column-header-input-3")
+      fireEvent.keyDown(input, { key: "Escape" })
+
+      // After editing, should be draggable again
+      expect(notesHeader).toHaveAttribute("draggable", "true")
+    })
+
+    it("responds to controlled editingColumnIndex prop", () => {
+      const columns = createColumns()
+      const { rerender } = render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onRenameColumn={mockOnRenameColumn}
+          editingColumnIndex={null}
+          onEditingColumnIndexChange={vi.fn()}
+        />
+      )
+
+      // Initially no input
+      expect(screen.queryByTestId("column-header-input-3")).not.toBeInTheDocument()
+
+      // Update controlled prop to trigger editing
+      rerender(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onRenameColumn={mockOnRenameColumn}
+          editingColumnIndex={3}
+          onEditingColumnIndexChange={vi.fn()}
+        />
+      )
+
+      // Should show input for index 3 (Notes column)
+      expect(screen.getByTestId("column-header-input-3")).toBeInTheDocument()
+    })
+
+    it("calls onEditingColumnIndexChange when exiting edit mode", () => {
+      const columns = createColumns()
+      const mockOnEditingChange = vi.fn()
+
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onRenameColumn={mockOnRenameColumn}
+          editingColumnIndex={3}
+          onEditingColumnIndexChange={mockOnEditingChange}
+        />
+      )
+
+      const input = screen.getByTestId("column-header-input-3")
+      fireEvent.keyDown(input, { key: "Escape" })
+
+      expect(mockOnEditingChange).toHaveBeenCalledWith(null)
     })
   })
 })

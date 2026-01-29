@@ -135,7 +135,7 @@ function getSelectedCells(selection: Selection | undefined): { row: number; colu
 }
 
 export function SpreadsheetContainer() {
-  const { sheets, activeSheetId, setActiveSheet, setSheetData, addSheetWithId, removeSheet, updateSheet, reorderColumns, updateColumnWidth, updateRowHeight } = useSheetsStore()
+  const { sheets, activeSheetId, setActiveSheet, setSheetData, addSheetWithId, removeSheet, updateSheet, reorderColumns, updateColumnWidth, updateRowHeight, updateFreeColumnHeader } = useSheetsStore()
   // Get active sheet and use its local specifications and columns
   const activeSheet = sheets.find((s) => s.id === activeSheetId)
   const specifications = useMemo(
@@ -612,6 +612,21 @@ export function SpreadsheetContainer() {
     updateRowHeight(activeSheetId, rowIndex, newHeight)
   }, [activeSheetId, updateRowHeight])
 
+  // Handle free column header rename
+  const handleRenameColumn = useCallback((columnIndex: number, newHeader: string) => {
+    if (!activeSheetId) return
+    updateFreeColumnHeader(activeSheetId, columnIndex, newHeader)
+  }, [activeSheetId, updateFreeColumnHeader])
+
+  // State for programmatically triggering column rename (from context menu)
+  const [editingColumnIndex, setEditingColumnIndex] = useState<number | null>(null)
+
+  // Handle context menu rename request
+  const handleContextMenuRename = useCallback((columnIndex: number) => {
+    // Context menu closes itself, set editing state to trigger inline rename
+    setEditingColumnIndex(columnIndex)
+  }, [])
+
   // Compute validation errors for the active sheet
   const validationErrors = useMemo((): ValidationError[] => {
     if (!activeSheet) return []
@@ -884,7 +899,10 @@ export function SpreadsheetContainer() {
         columns={columns}
         onReorder={handleColumnReorder}
         onColumnResize={handleColumnResize}
+        onRenameColumn={handleRenameColumn}
         spreadsheetRef={spreadsheetContainerRef}
+        editingColumnIndex={editingColumnIndex}
+        onEditingColumnIndexChange={setEditingColumnIndex}
       />
       <div
         ref={spreadsheetContainerRef}
@@ -927,6 +945,7 @@ export function SpreadsheetContainer() {
         onInsertBefore={handleInsertColumnBefore}
         onInsertAfter={handleInsertColumnAfter}
         onDelete={handleDeleteColumnRequest}
+        onRename={handleContextMenuRename}
       />
 
       {/* Add column dialog */}

@@ -1,3 +1,40 @@
+## free-column-rename - COMPLETED
+Add ability to rename free column titles via double-click or context menu
+
+### Key decisions
+- Added updateFreeColumnHeader(sheetId, columnIndex, header) method to useSheetsStore
+- Method only allows renaming 'free' type columns; rejects spec/SKU columns
+- Method updates both column definition header AND header row data atomically
+- Added double-click handler on header text to trigger inline rename for free columns
+- Added "Rename" option to ColumnHeaderContextMenu (only shows for free columns)
+- DraggableColumnHeaders supports both controlled (editingColumnIndex prop) and uncontrolled editing
+- Context menu integration uses controlled mode via editingColumnIndex/onEditingColumnIndexChange props
+- Free column headers show "(double-click to rename)" hint in title tooltip
+- Keyboard: Enter saves, Escape cancels, blur saves
+- Empty/whitespace-only names are rejected
+
+### Files changed
+- src/store/sheets.ts (added updateFreeColumnHeader method)
+- src/store/sheets.test.ts (+7 tests for updateFreeColumnHeader)
+- src/components/spreadsheet/DraggableColumnHeaders.tsx (inline editing, double-click handling, controlled mode)
+- src/components/spreadsheet/DraggableColumnHeaders.test.tsx (+10 tests for column renaming)
+- src/components/spreadsheet/ColumnHeaderContextMenu.tsx (added Rename option for free columns)
+- src/components/spreadsheet/ColumnHeaderContextMenu.test.tsx (+5 tests for Rename option)
+- src/components/SpreadsheetContainer.tsx (integration: handleRenameColumn, handleContextMenuRename, editingColumnIndex state)
+
+### Notes
+- All 7 stepsToVerify criteria met:
+  1. Add a free column with a title ✓
+  2. Double-click on the free column header - enters edit mode ✓
+  3. Type new name and press Enter - header is renamed ✓
+  4. Press Escape while editing - cancels rename ✓
+  5. Right-click context menu has 'Rename' option for free columns ✓
+  6. Renamed title persists after page refresh ✓ (via Zustand persist)
+  7. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (927 tests, +22 new)
+
 ## free-column-deletion - COMPLETED
 Enable deleting free columns via right-click context menu and add undo support
 
