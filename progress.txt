@@ -1,3 +1,41 @@
+## remotion-spreadsheet-scene - COMPLETED
+Create SpreadsheetScene.tsx (~10 seconds, 300 frames at 30fps)
+
+### Key decisions
+- Created SpreadsheetScene component demonstrating spreadsheet interaction with dropdowns and SKU generation
+- Animation timeline divided into phases:
+  - Frame 0-30: Browser frame slides in from right with slide animation
+  - Frame 30-110: First row cell selection, dropdown opens with spring height animation, option highlights
+  - Frame 110-180: Value selection, dropdown closes, second cell selection and dropdown
+  - Frame 180-230: Third cell selection, all first row values selected, SKU generates character-by-character
+  - Frame 230-270: Second row fills with staggered effect (Blue-Medium-Polyester → B-M-PLY)
+  - Frame 270-300: Third row fills (Green-Large-Wool → G-L-WOL), final state with callout
+- Reused existing MockSpreadsheet patterns but built custom cell components for fine-grained animation control
+- AnimatedDropdown component with spring height animation and highlighted option state
+- TypewriterSKU component for character-by-character SKU generation with blinking cursor
+- Feature callout bubbles: "Select from dropdown", "SKU auto-generates!", "Multiple rows with unique SKUs"
+- Sidebar shows collapsed spec cards for context (Color, Size, Material specs)
+- Sheet tabs at bottom matching app styling
+
+### Files changed
+- remotion/scenes/SpreadsheetScene.tsx (new, ~580 lines)
+- remotion/Root.tsx (added SpreadsheetScene composition for preview)
+
+### Notes
+- All 7 stepsToVerify criteria met:
+  1. remotion/scenes/SpreadsheetScene.tsx exports SpreadsheetScene component ✓
+  2. Browser frame enters with slide animation ✓
+  3. Cell selection shows animated ring around cell ✓
+  4. Dropdown opens with spring height animation ✓
+  5. Value selection highlights option before closing ✓
+  6. SKU in Column A fills character-by-character with typing cursor ✓
+  7. Multiple rows show different SKU combinations ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build dir)
+- npm run test passes (747 tests)
+- npm run build passes
+- Remotion bundle builds successfully
+
 ## remotion-spec-management-scene - COMPLETED
 Create SpecManagementScene.tsx (~7 seconds, 210 frames at 30fps)
 

@@ -500,7 +500,7 @@
       "SKU in Column A fills character-by-character with typing cursor",
       "Multiple rows show different SKU combinations"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "remotion-settings-scene",
