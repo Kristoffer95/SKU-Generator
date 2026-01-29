@@ -4234,3 +4234,161 @@ describe('SpreadsheetContainer row resizing (row-resizing)', () => {
     expect(styleElement?.textContent).toContain('height: 32px')
   })
 })
+
+describe('column width styles (column-resize-full-column)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+  })
+
+  it('generates column width styles for colgroup col elements', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU', width: 100 },
+      { id: 'col-1', type: 'spec', specId: 'spec-1', header: 'Color', width: 150 },
+      { id: 'col-2', type: 'free', header: 'Notes', width: 200 },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU' }, { v: 'Color' }, { v: 'Notes' }],
+      [{ v: 'SKU-001' }, { v: 'Red' }, { v: 'Test note' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [])
+
+    render(<SpreadsheetContainer />)
+
+    const styleElement = document.querySelector('[data-testid="column-width-styles"]')
+    expect(styleElement).toBeInTheDocument()
+
+    // Should target colgroup col elements for proper table-layout: fixed width control
+    expect(styleElement?.textContent).toContain('.Spreadsheet__table colgroup col:nth-child(2)')
+    expect(styleElement?.textContent).toContain('.Spreadsheet__table colgroup col:nth-child(3)')
+    expect(styleElement?.textContent).toContain('.Spreadsheet__table colgroup col:nth-child(4)')
+
+    // Verify actual widths are in the styles
+    expect(styleElement?.textContent).toContain('width: 100px')
+    expect(styleElement?.textContent).toContain('width: 150px')
+    expect(styleElement?.textContent).toContain('width: 200px')
+  })
+
+  it('generates cell width styles for all cells in each column', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU', width: 100 },
+      { id: 'col-1', type: 'spec', specId: 'spec-1', header: 'Color', width: 150 },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'SKU-001' }, { v: 'Red' }],
+      [{ v: 'SKU-002' }, { v: 'Blue' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [])
+
+    render(<SpreadsheetContainer />)
+
+    const styleElement = document.querySelector('[data-testid="column-width-styles"]')
+    expect(styleElement).toBeInTheDocument()
+
+    // Should target all cells in column via tr > *:nth-child selector
+    // This ensures both header row th and data row td cells are styled
+    expect(styleElement?.textContent).toContain('.Spreadsheet__table tr > *:nth-child(2)')
+    expect(styleElement?.textContent).toContain('.Spreadsheet__table tr > *:nth-child(3)')
+
+    // Verify min-width and max-width are included for consistent sizing
+    expect(styleElement?.textContent).toContain('min-width: 100px')
+    expect(styleElement?.textContent).toContain('max-width: 100px')
+    expect(styleElement?.textContent).toContain('min-width: 150px')
+    expect(styleElement?.textContent).toContain('max-width: 150px')
+  })
+
+  it('uses default width (120px) when column.width is not set', () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' }, // No width set
+      { id: 'col-1', type: 'spec', specId: 'spec-1', header: 'Color' }, // No width set
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'SKU-001' }, { v: 'Red' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [])
+
+    render(<SpreadsheetContainer />)
+
+    const styleElement = document.querySelector('[data-testid="column-width-styles"]')
+    expect(styleElement).toBeInTheDocument()
+
+    // Default width should be 120px for columns without explicit width
+    expect(styleElement?.textContent).toContain('width: 120px')
+    expect(styleElement?.textContent).toContain('min-width: 120px')
+    expect(styleElement?.textContent).toContain('max-width: 120px')
+  })
+
+  it('accounts for row indicator column with +2 offset in nth-child', () => {
+    // In react-spreadsheet, the first col in colgroup is for row indicators
+    // So data column 0 (SKU) should target col:nth-child(2)
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU', width: 100 },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU' }],
+      [{ v: 'SKU-001' }],
+    ]
+    createSheetWithColumns('Products', data, columns, [])
+
+    render(<SpreadsheetContainer />)
+
+    const styleElement = document.querySelector('[data-testid="column-width-styles"]')
+    expect(styleElement).toBeInTheDocument()
+
+    // Column index 0 should target nth-child(2) because:
+    // - nth-child is 1-indexed (so add 1)
+    // - row indicator column is first (so add 1 more)
+    // = index 0 + 2 = nth-child(2)
+    expect(styleElement?.textContent).toContain('col:nth-child(2) { width: 100px')
+    expect(styleElement?.textContent).toContain('tr > *:nth-child(2) { width: 100px')
+  })
+
+  it('updates column width styles when column width changes in store', async () => {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU', width: 100 },
+      { id: 'col-1', type: 'free', header: 'Notes', width: 150 },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU' }, { v: 'Notes' }],
+      [{ v: 'SKU-001' }, { v: 'Test' }],
+    ]
+    const sheetId = createSheetWithColumns('Products', data, columns, [])
+
+    render(<SpreadsheetContainer />)
+
+    let styleElement = document.querySelector('[data-testid="column-width-styles"]')
+    expect(styleElement?.textContent).toContain('width: 150px')
+
+    // Update column width in store
+    await act(async () => {
+      useSheetsStore.getState().updateColumnWidth(sheetId, 1, 250)
+    })
+
+    // Re-query the style element (React may have re-rendered)
+    styleElement = document.querySelector('[data-testid="column-width-styles"]')
+    expect(styleElement?.textContent).toContain('width: 250px')
+  })
+
+  it('no column width styles when no columns exist', () => {
+    useSheetsStore.setState({
+      sheets: [{
+        id: 'sheet-1',
+        name: 'Empty Sheet',
+        type: 'data',
+        data: [],
+        columns: [],
+        specifications: [],
+      }],
+      activeSheetId: 'sheet-1',
+    })
+
+    render(<SpreadsheetContainer />)
+
+    // No columns means no column width styles should be rendered
+    const styleElement = document.querySelector('[data-testid="column-width-styles"]')
+    expect(styleElement).not.toBeInTheDocument()
+  })
+})

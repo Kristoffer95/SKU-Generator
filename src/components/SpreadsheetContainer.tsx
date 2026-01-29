@@ -663,13 +663,24 @@ export function SpreadsheetContainer() {
   const columnWidthStyles = useMemo(() => {
     if (!columns.length) return null
 
-    const styles = columns.map((col, index) => {
+    // react-spreadsheet uses table-layout: fixed with a <colgroup>
+    // The first <col> is for the row indicator column, then one <col> per data column
+    // With table-layout: fixed, widths on <col> elements control the entire column
+    const colStyles = columns.map((col, index) => {
       const width = col.width ?? 120
-      // Target cells in each column (nth-child is 1-indexed, +2 for row indicator column)
-      return `.sku-spreadsheet .Spreadsheet__cell:nth-child(${index + 2}) { width: ${width}px; min-width: ${width}px; max-width: ${width}px; }`
+      // nth-child is 1-indexed, +2 accounts for: 1-indexing and row indicator column
+      return `.sku-spreadsheet .Spreadsheet__table colgroup col:nth-child(${index + 2}) { width: ${width}px; }`
     }).join("\n")
 
-    return <style data-testid="column-width-styles">{styles}</style>
+    // Also target cells directly for any edge cases where colgroup isn't sufficient
+    // This targets all td/th in the column position across all rows
+    const cellStyles = columns.map((col, index) => {
+      const width = col.width ?? 120
+      // Target both th and td at this column position (nth-child is 1-indexed, +2 for row indicator)
+      return `.sku-spreadsheet .Spreadsheet__table tr > *:nth-child(${index + 2}) { width: ${width}px; min-width: ${width}px; max-width: ${width}px; }`
+    }).join("\n")
+
+    return <style data-testid="column-width-styles">{colStyles}\n{cellStyles}</style>
   }, [columns])
 
   // Generate dynamic row height styles

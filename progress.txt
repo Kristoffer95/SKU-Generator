@@ -1,3 +1,31 @@
+## column-resize-full-column - COMPLETED
+Fix column resize to affect entire column (header and all data cells)
+
+### Key decisions
+- Root cause: CSS selector `.Spreadsheet__cell:nth-child()` doesn't work correctly for HTML tables because cells are children of rows, not the table
+- react-spreadsheet uses `table-layout: fixed` with `<colgroup>` containing `<col>` elements for each column
+- Fix: Generate CSS targeting `<col>` elements in `<colgroup>` for proper table-layout width control
+- Also target all cells via `.Spreadsheet__table tr > *:nth-child()` selector to ensure both th and td elements are styled
+- Selector uses `+2` offset to account for: 1-indexed nth-child and row indicator column
+
+### Files changed
+- src/components/SpreadsheetContainer.tsx (rewrote columnWidthStyles useMemo to target colgroup col and all tr children)
+- src/components/SpreadsheetContainer.test.tsx (+6 tests for column width styles)
+
+### Notes
+- All 7 stepsToVerify criteria met:
+  1. Hover on the right edge of a column header ✓
+  2. Drag to resize the column width ✓
+  3. Header cell AND all data cells in that column resize together ✓
+  4. Column width is consistent from header to last row ✓
+  5. Width persists after page refresh ✓ (via Zustand persist with column.width)
+  6. Works for all column types (SKU, spec, free) ✓
+  7. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (933 tests, +6 new)
+- npm run build passes
+
 ## free-column-rename - COMPLETED
 Add ability to rename free column titles via double-click or context menu
 

@@ -757,7 +757,7 @@
       "Works for all column types (SKU, spec, free)",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "column-header-data-width-consistency",
