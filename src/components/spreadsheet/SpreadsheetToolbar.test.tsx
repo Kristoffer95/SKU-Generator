@@ -273,6 +273,25 @@ describe("SpreadsheetToolbar", () => {
 
       expect(mockOnCellColorChange).toHaveBeenCalledWith(null);
     });
+
+    it("calls onCellColorPickerOpenChange when dropdown opens", async () => {
+      const user = userEvent.setup();
+      const mockOnOpenChange = vi.fn();
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          onCellColorChange={mockOnCellColorChange}
+          onCellColorPickerOpenChange={mockOnOpenChange}
+        />
+      );
+
+      await user.click(screen.getByTestId("cell-color-picker-trigger"));
+
+      await waitFor(() => {
+        expect(mockOnOpenChange).toHaveBeenCalledWith(true);
+      });
+    });
   });
 
   describe("cell text color picker", () => {
@@ -382,6 +401,25 @@ describe("SpreadsheetToolbar", () => {
       await user.click(screen.getByTestId("cell-text-color-clear"));
 
       expect(mockOnTextColorChange).toHaveBeenCalledWith(null);
+    });
+
+    it("calls onTextColorPickerOpenChange when dropdown opens", async () => {
+      const user = userEvent.setup();
+      const mockOnOpenChange = vi.fn();
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          onTextColorChange={mockOnTextColorChange}
+          onTextColorPickerOpenChange={mockOnOpenChange}
+        />
+      );
+
+      await user.click(screen.getByTestId("cell-text-color-picker-trigger"));
+
+      await waitFor(() => {
+        expect(mockOnOpenChange).toHaveBeenCalledWith(true);
+      });
     });
   });
 });

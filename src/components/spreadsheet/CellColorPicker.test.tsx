@@ -149,6 +149,55 @@ describe("CellColorPicker", () => {
     })
   })
 
+  describe("onOpenChange callback", () => {
+    it("calls onOpenChange with true when dropdown opens", async () => {
+      const user = userEvent.setup()
+      const onOpenChange = vi.fn()
+      render(<CellColorPicker onColorSelect={vi.fn()} onOpenChange={onOpenChange} />)
+
+      const trigger = screen.getByTestId("cell-color-picker-trigger")
+      await user.click(trigger)
+
+      await waitFor(() => {
+        expect(onOpenChange).toHaveBeenCalledWith(true)
+      })
+    })
+
+    it("calls onOpenChange with false when dropdown closes", async () => {
+      const user = userEvent.setup()
+      const onOpenChange = vi.fn()
+      render(<CellColorPicker onColorSelect={vi.fn()} onOpenChange={onOpenChange} />)
+
+      // Open dropdown
+      const trigger = screen.getByTestId("cell-color-picker-trigger")
+      await user.click(trigger)
+
+      await waitFor(() => {
+        expect(screen.getByTestId("cell-color-picker-dropdown")).toBeInTheDocument()
+      })
+
+      // Close by clicking outside (press Escape to close)
+      await user.keyboard("{Escape}")
+
+      await waitFor(() => {
+        expect(onOpenChange).toHaveBeenCalledWith(false)
+      })
+    })
+
+    it("works without onOpenChange prop", async () => {
+      const user = userEvent.setup()
+      // Should not throw error when onOpenChange is not provided
+      render(<CellColorPicker onColorSelect={vi.fn()} />)
+
+      const trigger = screen.getByTestId("cell-color-picker-trigger")
+      await user.click(trigger)
+
+      await waitFor(() => {
+        expect(screen.getByTestId("cell-color-picker-dropdown")).toBeInTheDocument()
+      })
+    })
+  })
+
   describe("COLOR_PALETTE", () => {
     it("has exactly 18 colors", () => {
       expect(COLOR_PALETTE).toHaveLength(18)

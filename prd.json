@@ -671,5 +671,32 @@
       "npm run typecheck passes"
     ],
     "passes": true
+  },
+  {
+    "id": "row-indicator-width-fix",
+    "category": "Bug Fix",
+    "description": "Row indicator column (row numbers 1, 2, 3...) should match the header cell width. Currently they are misaligned - the header cell is wider than the row number cells below it. Fix CSS to enforce consistent width across all row indicator elements.",
+    "stepsToVerify": [
+      "Row number cells align perfectly with the header cell above",
+      "All row indicators have the same width (40px)",
+      "Visual appearance is consistent across light/dark mode",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "color-picker-selection-fix",
+    "category": "Bug Fix",
+    "description": "Cell background and text color pickers deselect cells when clicked, preventing colors from being applied. The dropdown menu steals focus which clears the spreadsheet selection. Fix by using modal={false} on DropdownMenu components and preserving selection state in a ref before the dropdown opens.",
+    "stepsToVerify": [
+      "Select a cell in the spreadsheet",
+      "Click the background color picker button - cell stays selected",
+      "Click a color swatch - background color is applied to the cell",
+      "Select multiple cells, click text color picker - cells stay selected",
+      "Click a text color - text color is applied to all selected cells",
+      "Colors persist after page refresh",
+      "npm run typecheck passes"
+    ],
+    "passes": true
   }
 ]

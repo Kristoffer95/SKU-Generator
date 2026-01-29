@@ -23,10 +23,14 @@ export interface SpreadsheetToolbarProps {
   selectedCellColor?: string;
   /** Called when a background color is selected */
   onCellColorChange?: (color: string | null) => void;
+  /** Called when background color picker open state changes */
+  onCellColorPickerOpenChange?: (open: boolean) => void;
   /** Current text color of selected cells (or undefined if mixed/none) */
   selectedTextColor?: string;
   /** Called when a text color is selected */
   onTextColorChange?: (color: string | null) => void;
+  /** Called when text color picker open state changes */
+  onTextColorPickerOpenChange?: (open: boolean) => void;
   /** Optional additional class name */
   className?: string;
 }
@@ -46,8 +50,10 @@ export function SpreadsheetToolbar({
   hasSelection = false,
   selectedCellColor,
   onCellColorChange,
+  onCellColorPickerOpenChange,
   selectedTextColor,
   onTextColorChange,
+  onTextColorPickerOpenChange,
   className,
 }: SpreadsheetToolbarProps) {
   return (
@@ -120,6 +126,7 @@ export function SpreadsheetToolbar({
           disabled={!hasSelection}
           currentColor={selectedCellColor}
           onColorSelect={onCellColorChange}
+          onOpenChange={onCellColorPickerOpenChange}
         />
       )}
 
@@ -129,6 +136,7 @@ export function SpreadsheetToolbar({
           disabled={!hasSelection}
           currentColor={selectedTextColor}
           onColorSelect={onTextColorChange}
+          onOpenChange={onTextColorPickerOpenChange}
         />
       )}
     </div>

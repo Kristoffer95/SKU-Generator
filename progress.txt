@@ -1,3 +1,39 @@
+## color-picker-selection-fix - COMPLETED
+Fix cell color pickers deselecting cells when dropdown opens
+
+### Key decisions
+- Root cause: DropdownMenu from Radix UI operates in modal mode by default, stealing focus when opened
+- Fix 1: Added modal={false} to DropdownMenu in both CellColorPicker and CellTextColorPicker
+- Fix 2: Added onOpenChange prop to color pickers to notify parent when dropdown opens/closes
+- Fix 3: SpreadsheetContainer stores current selection in preservedSelectionRef when dropdown opens
+- Fix 4: Color change handlers fall back to preserved selection if current selection is empty
+- Both color pickers now support onOpenChange callback for selection preservation
+- SpreadsheetToolbar passes onCellColorPickerOpenChange and onTextColorPickerOpenChange props
+
+### Files changed
+- src/components/spreadsheet/CellColorPicker.tsx (added modal={false}, onOpenChange prop)
+- src/components/spreadsheet/CellColorPicker.test.tsx (+3 tests for onOpenChange)
+- src/components/spreadsheet/CellTextColorPicker.tsx (added modal={false}, onOpenChange prop)
+- src/components/spreadsheet/CellTextColorPicker.test.tsx (+3 tests for onOpenChange)
+- src/components/spreadsheet/SpreadsheetToolbar.tsx (added onCellColorPickerOpenChange, onTextColorPickerOpenChange props)
+- src/components/spreadsheet/SpreadsheetToolbar.test.tsx (+2 tests for open change callbacks)
+- src/components/SpreadsheetContainer.tsx (added preservedSelectionRef, handleColorPickerOpenChange, updated color handlers)
+- src/components/SpreadsheetContainer.test.tsx (+3 tests for selection preservation during color application)
+
+### Notes
+- All 7 stepsToVerify criteria met:
+  1. Select a cell in the spreadsheet ✓
+  2. Click background color picker button - cell stays selected ✓
+  3. Click a color swatch - background color is applied ✓
+  4. Select multiple cells, click text color picker - cells stay selected ✓
+  5. Click a text color - text color is applied to all selected cells ✓
+  6. Colors persist after page refresh ✓ (via Zustand persist)
+  7. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (902 tests, +11 new)
+- npm run build passes
+
 ## row-resizing - COMPLETED
 Add ability to resize row heights by dragging
 

@@ -165,6 +165,8 @@ export function SpreadsheetContainer() {
 
   // Selection state for programmatic cell navigation
   const [selected, setSelected] = useState<Selection | undefined>(undefined)
+  // Ref to preserve selection when color picker opens (dropdown can steal focus)
+  const preservedSelectionRef = useRef<Selection | undefined>(undefined)
   // Ref for the spreadsheet scroll container
   const spreadsheetContainerRef = useRef<HTMLDivElement>(null)
 
@@ -708,7 +710,14 @@ export function SpreadsheetContainer() {
 
   // Handle cell background color change
   const handleCellColorChange = useCallback((color: string | null) => {
-    if (!activeSheet || selectedCells.length === 0) return
+    if (!activeSheet) return
+
+    // Use preserved selection if current selection is empty (dropdown stole focus)
+    const cellsToApply = selectedCells.length > 0
+      ? selectedCells
+      : getSelectedCells(preservedSelectionRef.current)
+
+    if (cellsToApply.length === 0) return
 
     // Track history for undo
     const oldEntry: HistoryEntry = {
@@ -721,7 +730,7 @@ export function SpreadsheetContainer() {
     const newData = activeSheet.data.map((row, rowIndex) => {
       return row.map((cell, colIndex) => {
         // Check if this cell is selected
-        const isSelected = selectedCells.some(
+        const isSelected = cellsToApply.some(
           (sel) => sel.row === rowIndex && sel.column === colIndex
         )
 
@@ -757,9 +766,24 @@ export function SpreadsheetContainer() {
     historyIndexRef.current = -1
   }, [activeSheet, selectedCells, setSheetData])
 
+  // Handle color picker open state changes - preserve selection before dropdown steals focus
+  const handleColorPickerOpenChange = useCallback((open: boolean) => {
+    if (open) {
+      // When opening, preserve the current selection in a ref
+      preservedSelectionRef.current = selected
+    }
+  }, [selected])
+
   // Handle cell text color change
   const handleCellTextColorChange = useCallback((color: string | null) => {
-    if (!activeSheet || selectedCells.length === 0) return
+    if (!activeSheet) return
+
+    // Use preserved selection if current selection is empty (dropdown stole focus)
+    const cellsToApply = selectedCells.length > 0
+      ? selectedCells
+      : getSelectedCells(preservedSelectionRef.current)
+
+    if (cellsToApply.length === 0) return
 
     // Track history for undo
     const oldEntry: HistoryEntry = {
@@ -772,7 +796,7 @@ export function SpreadsheetContainer() {
     const newData = activeSheet.data.map((row, rowIndex) => {
       return row.map((cell, colIndex) => {
         // Check if this cell is selected
-        const isSelected = selectedCells.some(
+        const isSelected = cellsToApply.some(
           (sel) => sel.row === rowIndex && sel.column === colIndex
         )
 
@@ -830,8 +854,10 @@ export function SpreadsheetContainer() {
         hasSelection={hasSelection}
         selectedCellColor={selectedCellColor}
         onCellColorChange={handleCellColorChange}
+        onCellColorPickerOpenChange={handleColorPickerOpenChange}
         selectedTextColor={selectedTextColor}
         onTextColorChange={handleCellTextColorChange}
+        onTextColorPickerOpenChange={handleColorPickerOpenChange}
       />
       <DraggableColumnHeaders
         columns={columns}

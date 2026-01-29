@@ -42,6 +42,8 @@ export interface CellColorPickerProps {
   currentColor?: string
   /** Called when a color is selected */
   onColorSelect: (color: string | null) => void
+  /** Called when the dropdown open state changes - use to preserve selection state */
+  onOpenChange?: (open: boolean) => void
   /** Optional additional class name */
   className?: string
 }
@@ -54,10 +56,11 @@ export function CellColorPicker({
   disabled = false,
   currentColor,
   onColorSelect,
+  onOpenChange,
   className,
 }: CellColorPickerProps) {
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
