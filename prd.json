@@ -571,6 +571,6 @@
       "Scene transitions play smoothly",
       "Video file size is reasonable for quality"
     ],
-    "passes": false
+    "passes": true
   }
 ]
