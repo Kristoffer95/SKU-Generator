@@ -1,3 +1,36 @@
+## copy-cell-styles-shortcut - COMPLETED
+Implement Option+Cmd+C keyboard shortcut to copy cell styles, Option+Cmd+V to paste
+
+### Key decisions
+- Created CellStyles interface in types/index.ts with bg, fc, bold, italic, align fields
+- Added copiedStylesRef to SpreadsheetContainer to store copied styles across paste operations
+- handleCopyStyles extracts styles from first selected cell (ignores value, copies only formatting)
+- handlePasteStyles applies copied styles to all selected cells, preserving their values
+- Pasting clears target cell styles that weren't in copied styles (replaces entire style set)
+- Keyboard handler listens for Option+Cmd+C (Mac) or Alt+Ctrl+C (Win/Linux) for copy
+- Keyboard handler listens for Option+Cmd+V (Mac) or Alt+Ctrl+V (Win/Linux) for paste
+- Added tabIndex={0} to spreadsheet container div for keyboard focus
+- History tracking for undo/redo support on paste operations
+
+### Files changed
+- src/types/index.ts (added CellStyles interface)
+- src/components/SpreadsheetContainer.tsx (added copiedStylesRef, handleCopyStyles, handlePasteStyles, handleKeyDown, tabIndex on container)
+- src/components/SpreadsheetContainer.test.tsx (+7 tests for copy-paste styles)
+
+### Notes
+- All 7 stepsToVerify criteria met:
+  1. Select a cell with custom styling ✓
+  2. Press Option+Cmd+C - styles are copied ✓
+  3. Select another cell or range of cells ✓
+  4. Press Option+Cmd+V - styles are applied without changing text ✓
+  5. Original cell content remains unchanged in target cells ✓
+  6. Works with multiple style properties at once ✓
+  7. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (975 tests, +7 new)
+- npm run build passes
+
 ## text-formatting-options - COMPLETED
 Add text formatting options (bold, italic, alignment) to spreadsheet toolbar
 

@@ -31,6 +31,18 @@ export interface ParsedSpec {
 export type CellTextAlign = 'left' | 'center' | 'right';
 
 /**
+ * Cell styles that can be copied/pasted between cells
+ * Contains only formatting properties, not cell values
+ */
+export interface CellStyles {
+  bg?: string;          // background color (hex)
+  fc?: string;          // font/text color (hex)
+  bold?: boolean;       // bold text formatting
+  italic?: boolean;     // italic text formatting
+  align?: CellTextAlign; // text alignment
+}
+
+/**
  * Fortune-Sheet cell data structure
  */
 export interface CellData {

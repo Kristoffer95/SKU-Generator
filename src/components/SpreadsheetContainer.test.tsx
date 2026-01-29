@@ -4433,4 +4433,352 @@ describe('column width styles (column-resize-full-column)', () => {
     // Verify no malformed selectors like 'n.sku-spreadsheet' exist
     expect(styleContent).not.toMatch(/\bn\.sku-spreadsheet/)
   })
+
+  // ============================================================================
+  // Copy-Paste Cell Styles Tests (Option+Cmd+C / Option+Cmd+V)
+  // ============================================================================
+
+  describe('copy-paste cell styles', () => {
+    const colorSpec: Specification = {
+      id: 'color-spec',
+      name: 'Color',
+      order: 0,
+      values: [
+        { id: 'red', displayValue: 'Red', skuFragment: 'R' },
+        { id: 'blue', displayValue: 'Blue', skuFragment: 'B' },
+        { id: 'green', displayValue: 'Green', skuFragment: 'G' },
+      ],
+    }
+
+    beforeEach(() => {
+      useSheetsStore.setState({ sheets: [], activeSheetId: null })
+      capturedOnSelect = null
+    })
+
+    it('copies styles from selected cell with Option+Cmd+C', () => {
+      const columns: ColumnDef[] = [
+        { id: 'col-0', type: 'sku', header: 'SKU' },
+        { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+      ]
+      const data: CellData[][] = [
+        [{ v: 'SKU' }, { v: 'Color' }],
+        [{ v: 'R' }, { v: 'Red', bg: '#fce4ec', fc: '#b71c1c', bold: true, italic: true, align: 'center' }],
+      ]
+      createSheetWithColumns('Products', data, columns, [colorSpec])
+
+      render(<SpreadsheetContainer />)
+
+      // Select cell (1, 1) - the styled "Red" cell
+      act(() => {
+        if (capturedOnSelect) {
+          capturedOnSelect({
+            range: {
+              start: { row: 1, column: 1 },
+              end: { row: 1, column: 1 },
+            },
+          })
+        }
+      })
+
+      // Trigger copy styles with Option+Cmd+C
+      const container = screen.getByTestId('spreadsheet-container')
+      const scrollContainer = container.querySelector('.sku-spreadsheet')
+      fireEvent.keyDown(scrollContainer!, { key: 'c', altKey: true, metaKey: true })
+
+      // Cannot directly verify ref value, but we can verify paste works (in next test)
+      // At this point, styles should be copied to the ref
+    })
+
+    it('pastes copied styles to selected cells with Option+Cmd+V', () => {
+      const columns: ColumnDef[] = [
+        { id: 'col-0', type: 'sku', header: 'SKU' },
+        { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+      ]
+      const data: CellData[][] = [
+        [{ v: 'SKU' }, { v: 'Color' }],
+        [{ v: 'R' }, { v: 'Red', bg: '#fce4ec', fc: '#b71c1c', bold: true }],
+        [{ v: 'B' }, { v: 'Blue' }], // No styles
+      ]
+      createSheetWithColumns('Products', data, columns, [colorSpec])
+
+      render(<SpreadsheetContainer />)
+
+      const container = screen.getByTestId('spreadsheet-container')
+      const scrollContainer = container.querySelector('.sku-spreadsheet')!
+
+      // First, select the styled cell and copy styles
+      act(() => {
+        if (capturedOnSelect) {
+          capturedOnSelect({
+            range: {
+              start: { row: 1, column: 1 },
+              end: { row: 1, column: 1 },
+            },
+          })
+        }
+      })
+
+      fireEvent.keyDown(scrollContainer, { key: 'c', altKey: true, metaKey: true })
+
+      // Now select the unstyled cell
+      act(() => {
+        if (capturedOnSelect) {
+          capturedOnSelect({
+            range: {
+              start: { row: 2, column: 1 },
+              end: { row: 2, column: 1 },
+            },
+          })
+        }
+      })
+
+      // Paste styles with Option+Cmd+V
+      fireEvent.keyDown(scrollContainer, { key: 'v', altKey: true, metaKey: true })
+
+      // Verify styles were applied to cell (2, 1) but value is unchanged
+      const activeSheet = useSheetsStore.getState().getActiveSheet()
+      expect(activeSheet!.data[2][1].v).toBe('Blue') // Value unchanged
+      expect(activeSheet!.data[2][1].bg).toBe('#fce4ec') // Styles applied
+      expect(activeSheet!.data[2][1].fc).toBe('#b71c1c')
+      expect(activeSheet!.data[2][1].bold).toBe(true)
+    })
+
+    it('pastes styles to multiple selected cells', () => {
+      const columns: ColumnDef[] = [
+        { id: 'col-0', type: 'sku', header: 'SKU' },
+        { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+      ]
+      const data: CellData[][] = [
+        [{ v: 'SKU' }, { v: 'Color' }],
+        [{ v: 'R' }, { v: 'Red', bg: '#90caf9', italic: true, align: 'right' }],
+        [{ v: 'G' }, { v: 'Green' }],
+        [{ v: 'B' }, { v: 'Blue' }],
+      ]
+      createSheetWithColumns('Products', data, columns, [colorSpec])
+
+      render(<SpreadsheetContainer />)
+
+      const container = screen.getByTestId('spreadsheet-container')
+      const scrollContainer = container.querySelector('.sku-spreadsheet')!
+
+      // Copy styles from cell (1, 1)
+      act(() => {
+        if (capturedOnSelect) {
+          capturedOnSelect({
+            range: {
+              start: { row: 1, column: 1 },
+              end: { row: 1, column: 1 },
+            },
+          })
+        }
+      })
+
+      fireEvent.keyDown(scrollContainer, { key: 'c', altKey: true, metaKey: true })
+
+      // Select range (2, 1) to (3, 1)
+      act(() => {
+        if (capturedOnSelect) {
+          capturedOnSelect({
+            range: {
+              start: { row: 2, column: 1 },
+              end: { row: 3, column: 1 },
+            },
+          })
+        }
+      })
+
+      // Paste styles
+      fireEvent.keyDown(scrollContainer, { key: 'v', altKey: true, metaKey: true })
+
+      // Verify styles were applied to both cells
+      const activeSheet = useSheetsStore.getState().getActiveSheet()
+      expect(activeSheet!.data[2][1].bg).toBe('#90caf9')
+      expect(activeSheet!.data[2][1].italic).toBe(true)
+      expect(activeSheet!.data[2][1].align).toBe('right')
+      expect(activeSheet!.data[3][1].bg).toBe('#90caf9')
+      expect(activeSheet!.data[3][1].italic).toBe(true)
+      expect(activeSheet!.data[3][1].align).toBe('right')
+    })
+
+    it('clears styles from target cells that were not in copied styles', () => {
+      const columns: ColumnDef[] = [
+        { id: 'col-0', type: 'sku', header: 'SKU' },
+        { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+      ]
+      const data: CellData[][] = [
+        [{ v: 'SKU' }, { v: 'Color' }],
+        [{ v: 'R' }, { v: 'Red', bg: '#fce4ec' }], // Only bg color
+        [{ v: 'B' }, { v: 'Blue', bold: true, italic: true, fc: '#1976d2' }], // Has bold, italic, fc
+      ]
+      createSheetWithColumns('Products', data, columns, [colorSpec])
+
+      render(<SpreadsheetContainer />)
+
+      const container = screen.getByTestId('spreadsheet-container')
+      const scrollContainer = container.querySelector('.sku-spreadsheet')!
+
+      // Copy styles from cell (1, 1) - only has bg
+      act(() => {
+        if (capturedOnSelect) {
+          capturedOnSelect({
+            range: {
+              start: { row: 1, column: 1 },
+              end: { row: 1, column: 1 },
+            },
+          })
+        }
+      })
+
+      fireEvent.keyDown(scrollContainer, { key: 'c', altKey: true, metaKey: true })
+
+      // Paste to cell (2, 1) which has bold, italic, fc
+      act(() => {
+        if (capturedOnSelect) {
+          capturedOnSelect({
+            range: {
+              start: { row: 2, column: 1 },
+              end: { row: 2, column: 1 },
+            },
+          })
+        }
+      })
+
+      fireEvent.keyDown(scrollContainer, { key: 'v', altKey: true, metaKey: true })
+
+      // Verify: bg is applied, but bold, italic, fc should be cleared
+      const activeSheet = useSheetsStore.getState().getActiveSheet()
+      expect(activeSheet!.data[2][1].bg).toBe('#fce4ec')
+      expect(activeSheet!.data[2][1].bold).toBeUndefined()
+      expect(activeSheet!.data[2][1].italic).toBeUndefined()
+      expect(activeSheet!.data[2][1].fc).toBeUndefined()
+    })
+
+    it('supports undo after pasting styles', () => {
+      const columns: ColumnDef[] = [
+        { id: 'col-0', type: 'sku', header: 'SKU' },
+        { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+      ]
+      const data: CellData[][] = [
+        [{ v: 'SKU' }, { v: 'Color' }],
+        [{ v: 'R' }, { v: 'Red', bg: '#fce4ec' }],
+        [{ v: 'B' }, { v: 'Blue' }],
+      ]
+      createSheetWithColumns('Products', data, columns, [colorSpec])
+
+      render(<SpreadsheetContainer />)
+
+      const container = screen.getByTestId('spreadsheet-container')
+      const scrollContainer = container.querySelector('.sku-spreadsheet')!
+
+      // Copy and paste styles
+      act(() => {
+        if (capturedOnSelect) {
+          capturedOnSelect({
+            range: { start: { row: 1, column: 1 }, end: { row: 1, column: 1 } },
+          })
+        }
+      })
+
+      fireEvent.keyDown(scrollContainer, { key: 'c', altKey: true, metaKey: true })
+
+      act(() => {
+        if (capturedOnSelect) {
+          capturedOnSelect({
+            range: { start: { row: 2, column: 1 }, end: { row: 2, column: 1 } },
+          })
+        }
+      })
+
+      fireEvent.keyDown(scrollContainer, { key: 'v', altKey: true, metaKey: true })
+
+      // Verify style was applied
+      let activeSheet = useSheetsStore.getState().getActiveSheet()
+      expect(activeSheet!.data[2][1].bg).toBe('#fce4ec')
+
+      // Click undo
+      const undoButton = screen.getByTestId('spreadsheet-toolbar-undo')
+      fireEvent.click(undoButton)
+
+      // Verify style was undone
+      activeSheet = useSheetsStore.getState().getActiveSheet()
+      expect(activeSheet!.data[2][1].bg).toBeUndefined()
+    })
+
+    it('does nothing when no styles have been copied', () => {
+      const columns: ColumnDef[] = [
+        { id: 'col-0', type: 'sku', header: 'SKU' },
+        { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+      ]
+      const data: CellData[][] = [
+        [{ v: 'SKU' }, { v: 'Color' }],
+        [{ v: 'R' }, { v: 'Red' }],
+      ]
+      createSheetWithColumns('Products', data, columns, [colorSpec])
+
+      render(<SpreadsheetContainer />)
+
+      const container = screen.getByTestId('spreadsheet-container')
+      const scrollContainer = container.querySelector('.sku-spreadsheet')!
+
+      // Select a cell without copying first
+      act(() => {
+        if (capturedOnSelect) {
+          capturedOnSelect({
+            range: { start: { row: 1, column: 1 }, end: { row: 1, column: 1 } },
+          })
+        }
+      })
+
+      // Try to paste styles (nothing should happen)
+      fireEvent.keyDown(scrollContainer, { key: 'v', altKey: true, metaKey: true })
+
+      // Verify cell is unchanged (no error, no styles applied)
+      const activeSheet = useSheetsStore.getState().getActiveSheet()
+      expect(activeSheet!.data[1][1].bg).toBeUndefined()
+    })
+
+    it('works with Alt+Ctrl+C/V on Windows/Linux', () => {
+      const columns: ColumnDef[] = [
+        { id: 'col-0', type: 'sku', header: 'SKU' },
+        { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+      ]
+      const data: CellData[][] = [
+        [{ v: 'SKU' }, { v: 'Color' }],
+        [{ v: 'R' }, { v: 'Red', bg: '#a5d6a7' }],
+        [{ v: 'B' }, { v: 'Blue' }],
+      ]
+      createSheetWithColumns('Products', data, columns, [colorSpec])
+
+      render(<SpreadsheetContainer />)
+
+      const container = screen.getByTestId('spreadsheet-container')
+      const scrollContainer = container.querySelector('.sku-spreadsheet')!
+
+      // Copy styles using Alt+Ctrl+C (Windows/Linux)
+      act(() => {
+        if (capturedOnSelect) {
+          capturedOnSelect({
+            range: { start: { row: 1, column: 1 }, end: { row: 1, column: 1 } },
+          })
+        }
+      })
+
+      fireEvent.keyDown(scrollContainer, { key: 'c', altKey: true, ctrlKey: true })
+
+      // Paste using Alt+Ctrl+V
+      act(() => {
+        if (capturedOnSelect) {
+          capturedOnSelect({
+            range: { start: { row: 2, column: 1 }, end: { row: 2, column: 1 } },
+          })
+        }
+      })
+
+      fireEvent.keyDown(scrollContainer, { key: 'v', altKey: true, ctrlKey: true })
+
+      // Verify style was pasted
+      const activeSheet = useSheetsStore.getState().getActiveSheet()
+      expect(activeSheet!.data[2][1].bg).toBe('#a5d6a7')
+    })
+  })
 })

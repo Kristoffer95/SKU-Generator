@@ -16,7 +16,7 @@ import { AddColumnDialog } from "@/components/AddColumnDialog"
 import { DeleteColumnConfirmDialog } from "@/components/DeleteColumnConfirmDialog"
 import { DeleteRowConfirmDialog } from "@/components/DeleteRowConfirmDialog"
 import { convertToSpreadsheetData, convertFromSpreadsheetData } from "@/lib/spreadsheet-adapter"
-import type { CellData, ColumnDef, CellTextAlign } from "@/types"
+import type { CellData, ColumnDef, CellTextAlign, CellStyles } from "@/types"
 import type { SKUMatrix } from "@/types/spreadsheet"
 
 /**
@@ -169,6 +169,8 @@ export function SpreadsheetContainer() {
   const preservedSelectionRef = useRef<Selection | undefined>(undefined)
   // Ref for the spreadsheet scroll container
   const spreadsheetContainerRef = useRef<HTMLDivElement>(null)
+  // Ref to store copied cell styles for paste operation
+  const copiedStylesRef = useRef<CellStyles | null>(null)
 
   // Context menu state
   const [contextMenuPosition, setContextMenuPosition] = useState<ContextMenuPosition | null>(null)
@@ -1097,6 +1099,119 @@ export function SpreadsheetContainer() {
     historyIndexRef.current = -1
   }, [activeSheet, selectedCells, setSheetData])
 
+  // Handle copying cell styles (Option+Cmd+C / Alt+Ctrl+C)
+  const handleCopyStyles = useCallback(() => {
+    if (!activeSheet || selectedCells.length === 0) return
+
+    // Copy styles from the first selected cell
+    const firstCell = selectedCells[0]
+    const cell = activeSheet.data[firstCell.row]?.[firstCell.column]
+
+    // Extract only style properties (not value)
+    const styles: CellStyles = {}
+    if (cell?.bg) styles.bg = cell.bg
+    if (cell?.fc) styles.fc = cell.fc
+    if (cell?.bold) styles.bold = cell.bold
+    if (cell?.italic) styles.italic = cell.italic
+    if (cell?.align) styles.align = cell.align
+
+    copiedStylesRef.current = styles
+  }, [activeSheet, selectedCells])
+
+  // Handle pasting cell styles (Option+Cmd+V / Alt+Ctrl+V)
+  const handlePasteStyles = useCallback(() => {
+    if (!activeSheet || selectedCells.length === 0 || !copiedStylesRef.current) return
+
+    const styles = copiedStylesRef.current
+
+    // Track history for undo
+    const oldEntry: HistoryEntry = {
+      data: activeSheet.data,
+      columns: activeSheet.columns,
+    }
+    const currentHistoryIndex = historyIndexRef.current
+
+    // Create a deep copy of the data with styles applied
+    const newData = activeSheet.data.map((row, rowIndex) => {
+      return row.map((cell, colIndex) => {
+        const isSelected = selectedCells.some(
+          (sel) => sel.row === rowIndex && sel.column === colIndex
+        )
+
+        if (isSelected) {
+          // Start with existing cell data (preserve value, display text, etc.)
+          const newCell = { ...(cell || {}) }
+
+          // Apply each style property, removing it if not in copied styles
+          if (styles.bg !== undefined) {
+            newCell.bg = styles.bg
+          } else {
+            delete newCell.bg
+          }
+
+          if (styles.fc !== undefined) {
+            newCell.fc = styles.fc
+          } else {
+            delete newCell.fc
+          }
+
+          if (styles.bold !== undefined) {
+            newCell.bold = styles.bold
+          } else {
+            delete newCell.bold
+          }
+
+          if (styles.italic !== undefined) {
+            newCell.italic = styles.italic
+          } else {
+            delete newCell.italic
+          }
+
+          if (styles.align !== undefined) {
+            newCell.align = styles.align
+          } else {
+            delete newCell.align
+          }
+
+          return newCell
+        }
+
+        return cell
+      })
+    })
+
+    // Update sheet data
+    setSheetData(activeSheet.id, newData)
+
+    // Track history for undo/redo
+    setHistory(prev => {
+      if (currentHistoryIndex === -1) {
+        return [...prev, oldEntry]
+      } else {
+        return prev.slice(0, currentHistoryIndex + 1)
+      }
+    })
+    setHistoryIndex(-1)
+    historyIndexRef.current = -1
+  }, [activeSheet, selectedCells, setSheetData])
+
+  // Handle keyboard shortcuts for copy/paste styles
+  const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
+    // Check for Option+Cmd+C (Mac) or Alt+Ctrl+C (Windows/Linux) - Copy styles
+    if (event.key === "c" && event.altKey && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault()
+      handleCopyStyles()
+      return
+    }
+
+    // Check for Option+Cmd+V (Mac) or Alt+Ctrl+V (Windows/Linux) - Paste styles
+    if (event.key === "v" && event.altKey && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault()
+      handlePasteStyles()
+      return
+    }
+  }, [handleCopyStyles, handlePasteStyles])
+
   if (sheets.length === 0) {
     return (
       <div className="flex h-full items-center justify-center text-muted-foreground">
@@ -1143,6 +1258,8 @@ export function SpreadsheetContainer() {
         ref={spreadsheetContainerRef}
         className="flex-1 min-h-0 overflow-auto sku-spreadsheet with-draggable-headers relative"
         onContextMenu={handleContextMenu}
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
       >
         <ResizableRowIndicators
           rowCount={activeSheet?.data.length ?? 0}

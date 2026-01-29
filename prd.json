@@ -712,7 +712,7 @@
       "Works with multiple style properties at once",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "free-column-deletion",
