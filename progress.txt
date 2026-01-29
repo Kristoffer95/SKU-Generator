@@ -1,3 +1,32 @@
+## spec-deletion-removes-column - COMPLETED
+Fix stale closure bug causing deleted columns to reappear after spec deletion
+
+### Key decisions
+- Root cause: handleDeleteConfirm made multiple separate state updates (removeSpecification, setState for columns/data, regenerateAllSKUs), and regenerateAllSKUs used stale activeSheet data from its closure
+- Fix: Combined all operations into a single atomic useSheetsStore.setState() call
+- Atomic operation includes: find columns by specId, remove columns, remove column data from rows, remove spec from specifications, recalculate spec order, regenerate all SKUs
+- Used updateRowSKUFromColumns (column-based) instead of deprecated updateRowSKU (header-based)
+- Removed unused removeSpecification import from destructuring
+
+### Files changed
+- src/components/SpecificationList.tsx (rewrote handleDeleteConfirm to be atomic, added updateRowSKUFromColumns import, removed removeSpecification from destructuring)
+- src/components/SpecificationList.test.tsx (added 4 new tests for atomic deletion behavior)
+
+### Notes
+- All 8 stepsToVerify criteria met:
+  1. Add a specification with values and column ✓
+  2. Add rows with values selected ✓
+  3. Delete the specification from sidebar ✓
+  4. Column immediately disappears (no refresh needed) ✓
+  5. Column data is removed from all rows ✓
+  6. SKUs are regenerated correctly without deleted spec's fragment ✓
+  7. Undo restores the specification and column ✓ (via existing undo/redo system)
+  8. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (751 tests, +4 new)
+- npm run build passes
+
 ## remotion-render-output - COMPLETED
 Render final video and verify quality
 

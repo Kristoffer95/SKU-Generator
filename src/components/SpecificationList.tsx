@@ -8,7 +8,7 @@ import { useSettingsStore } from "@/store/settings"
 import { AddSpecDialog } from "@/components/AddSpecDialog"
 import { DeleteSpecConfirmDialog } from "@/components/DeleteSpecConfirmDialog"
 import { registerTourDialogOpeners, unregisterTourDialogOpeners } from "@/lib/guided-tour"
-import { updateRowSKU } from "@/lib/auto-sku"
+import { updateRowSKU, updateRowSKUFromColumns } from "@/lib/auto-sku"
 import type { Specification, SpecValue, ColumnDef } from "@/types"
 
 interface SpecValueItemProps {
@@ -417,7 +417,7 @@ export function SpecificationList() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [specToDelete, setSpecToDelete] = useState<Specification | null>(null)
   // Get active sheet and its local specifications
-  const { sheets, activeSheetId, setSheetData, reorderSpec, removeSpecification } = useSheetsStore()
+  const { sheets, activeSheetId, setSheetData, reorderSpec } = useSheetsStore()
   const activeSheet = sheets.find(s => s.id === activeSheetId)
   // Use sheet-local specifications (fallback to empty array for backward compat)
   const specifications = useMemo(
@@ -502,55 +502,73 @@ export function SpecificationList() {
   }, [])
 
   // Confirm deletion: remove spec and all columns that reference it
+  // This is an ATOMIC operation - all changes happen in a single setState call
+  // to avoid stale closure bugs where regenerateAllSKUs uses outdated sheet data
   const handleDeleteConfirm = useCallback(() => {
-    if (!activeSheetId || !specToDelete || !activeSheet) return
+    if (!activeSheetId || !specToDelete) return
 
-    // Find all columns that reference this spec
-    const columnsToRemove = columns.filter(
-      (col) => col.type === "spec" && col.specId === specToDelete.id
-    )
+    const settings = { delimiter, prefix, suffix }
 
-    // Get indices of columns to remove (in reverse order to preserve indices)
-    const columnIndices = columnsToRemove
-      .map((col) => columns.findIndex((c) => c.id === col.id))
-      .filter((idx) => idx !== -1)
-      .sort((a, b) => b - a) // Sort descending for safe removal
-
-    // Remove columns from columns array and data rows
-    const newColumns = [...columns]
-    const newData = activeSheet.data.map((row) => [...row])
-
-    // Remove columns by index (descending order preserves indices)
-    for (const idx of columnIndices) {
-      newColumns.splice(idx, 1)
-      for (const row of newData) {
-        if (row.length > idx) {
-          row.splice(idx, 1)
-        }
-      }
-    }
-
-    // Remove the specification
-    removeSpecification(activeSheetId, specToDelete.id)
-
-    // Update the sheet with new columns and data
+    // Perform entire delete operation atomically in a single setState
     useSheetsStore.setState((state) => ({
-      sheets: state.sheets.map((s) =>
-        s.id === activeSheetId
-          ? { ...s, columns: newColumns, data: newData }
-          : s
-      ),
-    }))
+      sheets: state.sheets.map((sheet) => {
+        if (sheet.id !== activeSheetId) return sheet
 
-    // Regenerate all SKUs after column removal
-    const latestSheet = useSheetsStore.getState().sheets.find((s) => s.id === activeSheetId)
-    const latestSpecs = latestSheet?.specifications ?? []
-    regenerateAllSKUs(latestSpecs)
+        const currentColumns = sheet.columns ?? []
+        const currentSpecs = sheet.specifications ?? []
+
+        // 1. Find columns that reference this spec (get indices in descending order)
+        const columnIndices = currentColumns
+          .map((col, idx) => (col.type === "spec" && col.specId === specToDelete.id ? idx : -1))
+          .filter((idx) => idx !== -1)
+          .sort((a, b) => b - a) // Descending for safe removal
+
+        // 2. Remove columns from columns array
+        const newColumns = [...currentColumns]
+        for (const idx of columnIndices) {
+          newColumns.splice(idx, 1)
+        }
+
+        // 3. Remove column data from all rows
+        const newData = sheet.data.map((row) => {
+          const newRow = [...row]
+          for (const idx of columnIndices) {
+            if (newRow.length > idx) {
+              newRow.splice(idx, 1)
+            }
+          }
+          return newRow
+        })
+
+        // 4. Remove the specification and recalculate order
+        const filteredSpecs = currentSpecs.filter((spec) => spec.id !== specToDelete.id)
+        const sortedSpecs = [...filteredSpecs].sort((a, b) => a.order - b.order)
+        const reorderedSpecs = sortedSpecs.map((spec, index) => ({
+          ...spec,
+          order: index,
+        }))
+
+        // 5. Regenerate all SKUs with the updated data, columns, and specs
+        // Skip if no data rows or no remaining spec columns
+        if (newData.length > 1) {
+          for (let rowIndex = 1; rowIndex < newData.length; rowIndex++) {
+            updateRowSKUFromColumns(newData, rowIndex, newColumns, reorderedSpecs, settings)
+          }
+        }
+
+        return {
+          ...sheet,
+          columns: newColumns,
+          data: newData,
+          specifications: reorderedSpecs,
+        }
+      }),
+    }))
 
     // Close dialog and clear state
     setIsDeleteDialogOpen(false)
     setSpecToDelete(null)
-  }, [activeSheetId, specToDelete, activeSheet, columns, removeSpecification, regenerateAllSKUs])
+  }, [activeSheetId, specToDelete, delimiter, prefix, suffix])
 
   // Callbacks for tour dialog openers
   const openAddSpecDialog = useCallback(() => {

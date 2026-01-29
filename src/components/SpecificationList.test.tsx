@@ -1408,5 +1408,237 @@ describe("SpecificationList", () => {
       const sheet = sheets.find((s) => s.id === activeSheetId)
       expect(sheet?.columns.some((c) => c.specId === "spec-size")).toBe(true)
     })
+
+    it("regenerates SKUs without deleted spec fragment (atomic operation)", async () => {
+      const user = userEvent.setup()
+      const specs: Specification[] = [
+        {
+          id: "spec-color",
+          name: "Color",
+          order: 0,
+          values: [{ id: "v1", displayValue: "Red", skuFragment: "R" }],
+        },
+        {
+          id: "spec-size",
+          name: "Size",
+          order: 1,
+          values: [{ id: "v2", displayValue: "Small", skuFragment: "S" }],
+        },
+      ]
+      const columns: ColumnDef[] = [
+        { id: "col-sku", type: "sku", header: "SKU" },
+        { id: "col-color", type: "spec", header: "Color", specId: "spec-color" },
+        { id: "col-size", type: "spec", header: "Size", specId: "spec-size" },
+      ]
+      const data: CellData[][] = [
+        [{ v: "SKU" }, { v: "Color" }, { v: "Size" }],
+        [{ v: "R-S" }, { v: "Red" }, { v: "Small" }],
+      ]
+
+      createSheetWithSpecs("Test Sheet", data, specs, columns)
+
+      render(<SpecificationList />)
+
+      // Delete Color spec
+      const deleteButtons = screen.getAllByTestId("delete-spec-button")
+      await user.click(deleteButtons[0])
+
+      await waitFor(() => {
+        expect(screen.getByTestId("delete-spec-dialog")).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId("delete-spec-confirm"))
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("delete-spec-dialog")).not.toBeInTheDocument()
+      })
+
+      // Verify SKU was regenerated without the Color fragment
+      const { sheets, activeSheetId } = useSheetsStore.getState()
+      const sheet = sheets.find((s) => s.id === activeSheetId)
+
+      // Should have only SKU and Size columns now
+      expect(sheet?.columns).toHaveLength(2)
+      expect(sheet?.columns[0].header).toBe("SKU")
+      expect(sheet?.columns[1].header).toBe("Size")
+
+      // SKU should be regenerated to just "S" (not "R-S")
+      expect(sheet?.data[1][0].v).toBe("S")
+    })
+
+    it("handles deleting all spec columns atomically", async () => {
+      const user = userEvent.setup()
+      const spec: Specification = {
+        id: "spec-color",
+        name: "Color",
+        order: 0,
+        values: [{ id: "v1", displayValue: "Red", skuFragment: "R" }],
+      }
+      const columns: ColumnDef[] = [
+        { id: "col-sku", type: "sku", header: "SKU" },
+        { id: "col-color", type: "spec", header: "Color", specId: "spec-color" },
+      ]
+      const data: CellData[][] = [
+        [{ v: "SKU" }, { v: "Color" }],
+        [{ v: "R" }, { v: "Red" }],
+      ]
+
+      createSheetWithSpecs("Test Sheet", data, [spec], columns)
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByTestId("delete-spec-button"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("delete-spec-dialog")).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId("delete-spec-confirm"))
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("delete-spec-dialog")).not.toBeInTheDocument()
+      })
+
+      // Verify columns and data updated atomically
+      const { sheets, activeSheetId } = useSheetsStore.getState()
+      const sheet = sheets.find((s) => s.id === activeSheetId)
+
+      // Should have only SKU column
+      expect(sheet?.columns).toHaveLength(1)
+      expect(sheet?.columns[0].header).toBe("SKU")
+
+      // Data should have only SKU column values
+      expect(sheet?.data[0]).toHaveLength(1)
+      expect(sheet?.data[1]).toHaveLength(1)
+
+      // SKU should be empty (no specs left)
+      expect(sheet?.data[1][0].v).toBe("")
+    })
+
+    it("deletes spec and regenerates SKUs in single atomic operation (no stale data)", async () => {
+      // This test verifies the fix for the stale closure bug
+      // Previously, regenerateAllSKUs used stale activeSheet data from closure
+      const user = userEvent.setup()
+      const specs: Specification[] = [
+        {
+          id: "spec-color",
+          name: "Color",
+          order: 0,
+          values: [
+            { id: "v1", displayValue: "Red", skuFragment: "R" },
+            { id: "v2", displayValue: "Blue", skuFragment: "B" },
+          ],
+        },
+        {
+          id: "spec-size",
+          name: "Size",
+          order: 1,
+          values: [
+            { id: "v3", displayValue: "Small", skuFragment: "S" },
+            { id: "v4", displayValue: "Large", skuFragment: "L" },
+          ],
+        },
+      ]
+      const columns: ColumnDef[] = [
+        { id: "col-sku", type: "sku", header: "SKU" },
+        { id: "col-color", type: "spec", header: "Color", specId: "spec-color" },
+        { id: "col-size", type: "spec", header: "Size", specId: "spec-size" },
+      ]
+      const data: CellData[][] = [
+        [{ v: "SKU" }, { v: "Color" }, { v: "Size" }],
+        [{ v: "R-S" }, { v: "Red" }, { v: "Small" }],
+        [{ v: "B-L" }, { v: "Blue" }, { v: "Large" }],
+        [{ v: "R-L" }, { v: "Red" }, { v: "Large" }],
+      ]
+
+      createSheetWithSpecs("Test Sheet", data, specs, columns)
+
+      render(<SpecificationList />)
+
+      // Delete Color spec
+      const deleteButtons = screen.getAllByTestId("delete-spec-button")
+      await user.click(deleteButtons[0])
+
+      await waitFor(() => {
+        expect(screen.getByTestId("delete-spec-dialog")).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId("delete-spec-confirm"))
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("delete-spec-dialog")).not.toBeInTheDocument()
+      })
+
+      // Verify all data was updated atomically
+      const { sheets, activeSheetId } = useSheetsStore.getState()
+      const sheet = sheets.find((s) => s.id === activeSheetId)
+
+      // Should have 2 columns (SKU and Size)
+      expect(sheet?.columns).toHaveLength(2)
+
+      // All rows should have correct SKU regenerated (only Size fragment)
+      expect(sheet?.data[1][0].v).toBe("S")
+      expect(sheet?.data[2][0].v).toBe("L")
+      expect(sheet?.data[3][0].v).toBe("L")
+
+      // Size column data should be preserved
+      expect(sheet?.data[1][1].v).toBe("Small")
+      expect(sheet?.data[2][1].v).toBe("Large")
+      expect(sheet?.data[3][1].v).toBe("Large")
+    })
+
+    it("removes multiple columns with same specId atomically", async () => {
+      const user = userEvent.setup()
+      const spec: Specification = {
+        id: "spec-color",
+        name: "Color",
+        order: 0,
+        values: [{ id: "v1", displayValue: "Red", skuFragment: "R" }],
+      }
+      const columns: ColumnDef[] = [
+        { id: "col-sku", type: "sku", header: "SKU" },
+        { id: "col-color1", type: "spec", header: "Color", specId: "spec-color" },
+        { id: "col-notes", type: "free", header: "Notes" },
+        { id: "col-color2", type: "spec", header: "Primary Color", specId: "spec-color" },
+      ]
+      const data: CellData[][] = [
+        [{ v: "SKU" }, { v: "Color" }, { v: "Notes" }, { v: "Primary Color" }],
+        [{ v: "R-R" }, { v: "Red" }, { v: "Test" }, { v: "Red" }],
+      ]
+
+      createSheetWithSpecs("Test Sheet", data, [spec], columns)
+
+      render(<SpecificationList />)
+
+      await user.click(screen.getByTestId("delete-spec-button"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("delete-spec-dialog")).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId("delete-spec-confirm"))
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("delete-spec-dialog")).not.toBeInTheDocument()
+      })
+
+      // Verify both Color columns removed atomically
+      const { sheets, activeSheetId } = useSheetsStore.getState()
+      const sheet = sheets.find((s) => s.id === activeSheetId)
+
+      // Should have only SKU and Notes columns
+      expect(sheet?.columns).toHaveLength(2)
+      expect(sheet?.columns[0].header).toBe("SKU")
+      expect(sheet?.columns[1].header).toBe("Notes")
+
+      // Data should reflect the removal
+      expect(sheet?.data[0]).toHaveLength(2)
+      expect(sheet?.data[1]).toHaveLength(2)
+
+      // SKU should be empty (no more spec columns)
+      expect(sheet?.data[1][0].v).toBe("")
+      // Notes should be preserved
+      expect(sheet?.data[1][1].v).toBe("Test")
+    })
   })
 })

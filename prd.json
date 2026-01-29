@@ -572,5 +572,104 @@
       "Video file size is reasonable for quality"
     ],
     "passes": true
+  },
+  {
+    "id": "spec-deletion-removes-column",
+    "category": "Bug Fix",
+    "description": "Deleting a specification should fully remove its column from the sheet reactively. Currently, due to a stale closure bug in handleDeleteConfirm, the regenerateAllSKUs function uses old sheet data and overwrites the updated data, causing deleted columns to reappear. Fix by making the entire delete operation atomic in a single setState call that removes the spec, removes columns, removes column data from rows, and regenerates SKUs all together.",
+    "stepsToVerify": [
+      "Add a specification (e.g., 'Color') with values and a column in the sheet",
+      "Add some rows with values selected in that column",
+      "Delete the specification from the sidebar",
+      "Column immediately disappears from the sheet (no refresh needed)",
+      "Column data is removed from all rows",
+      "SKUs are regenerated correctly without the deleted spec's fragment",
+      "Undo restores the specification and column",
+      "npm run typecheck passes"
+    ],
+    "passes": true
+  },
+  {
+    "id": "row-deletion",
+    "category": "Spreadsheet Features",
+    "description": "Add ability to delete rows from the spreadsheet. Implement right-click context menu on row indicators (leftmost numbered cells) with 'Delete Row' option. Show confirmation dialog before deletion. Header row (row 0) cannot be deleted. Integrate with undo/redo history.",
+    "stepsToVerify": [
+      "Right-click on row indicator (row number cell) shows context menu",
+      "Context menu has 'Delete Row' option",
+      "Clicking 'Delete Row' shows confirmation dialog",
+      "Confirming deletes the row from sheet data",
+      "Header row (row 0) does not show delete option",
+      "Undo restores the deleted row",
+      "Redo re-deletes the row",
+      "Works correctly with any number of rows",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "cell-background-color",
+    "category": "Spreadsheet Features",
+    "description": "Add ability to change cell background color. Create a formatting toolbar or context menu option with color picker. User can select one or more cells and apply a background color. Color is stored in CellData.bg field and persisted. Color is preserved across undo/redo operations.",
+    "stepsToVerify": [
+      "Select a cell or range of cells in the spreadsheet",
+      "Color picker UI is accessible (toolbar button or context menu)",
+      "Clicking a color applies background to selected cells",
+      "Background color persists after deselecting cells",
+      "Background color persists after page refresh (localStorage)",
+      "Undo reverts color change",
+      "Clear formatting option removes custom background",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "cell-text-color",
+    "category": "Spreadsheet Features",
+    "description": "Add ability to change cell text/font color. Extend CellData interface with 'fc' (font color) field. Create text color picker in formatting toolbar. User can select cells and apply text color. Color is rendered via inline styles or CSS classes.",
+    "stepsToVerify": [
+      "CellData interface has 'fc?: string' field for font color",
+      "Select a cell or range of cells",
+      "Text color picker is accessible in formatting UI",
+      "Clicking a color applies text color to selected cells",
+      "Text color renders correctly in the spreadsheet",
+      "Text color persists after page refresh",
+      "Undo reverts text color change",
+      "Clear formatting removes custom text color",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "column-resizing",
+    "category": "Spreadsheet Features",
+    "description": "Add ability to resize column widths by dragging. Extend ColumnDef interface with 'width?: number' field. Add resize handles (thin vertical lines) at right edge of column headers. Dragging handle adjusts column width. Width is persisted in sheet store. Double-click resize handle to auto-fit column width to content.",
+    "stepsToVerify": [
+      "ColumnDef interface has 'width?: number' field",
+      "Hover near right edge of column header shows resize cursor",
+      "Dragging adjusts column width in real-time",
+      "Releasing mouse commits the new width",
+      "Width persists after switching sheets and returning",
+      "Width persists after page refresh",
+      "Double-click resize handle auto-fits width to content",
+      "Minimum width constraint (80px) is enforced",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "row-resizing",
+    "category": "Spreadsheet Features",
+    "description": "Add ability to resize row heights by dragging. Add resize handles at bottom edge of row indicators. Dragging handle adjusts row height. Store row heights in SheetConfig. Default row height remains 32px.",
+    "stepsToVerify": [
+      "SheetConfig has 'rowHeights?: number[]' field",
+      "Hover near bottom edge of row indicator shows resize cursor",
+      "Dragging adjusts row height in real-time",
+      "Releasing mouse commits the new height",
+      "Height persists after page refresh",
+      "Default height for new rows is 32px",
+      "Minimum height constraint (24px) is enforced",
+      "npm run typecheck passes"
+    ],
+    "passes": false
   }
 ]
