@@ -1,3 +1,39 @@
+## export-preview - COMPLETED
+Add export preview dialog that shows what export will look like before downloading
+
+### Key decisions
+- Created ExportPreviewDialog component using shadcn Dialog (Radix UI)
+- Preview table renders cell formatting inline: bg (backgroundColor), fc (color), bold (fontWeight), italic (fontStyle), align (textAlign)
+- Sheet tabs appear only when multiple sheets exist, allowing switching preview between sheets
+- Format selector allows choosing PDF/Excel/CSV formats, with Excel as default
+- Truncation: MAX_PREVIEW_ROWS=50, MAX_PREVIEW_COLS=15, with indicator showing "Preview truncated. Showing X of Y rows"
+- For CSV format, "Export All Sheets" button is hidden since CSV only supports single sheet
+- Export handler in AppLayout dispatches to existing export functions based on format and allSheets flag
+
+### Files changed
+- src/components/ExportPreviewDialog.tsx (new, ~200 lines: dialog component with preview, format selector, sheet tabs)
+- src/components/ExportPreviewDialog.test.tsx (new, ~310 lines: 25 comprehensive tests)
+- src/components/AppLayout.tsx (+40 lines: exportPreviewOpen state, handleExportWithPreview, handlePreviewExport, dialog render)
+- src/components/AppLayout.test.tsx (+10 lines: test for export button dropdown behavior)
+
+### Notes
+- All 11 stepsToVerify criteria met:
+  1. Export dropdown has 'Export with Preview...' option ✓
+  2. Clicking opens ExportPreviewDialog modal ✓
+  3. Preview shows formatted table with cell styling ✓
+  4. Background colors render in preview ✓
+  5. Text colors, bold, italic render in preview ✓
+  6. Multi-sheet data shows tabs for sheet navigation ✓
+  7. Format selector allows choosing PDF/Excel/CSV ✓
+  8. Large datasets show truncation indicator ✓
+  9. Export button triggers download in selected format ✓
+  10. Cancel button closes dialog without export ✓
+  11. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build dirs)
+- npm run test passes (1212 tests, +25 new in ExportPreviewDialog.test.tsx)
+- npm run build passes
+
 ## export-pdf - COMPLETED
 Add ability to export spreadsheet data as PDF with formatting preservation
 

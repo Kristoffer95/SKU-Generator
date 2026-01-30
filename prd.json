@@ -1024,7 +1024,7 @@
       "Cancel button closes dialog without export",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "sheet-groups",

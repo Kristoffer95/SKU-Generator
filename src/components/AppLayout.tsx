@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react"
-import { PanelLeft, Settings, Upload, Download, FileSpreadsheet, FileText, FileType } from "lucide-react"
+import { PanelLeft, Settings, Upload, Download, FileSpreadsheet, FileText, FileType, Eye } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -15,10 +15,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { SettingsDialog } from "@/components/SettingsDialog"
 import { GuidedTourButton } from "@/components/GuidedTourButton"
+import { ExportPreviewDialog, ExportFormat } from "@/components/ExportPreviewDialog"
 import { exportToExcel, exportToCSV, importFromExcel } from "@/lib/import-export"
 import { exportToPDF, exportAllSheetsToPDF } from "@/lib/pdf-export"
 import { registerTourDialogOpeners, unregisterTourDialogOpeners } from "@/lib/guided-tour"
@@ -31,8 +33,10 @@ interface AppLayoutProps {
 
 export function AppLayout({ sidebar, children }: AppLayoutProps) {
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [exportPreviewOpen, setExportPreviewOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const sheets = useSheetsStore((state) => state.sheets)
+  const activeSheetId = useSheetsStore((state) => state.activeSheetId)
   const getActiveSheet = useSheetsStore((state) => state.getActiveSheet)
 
   // Callbacks for tour dialog openers
@@ -76,6 +80,36 @@ export function AppLayout({ sidebar, children }: AppLayoutProps) {
 
   const handleExportAllPDF = () => {
     exportAllSheetsToPDF(sheets, 'sku-data.pdf')
+  }
+
+  const handleExportWithPreview = () => {
+    setExportPreviewOpen(true)
+  }
+
+  const handlePreviewExport = (format: ExportFormat, allSheets: boolean) => {
+    const activeSheet = getActiveSheet()
+
+    switch (format) {
+      case 'excel':
+        if (allSheets) {
+          exportToExcel(sheets, 'sku-data.xlsx')
+        } else if (activeSheet) {
+          exportToExcel([activeSheet], `${activeSheet.name}.xlsx`)
+        }
+        break
+      case 'csv':
+        if (activeSheet) {
+          exportToCSV(activeSheet)
+        }
+        break
+      case 'pdf':
+        if (allSheets) {
+          exportAllSheetsToPDF(sheets, 'sku-data.pdf')
+        } else if (activeSheet) {
+          exportToPDF(activeSheet)
+        }
+        break
+    }
   }
 
   const handleImportClick = () => {
@@ -130,6 +164,11 @@ export function AppLayout({ sidebar, children }: AppLayoutProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportWithPreview} data-testid="export-with-preview">
+                  <Eye className="h-4 w-4 mr-2" />
+                  Export with Preview...
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleExportExcel}>
                   <FileSpreadsheet className="h-4 w-4 mr-2" />
                   Export to Excel (.xlsx)
@@ -153,6 +192,13 @@ export function AppLayout({ sidebar, children }: AppLayoutProps) {
         <main className="flex flex-1 flex-col min-h-0">{children}</main>
       </SidebarInset>
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <ExportPreviewDialog
+        open={exportPreviewOpen}
+        onOpenChange={setExportPreviewOpen}
+        sheets={sheets}
+        activeSheetId={activeSheetId}
+        onExport={handlePreviewExport}
+      />
     </SidebarProvider>
   )
 }

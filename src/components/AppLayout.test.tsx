@@ -122,4 +122,17 @@ describe('AppLayout', () => {
       expect(() => fireEvent.click(exportButton)).not.toThrow()
     })
   })
+
+  describe('Export with Preview', () => {
+    it('export button has dropdown menu trigger attributes', () => {
+      render(<AppLayout>content</AppLayout>)
+      const exportButton = screen.getByRole('button', { name: /export/i })
+
+      // Verify the export button has the dropdown trigger behavior
+      expect(exportButton).toHaveAttribute('aria-haspopup', 'menu')
+
+      // Click to open dropdown - should not throw
+      expect(() => fireEvent.click(exportButton)).not.toThrow()
+    })
+  })
 })
