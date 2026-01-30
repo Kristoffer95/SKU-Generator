@@ -2,7 +2,7 @@ import { useMemo, useCallback, useRef, useEffect, useState } from "react"
 import Spreadsheet, { Matrix, CellBase, Selection, RangeSelection, PointRange, EntireColumnsSelection } from "react-spreadsheet"
 import { useSheetsStore } from "@/store/sheets"
 import { useSettingsStore } from "@/store/settings"
-import { processAutoSKUFromColumns } from "@/lib/auto-sku"
+import { processAutoSKUFromColumns, processAutoSKUForAllRowsFromColumns } from "@/lib/auto-sku"
 import { validateDataSheetFromColumns, findDuplicateSKUs, ValidationError } from "@/lib/validation"
 import { ValidationPanel } from "@/components/ValidationPanel"
 import { SheetTabs } from "@/components/spreadsheet/SheetTabs"
@@ -16,6 +16,7 @@ import { ResizableRowIndicators, DEFAULT_ROW_HEIGHT } from "@/components/spreads
 import { AddColumnDialog } from "@/components/AddColumnDialog"
 import { DeleteColumnConfirmDialog } from "@/components/DeleteColumnConfirmDialog"
 import { DeleteRowConfirmDialog } from "@/components/DeleteRowConfirmDialog"
+import { AutoPopulateDialog } from "@/components/AutoPopulateDialog"
 import { convertToSpreadsheetData, convertFromSpreadsheetData } from "@/lib/spreadsheet-adapter"
 import type { CellData, ColumnDef, CellTextAlign, CellStyles } from "@/types"
 import type { SKUMatrix } from "@/types/spreadsheet"
@@ -211,6 +212,9 @@ export function SpreadsheetContainer() {
   // Delete row confirmation dialog state
   const [deleteRowDialogOpen, setDeleteRowDialogOpen] = useState(false)
   const [rowToDelete, setRowToDelete] = useState<number | null>(null)
+
+  // Auto populate dialog state
+  const [autoPopulateDialogOpen, setAutoPopulateDialogOpen] = useState(false)
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -647,6 +651,68 @@ export function SpreadsheetContainer() {
     // Context menu closes itself, set editing state to trigger inline rename
     setEditingColumnIndex(columnIndex)
   }, [])
+
+  // Compute spec columns for auto populate functionality
+  const specColumns = useMemo(() => {
+    return columns
+      .map((column, columnIndex) => {
+        if (column.type !== 'spec' || !column.specId) return null
+        const spec = specifications.find(s => s.id === column.specId)
+        if (!spec) return null
+        return { column, specification: spec, columnIndex }
+      })
+      .filter((item): item is { column: typeof columns[number]; specification: typeof specifications[number]; columnIndex: number } => item !== null)
+  }, [columns, specifications])
+
+  // Check if auto populate is available (has spec columns with values)
+  const canAutoPopulate = useMemo(() => {
+    return specColumns.length > 0 && specColumns.every(sc => sc.specification.values.length > 0)
+  }, [specColumns])
+
+  // Handle auto populate button click
+  const handleAutoPopulateClick = useCallback(() => {
+    setAutoPopulateDialogOpen(true)
+  }, [])
+
+  // Handle auto populate generation
+  const handleAutoPopulateGenerate = useCallback(({ mode, rows }: { mode: 'replace' | 'append'; rows: CellData[][] }) => {
+    if (!activeSheet) return
+
+    // Save current state for undo
+    const oldEntry: HistoryEntry = {
+      data: activeSheet.data,
+      columns: activeSheet.columns,
+    }
+    const currentHistoryIndex = historyIndexRef.current
+
+    let newData: CellData[][]
+
+    if (mode === 'replace') {
+      // Keep header row, replace all data rows
+      const headerRow = activeSheet.data[0] ?? []
+      newData = [headerRow, ...rows]
+    } else {
+      // Append rows to existing data
+      newData = [...activeSheet.data, ...rows]
+    }
+
+    // Regenerate SKUs for all new rows
+    processAutoSKUForAllRowsFromColumns(newData, columns, specifications, settings)
+
+    // Update sheet data
+    setSheetData(activeSheet.id, newData)
+
+    // Track history for undo/redo
+    setHistory(prev => {
+      if (currentHistoryIndex === -1) {
+        return [...prev, oldEntry]
+      } else {
+        return prev.slice(0, currentHistoryIndex + 1)
+      }
+    })
+    setHistoryIndex(-1)
+    historyIndexRef.current = -1
+  }, [activeSheet, columns, specifications, settings, setSheetData])
 
   // Compute validation errors for the active sheet
   const validationErrors = useMemo((): ValidationError[] => {
@@ -1365,6 +1431,8 @@ export function SpreadsheetContainer() {
         onRedo={handleRedo}
         onAddRow={handleAddRow}
         onAddColumn={handleAddColumn}
+        onAutoPopulate={handleAutoPopulateClick}
+        canAutoPopulate={canAutoPopulate}
         hasSelection={hasSelection}
         selectedCellColor={selectedCellColor}
         onCellColorChange={handleCellColorChange}
@@ -1470,6 +1538,15 @@ export function SpreadsheetContainer() {
         onOpenChange={setDeleteRowDialogOpen}
         rowIndex={rowToDelete}
         onConfirm={handleDeleteRowConfirm}
+      />
+
+      {/* Auto populate dialog */}
+      <AutoPopulateDialog
+        open={autoPopulateDialogOpen}
+        onOpenChange={setAutoPopulateDialogOpen}
+        specColumns={specColumns}
+        allColumns={columns}
+        onGenerate={handleAutoPopulateGenerate}
       />
     </div>
   )

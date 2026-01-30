@@ -1,4 +1,4 @@
-import { Undo2, Redo2, Plus, Columns, Bold, Italic, AlignLeft, AlignCenter, AlignRight } from "lucide-react";
+import { Undo2, Redo2, Plus, Columns, Bold, Italic, AlignLeft, AlignCenter, AlignRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CellColorPicker } from "@/components/spreadsheet/CellColorPicker";
 import { CellTextColorPicker } from "@/components/spreadsheet/CellTextColorPicker";
@@ -18,6 +18,10 @@ export interface SpreadsheetToolbarProps {
   onAddRow: () => void;
   /** Called when add column button is clicked */
   onAddColumn: () => void;
+  /** Called when auto populate button is clicked */
+  onAutoPopulate?: () => void;
+  /** Whether auto populate is available (has spec columns with values) */
+  canAutoPopulate?: boolean;
   /** Whether cells are currently selected (enables formatting options) */
   hasSelection?: boolean;
   /** Current background color of selected cells (or undefined if mixed/none) */
@@ -68,6 +72,8 @@ export function SpreadsheetToolbar({
   onRedo,
   onAddRow,
   onAddColumn,
+  onAutoPopulate,
+  canAutoPopulate = false,
   hasSelection = false,
   selectedCellColor,
   onCellColorChange,
@@ -143,6 +149,21 @@ export function SpreadsheetToolbar({
         <Columns className="h-4 w-4" />
         <span className="ml-1">Add Column</span>
       </Button>
+
+      {/* Auto Populate button */}
+      {onAutoPopulate && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onAutoPopulate}
+          disabled={!canAutoPopulate}
+          title="Auto Populate Combinations"
+          data-testid="spreadsheet-toolbar-auto-populate"
+        >
+          <Sparkles className="h-4 w-4" />
+          <span className="ml-1">Auto Populate</span>
+        </Button>
+      )}
 
       {/* Separator before formatting options */}
       <div className="mx-1 h-6 w-px bg-border" />

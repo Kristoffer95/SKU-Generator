@@ -789,7 +789,7 @@
       "Undo reverts the entire auto-populate operation",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "free-column-deletion",

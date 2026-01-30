@@ -1,3 +1,41 @@
+## auto-populate-combinations - COMPLETED
+Add Auto Populate button to toolbar that generates all possible combinations of specification values
+
+### Key decisions
+- Created AutoPopulateDialog component with:
+  - Draggable spec order list (native HTML5 drag/drop, no external lib)
+  - Mode toggle (Replace all data / Append below existing)
+  - Combination count preview
+- Added generateCombinations() utility that orders correctly: first spec changes least, last changes most
+- Toolbar button shows only when onAutoPopulate prop provided
+- canAutoPopulate prop controls enabled state (true when has spec columns with values)
+- Integration with existing undo/redo history system
+- Uses processAutoSKUForAllRowsFromColumns() to regenerate SKUs for generated rows
+
+### Files changed
+- src/components/AutoPopulateDialog.tsx (new, ~330 lines)
+- src/components/AutoPopulateDialog.test.tsx (new, 20 tests)
+- src/components/spreadsheet/SpreadsheetToolbar.tsx (added onAutoPopulate, canAutoPopulate props + button)
+- src/components/spreadsheet/SpreadsheetToolbar.test.tsx (+6 tests for auto populate button)
+- src/components/SpreadsheetContainer.tsx (added specColumns, canAutoPopulate, handlers, dialog)
+
+### Notes
+- All 11 stepsToVerify criteria met:
+  1. Auto Populate button appears in toolbar (Sparkles icon) ✓
+  2. Clicking button opens AutoPopulateDialog ✓
+  3. Dialog shows list of spec columns that can be reordered by dragging ✓
+  4. Dialog shows combination count preview (e.g., '24 combinations') ✓
+  5. Dialog has toggle for 'Replace all data' vs 'Append below existing' ✓
+  6. Clicking Generate creates all combinations in the spreadsheet ✓
+  7. Combinations are ordered: first spec changes least, last spec changes most ✓
+  8. Each combination is unique (no duplicates) ✓
+  9. SKUs are auto-generated for each row ✓
+  10. Undo reverts the entire auto-populate operation ✓
+  11. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (1055 tests, +26 new)
+
 ## select-all-keyboard-shortcut - COMPLETED
 Add Cmd+A (Mac) / Ctrl+A (Windows/Linux) keyboard shortcut to select all cells
 

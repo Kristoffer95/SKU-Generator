@@ -728,6 +728,85 @@ describe("SpreadsheetToolbar", () => {
     });
   });
 
+  describe("auto populate button", () => {
+    const mockOnAutoPopulate = vi.fn();
+
+    beforeEach(() => {
+      mockOnAutoPopulate.mockClear();
+    });
+
+    it("renders auto populate button when onAutoPopulate is provided", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          onAutoPopulate={mockOnAutoPopulate}
+          canAutoPopulate={true}
+        />
+      );
+
+      expect(screen.getByTestId("spreadsheet-toolbar-auto-populate")).toBeInTheDocument();
+      expect(screen.getByText("Auto Populate")).toBeInTheDocument();
+    });
+
+    it("does not render auto populate button when onAutoPopulate is not provided", () => {
+      render(<SpreadsheetToolbar {...defaultProps} />);
+
+      expect(screen.queryByTestId("spreadsheet-toolbar-auto-populate")).not.toBeInTheDocument();
+    });
+
+    it("auto populate button is disabled when canAutoPopulate is false", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          onAutoPopulate={mockOnAutoPopulate}
+          canAutoPopulate={false}
+        />
+      );
+
+      expect(screen.getByTestId("spreadsheet-toolbar-auto-populate")).toBeDisabled();
+    });
+
+    it("auto populate button is enabled when canAutoPopulate is true", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          onAutoPopulate={mockOnAutoPopulate}
+          canAutoPopulate={true}
+        />
+      );
+
+      expect(screen.getByTestId("spreadsheet-toolbar-auto-populate")).not.toBeDisabled();
+    });
+
+    it("calls onAutoPopulate when clicked", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          onAutoPopulate={mockOnAutoPopulate}
+          canAutoPopulate={true}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId("spreadsheet-toolbar-auto-populate"));
+
+      expect(mockOnAutoPopulate).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not call onAutoPopulate when disabled and clicked", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          onAutoPopulate={mockOnAutoPopulate}
+          canAutoPopulate={false}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId("spreadsheet-toolbar-auto-populate"));
+
+      expect(mockOnAutoPopulate).not.toHaveBeenCalled();
+    });
+  });
+
   describe("focus preservation (selection should be maintained after toolbar actions)", () => {
     const mockOnBoldChange = vi.fn();
     const mockOnItalicChange = vi.fn();
