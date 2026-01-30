@@ -770,7 +770,7 @@
       "Works with any number of rows and columns",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "auto-populate-combinations",

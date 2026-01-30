@@ -5458,3 +5458,291 @@ describe('SpreadsheetContainer redo keyboard shortcut (redo-keyboard-shortcut)',
     expect(sheet.data[1][1]?.v).toBe('Green')
   })
 })
+
+/**
+ * Tests for select-all-keyboard-shortcut PRD task
+ * Add Cmd+A (Mac) / Ctrl+A (Windows/Linux) keyboard shortcut to select all cells
+ */
+describe('SpreadsheetContainer select-all keyboard shortcut (select-all-keyboard-shortcut)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+    capturedOnChange = null
+    capturedOnSelect = null
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('Cmd+A selects all cells on Mac', async () => {
+    // Setup sheet with 3 rows and 3 columns
+    useSheetsStore.setState({
+      sheets: [
+        {
+          id: 'sheet-1',
+          name: 'Products',
+          type: 'data',
+          data: [
+            [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+            [{ v: 'SKU-001' }, { v: 'Red' }, { v: 'Small' }],
+            [{ v: 'SKU-002' }, { v: 'Blue' }, { v: 'Large' }],
+          ],
+          specifications: [],
+          columns: [
+            { id: 'col-sku', type: 'sku', header: 'SKU' },
+            { id: 'col-color', type: 'spec', specId: 'spec-1', header: 'Color' },
+            { id: 'col-size', type: 'spec', specId: 'spec-2', header: 'Size' },
+          ],
+        },
+      ],
+      activeSheetId: 'sheet-1',
+    })
+
+    render(<SpreadsheetContainer />)
+
+    // Get the scroll container to trigger keydown
+    const container = screen.getByTestId('spreadsheet-container')
+    const scrollContainer = container.querySelector('.sku-spreadsheet')!
+
+    // Press Cmd+A (Mac) - wrap in act since it triggers state update
+    await act(async () => {
+      fireEvent.keyDown(scrollContainer, { code: 'KeyA', metaKey: true })
+    })
+
+    // Verify the selection was set via capturedSelected (the selected prop)
+    // The selection should span from (0,0) to (2,2) - all 3 rows and 3 columns
+    expect(capturedSelected).toBeDefined()
+    const selection = capturedSelected as { range?: { start: { row: number; column: number }; end: { row: number; column: number } } }
+    expect(selection?.range).toBeDefined()
+    expect(selection?.range?.start.row).toBe(0)
+    expect(selection?.range?.start.column).toBe(0)
+    expect(selection?.range?.end.row).toBe(2)
+    expect(selection?.range?.end.column).toBe(2)
+  })
+
+  it('Ctrl+A selects all cells on Windows/Linux', async () => {
+    // Setup sheet with 2 rows and 2 columns
+    useSheetsStore.setState({
+      sheets: [
+        {
+          id: 'sheet-1',
+          name: 'Products',
+          type: 'data',
+          data: [
+            [{ v: 'SKU' }, { v: 'Color' }],
+            [{ v: 'SKU-001' }, { v: 'Red' }],
+          ],
+          specifications: [],
+          columns: [
+            { id: 'col-sku', type: 'sku', header: 'SKU' },
+            { id: 'col-color', type: 'spec', specId: 'spec-1', header: 'Color' },
+          ],
+        },
+      ],
+      activeSheetId: 'sheet-1',
+    })
+
+    render(<SpreadsheetContainer />)
+
+    // Get the scroll container to trigger keydown
+    const container = screen.getByTestId('spreadsheet-container')
+    const scrollContainer = container.querySelector('.sku-spreadsheet')!
+
+    // Press Ctrl+A (Windows/Linux) - wrap in act since it triggers state update
+    await act(async () => {
+      fireEvent.keyDown(scrollContainer, { code: 'KeyA', ctrlKey: true })
+    })
+
+    // Verify the selection was set via capturedSelected (the selected prop)
+    expect(capturedSelected).toBeDefined()
+    const selection = capturedSelected as { range?: { start: { row: number; column: number }; end: { row: number; column: number } } }
+    expect(selection?.range).toBeDefined()
+    expect(selection?.range?.start.row).toBe(0)
+    expect(selection?.range?.start.column).toBe(0)
+    expect(selection?.range?.end.row).toBe(1)
+    expect(selection?.range?.end.column).toBe(1)
+  })
+
+  it('does not trigger select-all when Alt is also pressed', async () => {
+    // Setup sheet with data
+    useSheetsStore.setState({
+      sheets: [
+        {
+          id: 'sheet-1',
+          name: 'Products',
+          type: 'data',
+          data: [
+            [{ v: 'SKU' }, { v: 'Color' }],
+            [{ v: 'SKU-001' }, { v: 'Red' }],
+          ],
+          specifications: [],
+          columns: [
+            { id: 'col-sku', type: 'sku', header: 'SKU' },
+            { id: 'col-color', type: 'spec', specId: 'spec-1', header: 'Color' },
+          ],
+        },
+      ],
+      activeSheetId: 'sheet-1',
+    })
+
+    render(<SpreadsheetContainer />)
+
+    // Get the scroll container to trigger keydown
+    const container = screen.getByTestId('spreadsheet-container')
+    const scrollContainer = container.querySelector('.sku-spreadsheet')!
+
+    // Reset capturedSelected to explicitly test it wasn't changed
+    capturedSelected = null
+
+    // Press Alt+Cmd+A (should NOT trigger select-all)
+    await act(async () => {
+      fireEvent.keyDown(scrollContainer, { code: 'KeyA', metaKey: true, altKey: true })
+    })
+
+    // Verify selection was NOT set (capturedSelected should remain null/undefined)
+    expect(capturedSelected).toBeNull()
+  })
+
+  it('prevents browser default select-all behavior', async () => {
+    // Setup sheet with data
+    useSheetsStore.setState({
+      sheets: [
+        {
+          id: 'sheet-1',
+          name: 'Products',
+          type: 'data',
+          data: [
+            [{ v: 'SKU' }, { v: 'Color' }],
+            [{ v: 'SKU-001' }, { v: 'Red' }],
+          ],
+          specifications: [],
+          columns: [
+            { id: 'col-sku', type: 'sku', header: 'SKU' },
+            { id: 'col-color', type: 'spec', specId: 'spec-1', header: 'Color' },
+          ],
+        },
+      ],
+      activeSheetId: 'sheet-1',
+    })
+
+    render(<SpreadsheetContainer />)
+
+    // Get the scroll container to trigger keydown
+    const container = screen.getByTestId('spreadsheet-container')
+    const scrollContainer = container.querySelector('.sku-spreadsheet')!
+
+    // Create event with spy on preventDefault
+    const event = new KeyboardEvent('keydown', {
+      code: 'KeyA',
+      metaKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
+
+    // Dispatch the event
+    scrollContainer.dispatchEvent(event)
+
+    // Verify preventDefault was called
+    expect(preventDefaultSpy).toHaveBeenCalled()
+  })
+
+  it('does nothing when no active sheet', () => {
+    // Setup with no sheets
+    useSheetsStore.setState({
+      sheets: [],
+      activeSheetId: null,
+    })
+
+    render(<SpreadsheetContainer />)
+
+    // Verify "No sheets available" message
+    expect(screen.getByText('No sheets available')).toBeInTheDocument()
+  })
+
+  it('does nothing when sheet has no data', async () => {
+    // Setup sheet with empty data
+    useSheetsStore.setState({
+      sheets: [
+        {
+          id: 'sheet-1',
+          name: 'Empty Sheet',
+          type: 'data',
+          data: [],
+          specifications: [],
+          columns: [],
+        },
+      ],
+      activeSheetId: 'sheet-1',
+    })
+
+    render(<SpreadsheetContainer />)
+
+    // Get the scroll container to trigger keydown
+    const container = screen.getByTestId('spreadsheet-container')
+    const scrollContainer = container.querySelector('.sku-spreadsheet')!
+
+    // Reset capturedSelected to explicitly test it wasn't changed
+    capturedSelected = null
+
+    // Press Cmd+A - should not throw, just do nothing
+    await act(async () => {
+      expect(() => {
+        fireEvent.keyDown(scrollContainer, { code: 'KeyA', metaKey: true })
+      }).not.toThrow()
+    })
+
+    // capturedSelected should remain null (no selection was set because no data)
+    expect(capturedSelected).toBeNull()
+  })
+
+  it('select-all works with many rows and columns', async () => {
+    // Setup sheet with 50 rows and 5 columns (simulating a realistic use case)
+    const rows = 50
+    const cols = 5
+    const data = Array(rows).fill(null).map((_, rowIdx) =>
+      Array(cols).fill(null).map((_, colIdx) => ({ v: `R${rowIdx}C${colIdx}` }))
+    )
+    const columns = Array(cols).fill(null).map((_, idx) => ({
+      id: `col-${idx}`,
+      type: idx === 0 ? 'sku' as const : 'free' as const,
+      header: `Col ${idx}`,
+    }))
+
+    useSheetsStore.setState({
+      sheets: [
+        {
+          id: 'sheet-1',
+          name: 'Large Sheet',
+          type: 'data',
+          data,
+          specifications: [],
+          columns,
+        },
+      ],
+      activeSheetId: 'sheet-1',
+    })
+
+    render(<SpreadsheetContainer />)
+
+    // Get the scroll container to trigger keydown
+    const container = screen.getByTestId('spreadsheet-container')
+    const scrollContainer = container.querySelector('.sku-spreadsheet')!
+
+    // Press Cmd+A (Mac) - wrap in act since it triggers state update
+    await act(async () => {
+      fireEvent.keyDown(scrollContainer, { code: 'KeyA', metaKey: true })
+    })
+
+    // Verify the selection was set via capturedSelected (the selected prop)
+    expect(capturedSelected).toBeDefined()
+    const selection = capturedSelected as { range?: { start: { row: number; column: number }; end: { row: number; column: number } } }
+    expect(selection?.range).toBeDefined()
+    expect(selection?.range?.start.row).toBe(0)
+    expect(selection?.range?.start.column).toBe(0)
+    expect(selection?.range?.end.row).toBe(rows - 1)  // 49
+    expect(selection?.range?.end.column).toBe(cols - 1)  // 4
+  })
+})

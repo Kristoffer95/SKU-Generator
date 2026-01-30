@@ -1286,7 +1286,23 @@ export function SpreadsheetContainer() {
     historyIndexRef.current = -1
   }, [activeSheet, selectedCells, setSheetData])
 
-  // Handle keyboard shortcuts for copy/paste styles and undo/redo
+  // Handle select-all (Cmd+A / Ctrl+A)
+  const handleSelectAll = useCallback(() => {
+    if (!activeSheet) return
+
+    const rowCount = activeSheet.data.length
+    const colCount = columns.length
+    if (rowCount === 0 || colCount === 0) return
+
+    // Create a RangeSelection from (0,0) to (lastRow, lastCol)
+    const startPoint = { row: 0, column: 0 }
+    const endPoint = { row: rowCount - 1, column: colCount - 1 }
+    const range = new PointRange(startPoint, endPoint)
+    const selection = new RangeSelection(range)
+    setSelected(selection)
+  }, [activeSheet, columns.length])
+
+  // Handle keyboard shortcuts for copy/paste styles, undo/redo, and select-all
   const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
     // Use event.code instead of event.key to detect the physical key pressed
     // On macOS, Option+C produces 'ç' for event.key, but event.code is always 'KeyC'
@@ -1320,7 +1336,15 @@ export function SpreadsheetContainer() {
       handleRedo()
       return
     }
-  }, [handleCopyStyles, handlePasteStyles, handleUndo, handleRedo])
+
+    // Check for Cmd+A (Mac) or Ctrl+A (Windows/Linux) - Select all
+    // Do not trigger when combined with Alt/Option to allow other shortcuts
+    if (event.code === "KeyA" && (event.metaKey || event.ctrlKey) && !event.altKey) {
+      event.preventDefault()
+      handleSelectAll()
+      return
+    }
+  }, [handleCopyStyles, handlePasteStyles, handleUndo, handleRedo, handleSelectAll])
 
   if (sheets.length === 0) {
     return (

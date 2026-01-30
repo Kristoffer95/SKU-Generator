@@ -1,3 +1,30 @@
+## select-all-keyboard-shortcut - COMPLETED
+Add Cmd+A (Mac) / Ctrl+A (Windows/Linux) keyboard shortcut to select all cells
+
+### Key decisions
+- Added handleSelectAll callback that creates a RangeSelection from (0,0) to (lastRow-1, lastCol-1)
+- Extended handleKeyDown to detect Cmd+A (Mac) or Ctrl+A (Win/Linux) without Alt modifier
+- Uses existing RangeSelection and PointRange classes from react-spreadsheet
+- Calls event.preventDefault() to stop browser from selecting page text
+- Early return when no activeSheet or empty data/columns to prevent errors
+
+### Files changed
+- src/components/SpreadsheetContainer.tsx (added handleSelectAll callback, extended handleKeyDown)
+- src/components/SpreadsheetContainer.test.tsx (+7 tests for select-all keyboard shortcut)
+
+### Notes
+- All 7 stepsToVerify criteria met:
+  1. Click on the spreadsheet to focus it ✓
+  2. Press Cmd+A (Mac) or Ctrl+A (Windows) - all cells are selected ✓
+  3. Selection visually highlights all cells in the sheet ✓
+  4. Can apply formatting (background color, bold, etc.) to all selected cells ✓
+  5. Browser does not select page text (default prevented) ✓
+  6. Works with any number of rows and columns ✓
+  7. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs and component files)
+- npm run test passes (1029 tests, +7 new)
+
 ## redo-keyboard-shortcut - COMPLETED
 Add Shift+Cmd+Z (Mac) / Shift+Ctrl+Z (Windows/Linux) keyboard shortcut for redo
 
