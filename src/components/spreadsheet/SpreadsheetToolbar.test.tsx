@@ -807,6 +807,102 @@ describe("SpreadsheetToolbar", () => {
     });
   });
 
+  describe("insert checkbox button", () => {
+    const mockOnInsertCheckbox = vi.fn();
+
+    beforeEach(() => {
+      mockOnInsertCheckbox.mockClear();
+    });
+
+    it("renders insert checkbox button when onInsertCheckbox is provided", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          onInsertCheckbox={mockOnInsertCheckbox}
+        />
+      );
+
+      expect(screen.getByTestId("spreadsheet-toolbar-insert-checkbox")).toBeInTheDocument();
+    });
+
+    it("does not render insert checkbox button when onInsertCheckbox is not provided", () => {
+      render(<SpreadsheetToolbar {...defaultProps} />);
+
+      expect(screen.queryByTestId("spreadsheet-toolbar-insert-checkbox")).not.toBeInTheDocument();
+    });
+
+    it("insert checkbox button is disabled when hasSelection is false", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={false}
+          onInsertCheckbox={mockOnInsertCheckbox}
+        />
+      );
+
+      expect(screen.getByTestId("spreadsheet-toolbar-insert-checkbox")).toBeDisabled();
+    });
+
+    it("insert checkbox button is enabled when hasSelection is true", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          onInsertCheckbox={mockOnInsertCheckbox}
+        />
+      );
+
+      expect(screen.getByTestId("spreadsheet-toolbar-insert-checkbox")).not.toBeDisabled();
+    });
+
+    it("calls onInsertCheckbox when clicked", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          onInsertCheckbox={mockOnInsertCheckbox}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId("spreadsheet-toolbar-insert-checkbox"));
+
+      expect(mockOnInsertCheckbox).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not call onInsertCheckbox when disabled and clicked", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={false}
+          onInsertCheckbox={mockOnInsertCheckbox}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId("spreadsheet-toolbar-insert-checkbox"));
+
+      expect(mockOnInsertCheckbox).not.toHaveBeenCalled();
+    });
+
+    it("insert checkbox button prevents focus change on mousedown", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          hasSelection={true}
+          onInsertCheckbox={mockOnInsertCheckbox}
+        />
+      );
+
+      const button = screen.getByTestId("spreadsheet-toolbar-insert-checkbox");
+      const mouseDownEvent = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+      const preventDefaultSpy = vi.spyOn(mouseDownEvent, "preventDefault");
+
+      button.dispatchEvent(mouseDownEvent);
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+  });
+
   describe("focus preservation (selection should be maintained after toolbar actions)", () => {
     const mockOnBoldChange = vi.fn();
     const mockOnItalicChange = vi.fn();

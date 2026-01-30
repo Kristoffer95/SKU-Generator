@@ -1,4 +1,4 @@
-import { Undo2, Redo2, Plus, Columns, Bold, Italic, AlignLeft, AlignCenter, AlignRight, Sparkles } from "lucide-react";
+import { Undo2, Redo2, Plus, Columns, Bold, Italic, AlignLeft, AlignCenter, AlignRight, Sparkles, CheckSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CellColorPicker } from "@/components/spreadsheet/CellColorPicker";
 import { CellTextColorPicker } from "@/components/spreadsheet/CellTextColorPicker";
@@ -48,6 +48,8 @@ export interface SpreadsheetToolbarProps {
   textAlign?: CellTextAlign;
   /** Called when alignment button is clicked */
   onAlignChange?: (align: CellTextAlign) => void;
+  /** Called when insert checkbox button is clicked */
+  onInsertCheckbox?: () => void;
   /** Optional additional class name */
   className?: string;
 }
@@ -87,6 +89,7 @@ export function SpreadsheetToolbar({
   onItalicChange,
   textAlign,
   onAlignChange,
+  onInsertCheckbox,
   className,
 }: SpreadsheetToolbarProps) {
   return (
@@ -265,6 +268,26 @@ export function SpreadsheetToolbar({
             <AlignRight className="h-4 w-4" />
           </Button>
         </>
+      )}
+
+      {/* Separator before checkbox button */}
+      {onInsertCheckbox && (
+        <div className="mx-1 h-6 w-px bg-border" />
+      )}
+
+      {/* Insert checkbox button */}
+      {onInsertCheckbox && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onInsertCheckbox}
+          onMouseDown={preventFocusLoss}
+          disabled={!hasSelection}
+          title="Insert Checkbox"
+          data-testid="spreadsheet-toolbar-insert-checkbox"
+        >
+          <CheckSquare className="h-4 w-4" />
+        </Button>
       )}
     </div>
   );

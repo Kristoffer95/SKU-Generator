@@ -432,4 +432,153 @@ describe('spreadsheet-adapter', () => {
       expect(result[2][2]?.v).toBe('Large');
     });
   });
+
+  describe('checkbox cells', () => {
+    const freeColumns: ColumnDef[] = [
+      { id: 'col-sku', type: 'sku', header: 'SKU' },
+      { id: 'col-status', type: 'free', header: 'Status' },
+    ];
+
+    describe('convertToSpreadsheetData with checkbox cells', () => {
+      it('preserves checkbox flag on cells', () => {
+        const data: CellData[][] = [
+          [{ v: 'SKU', m: 'SKU' }, { v: 'Status', m: 'Status' }],
+          [{ v: 'SKU-1', m: 'SKU-1' }, { v: true, checkbox: true }],
+        ];
+
+        const result = convertToSpreadsheetData(data, freeColumns, []);
+
+        expect(result[1][1]).toMatchObject({
+          value: true,
+          checkbox: true,
+        });
+      });
+
+      it('converts boolean true value for checkbox cells', () => {
+        const data: CellData[][] = [
+          [{ v: 'SKU' }, { v: 'Status' }],
+          [{ v: 'SKU-1' }, { v: true, checkbox: true }],
+        ];
+
+        const result = convertToSpreadsheetData(data, freeColumns, []);
+
+        expect(result[1][1]?.checkbox).toBe(true);
+        expect(result[1][1]?.value).toBe(true);
+      });
+
+      it('converts boolean false value for checkbox cells', () => {
+        const data: CellData[][] = [
+          [{ v: 'SKU' }, { v: 'Status' }],
+          [{ v: 'SKU-1' }, { v: false, checkbox: true }],
+        ];
+
+        const result = convertToSpreadsheetData(data, freeColumns, []);
+
+        expect(result[1][1]?.checkbox).toBe(true);
+        expect(result[1][1]?.value).toBe(false);
+      });
+
+      it('converts string "true" to boolean true for checkbox cells', () => {
+        const data: CellData[][] = [
+          [{ v: 'SKU' }, { v: 'Status' }],
+          [{ v: 'SKU-1' }, { v: 'true', checkbox: true }],
+        ];
+
+        const result = convertToSpreadsheetData(data, freeColumns, []);
+
+        expect(result[1][1]?.checkbox).toBe(true);
+        expect(result[1][1]?.value).toBe(true);
+      });
+
+      it('converts string "TRUE" to boolean true for checkbox cells', () => {
+        const data: CellData[][] = [
+          [{ v: 'SKU' }, { v: 'Status' }],
+          [{ v: 'SKU-1' }, { v: 'TRUE', checkbox: true }],
+        ];
+
+        const result = convertToSpreadsheetData(data, freeColumns, []);
+
+        expect(result[1][1]?.checkbox).toBe(true);
+        expect(result[1][1]?.value).toBe(true);
+      });
+
+      it('converts other string values to boolean false for checkbox cells', () => {
+        const data: CellData[][] = [
+          [{ v: 'SKU' }, { v: 'Status' }],
+          [{ v: 'SKU-1' }, { v: 'false', checkbox: true }],
+        ];
+
+        const result = convertToSpreadsheetData(data, freeColumns, []);
+
+        expect(result[1][1]?.checkbox).toBe(true);
+        expect(result[1][1]?.value).toBe(false);
+      });
+
+      it('converts null to boolean false for checkbox cells', () => {
+        const data: CellData[][] = [
+          [{ v: 'SKU' }, { v: 'Status' }],
+          [{ v: 'SKU-1' }, { v: null, checkbox: true }],
+        ];
+
+        const result = convertToSpreadsheetData(data, freeColumns, []);
+
+        expect(result[1][1]?.checkbox).toBe(true);
+        expect(result[1][1]?.value).toBe(false);
+      });
+    });
+
+    describe('convertFromSpreadsheetData with checkbox cells', () => {
+      it('preserves checkbox flag when converting back', () => {
+        const matrix: SKUMatrix = [
+          [{ value: 'SKU' }, { value: 'Status' }],
+          [{ value: 'SKU-1' }, { value: true, checkbox: true }],
+        ];
+
+        const result = convertFromSpreadsheetData(matrix);
+
+        expect(result[1][1]?.checkbox).toBe(true);
+        expect(result[1][1]?.v).toBe(true);
+      });
+
+      it('does not set display text (m) for checkbox cells', () => {
+        const matrix: SKUMatrix = [
+          [{ value: 'SKU' }, { value: 'Status' }],
+          [{ value: 'SKU-1' }, { value: true, checkbox: true }],
+        ];
+
+        const result = convertFromSpreadsheetData(matrix);
+
+        expect(result[1][1]?.m).toBeUndefined();
+      });
+
+      it('sets display text (m) for non-checkbox cells', () => {
+        const matrix: SKUMatrix = [
+          [{ value: 'SKU' }, { value: 'Status' }],
+          [{ value: 'SKU-1' }, { value: 'Active' }],
+        ];
+
+        const result = convertFromSpreadsheetData(matrix);
+
+        expect(result[1][1]?.m).toBe('Active');
+      });
+    });
+
+    describe('round-trip conversion with checkbox cells', () => {
+      it('preserves checkbox state through round-trip', () => {
+        const original: CellData[][] = [
+          [{ v: 'SKU' }, { v: 'Done' }],
+          [{ v: 'SKU-1' }, { v: true, checkbox: true }],
+          [{ v: 'SKU-2' }, { v: false, checkbox: true }],
+        ];
+
+        const spreadsheetData = convertToSpreadsheetData(original, freeColumns, []);
+        const result = convertFromSpreadsheetData(spreadsheetData);
+
+        expect(result[1][1]?.v).toBe(true);
+        expect(result[1][1]?.checkbox).toBe(true);
+        expect(result[2][1]?.v).toBe(false);
+        expect(result[2][1]?.checkbox).toBe(true);
+      });
+    });
+  });
 });

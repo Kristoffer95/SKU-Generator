@@ -17,15 +17,17 @@ export type CellBase<Value = unknown> = {
  * Extends react-spreadsheet's CellBase with additional properties
  * for dropdown selection and styling
  */
-export interface SKUCell extends CellBase<string | number | null> {
-  /** The cell value (string, number, or null) */
-  value: string | number | null;
+export interface SKUCell extends CellBase<string | number | boolean | null> {
+  /** The cell value (string, number, boolean for checkboxes, or null) */
+  value: string | number | boolean | null;
   /** Whether the cell is read-only (used for SKU column) */
   readOnly?: boolean;
   /** CSS class name for styling (e.g., duplicate highlight) */
   className?: string;
   /** Dropdown options for spec columns (undefined for non-dropdown cells) */
   dropdownOptions?: string[];
+  /** Whether this cell is a checkbox type */
+  checkbox?: boolean;
 }
 
 /**

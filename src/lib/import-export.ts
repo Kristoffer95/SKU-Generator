@@ -6,8 +6,15 @@ import type { SheetConfig, CellData } from '../types';
  */
 function sheetConfigToWorksheet(sheet: SheetConfig): XLSX.WorkSheet {
   // Convert CellData[][] to simple 2D array of values
+  // Boolean values (checkboxes) are converted to strings "TRUE"/"FALSE" for Excel compatibility
   const data: (string | number | null | undefined)[][] = sheet.data.map((row) =>
-    row.map((cell) => cell?.v ?? null)
+    row.map((cell) => {
+      const value = cell?.v ?? null;
+      if (typeof value === 'boolean') {
+        return value ? 'TRUE' : 'FALSE';
+      }
+      return value;
+    })
   );
 
   return XLSX.utils.aoa_to_sheet(data);

@@ -1077,7 +1077,7 @@
       "Checkbox cells work in free columns",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "checkbox-spacebar-toggle",

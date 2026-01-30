@@ -1,3 +1,46 @@
+## checkbox-cells - COMPLETED
+Add ability to insert checkboxes into cells
+
+### Key decisions
+- Extended CellData.v type to include boolean: `string | number | boolean | null`
+- Added `checkbox?: boolean` field to CellData interface to mark cells as checkbox type
+- Extended SKUCell interface to also support boolean values and checkbox flag
+- Created CheckboxCell component using factory pattern (`createCheckboxCellViewer`) to inject onClick handler
+- Checkbox renders with Check icon from lucide-react when checked
+- Used custom DataViewer prop on react-spreadsheet Spreadsheet component
+- Toolbar button uses CheckSquare icon, disabled when no selection
+- Checkbox toggle tracked in undo/redo history
+- Updated import-export.ts to convert boolean values to "TRUE"/"FALSE" for Excel compatibility
+
+### Files changed
+- src/types/index.ts (+2 lines: extended CellData.v type to include boolean, added checkbox field)
+- src/types/spreadsheet.ts (+2 lines: extended SKUCell value type and added checkbox field)
+- src/lib/spreadsheet-adapter.ts (+20 lines: checkbox conversion in convertToSpreadsheetData and convertFromSpreadsheetData)
+- src/lib/import-export.ts (+6 lines: convert boolean to TRUE/FALSE for Excel export)
+- src/components/spreadsheet/CheckboxCell.tsx (new, ~100 lines: CheckboxCell component and factory)
+- src/components/spreadsheet/CheckboxCell.test.tsx (new, ~200 lines: 16 tests for checkbox rendering)
+- src/components/spreadsheet/SpreadsheetToolbar.tsx (+20 lines: onInsertCheckbox prop and CheckSquare button)
+- src/components/spreadsheet/SpreadsheetToolbar.test.tsx (+90 lines: 7 tests for insert checkbox button)
+- src/components/SpreadsheetContainer.tsx (+100 lines: handleInsertCheckbox, handleCheckboxToggle, CheckboxCellViewer)
+- src/lib/spreadsheet-adapter.test.ts (+120 lines: 12 tests for checkbox conversion)
+
+### Notes
+- All 10 stepsToVerify criteria met:
+  1. CellData interface has 'checkbox?: boolean' field ✓
+  2. CellData.v type includes boolean ✓
+  3. Toolbar has 'Insert checkbox' button ✓
+  4. Clicking button converts selected cell(s) to checkbox ✓
+  5. Checkbox cells render checkmark when value is true ✓
+  6. Checkbox cells render empty box when value is false ✓
+  7. Clicking checkbox toggles the boolean value ✓
+  8. Checkbox state persists after page refresh ✓ (via Zustand persist)
+  9. Checkbox cells work in free columns ✓
+  10. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (1311 tests, +35 new tests)
+- npm run build passes
+
 ## sheet-group-colors - COMPLETED
 Add ability to color-code sheet groups with predefined palette
 

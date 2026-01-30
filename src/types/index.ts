@@ -46,7 +46,7 @@ export interface CellStyles {
  * Fortune-Sheet cell data structure
  */
 export interface CellData {
-  v?: string | number | null; // cell value
+  v?: string | number | boolean | null; // cell value (includes boolean for checkboxes)
   m?: string; // display text
   ct?: { fa?: string; t?: string }; // cell type info
   bg?: string; // background color (hex)
@@ -54,6 +54,7 @@ export interface CellData {
   bold?: boolean; // bold text formatting
   italic?: boolean; // italic text formatting
   align?: CellTextAlign; // text alignment
+  checkbox?: boolean; // whether this cell is a checkbox type
 }
 
 /**

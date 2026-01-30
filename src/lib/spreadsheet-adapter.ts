@@ -99,6 +99,17 @@ export function convertToSpreadsheetData(
 
       // Free columns: no special treatment (plain text input)
 
+      // Preserve checkbox flag
+      if (cell.checkbox) {
+        skuCell.checkbox = true;
+        // For checkbox cells, ensure value is boolean
+        // The value could be boolean, string 'true'/'false', or null
+        const currentValue = skuCell.value;
+        if (typeof currentValue !== 'boolean') {
+          skuCell.value = currentValue === 'true' || currentValue === 'TRUE';
+        }
+      }
+
       // Preserve styling as classNames
       const classNames: string[] = [];
       if (cell.bg) {
@@ -154,10 +165,18 @@ export function convertFromSpreadsheetData(matrix: SKUMatrix): CellData[][] {
 
       const cellData: CellData = {};
 
+      // Preserve checkbox flag
+      if (cell.checkbox) {
+        cellData.checkbox = true;
+      }
+
       // Convert value
       if (cell.value !== null && cell.value !== undefined) {
         cellData.v = cell.value;
-        cellData.m = String(cell.value);
+        // For checkbox cells, don't set display text (m) since we render a checkbox
+        if (!cell.checkbox) {
+          cellData.m = String(cell.value);
+        }
       }
 
       // Convert className back to styling properties

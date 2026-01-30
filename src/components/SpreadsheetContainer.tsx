@@ -8,6 +8,7 @@ import { ValidationPanel } from "@/components/ValidationPanel"
 import { GroupedSheetTabs } from "@/components/spreadsheet/GroupedSheetTabs"
 import { SpreadsheetToolbar } from "@/components/spreadsheet/SpreadsheetToolbar"
 import { DropdownEditor } from "@/components/spreadsheet/DropdownEditor"
+import { createCheckboxCellViewer } from "@/components/spreadsheet/CheckboxCell"
 import { ColumnHeaderContextMenu, ContextMenuPosition } from "@/components/spreadsheet/ColumnHeaderContextMenu"
 import { RowContextMenu, RowContextMenuPosition } from "@/components/spreadsheet/RowContextMenu"
 import { DraggableColumnHeaders } from "@/components/spreadsheet/DraggableColumnHeaders"
@@ -305,7 +306,7 @@ export function SpreadsheetContainer() {
   const ungroupedSheetIds = useMemo(() => getUngroupedSheetIds(), [getUngroupedSheetIds, sheets, groups])
 
   // Handle spreadsheet data change
-  const handleDataChange = useCallback((data: Matrix<CellBase<string | number | null>>) => {
+  const handleDataChange = useCallback((data: Matrix<CellBase<string | number | boolean | null>>) => {
     if (!activeSheetId || !activeSheet) return
 
     // Convert react-spreadsheet format back to our CellData format
@@ -1592,6 +1593,104 @@ export function SpreadsheetContainer() {
     setSelected(selection)
   }, [activeSheet, columns.length])
 
+  // Handle inserting checkboxes into selected cells
+  const handleInsertCheckbox = useCallback(() => {
+    if (!activeSheet) return
+
+    // Use preserved selection if current selection is empty
+    const cellsToApply = selectedCells.length > 0
+      ? selectedCells
+      : getSelectedCells(preservedSelectionRef.current, activeSheet.data.length)
+
+    if (cellsToApply.length === 0) return
+
+    // Track history for undo
+    const oldEntry: HistoryEntry = {
+      data: activeSheet.data,
+      columns: activeSheet.columns,
+    }
+    const currentHistoryIndex = historyIndexRef.current
+
+    // Create a deep copy of the data with checkbox flag applied
+    const newData = activeSheet.data.map((row, rowIndex) => {
+      return row.map((cell, colIndex) => {
+        const isSelected = cellsToApply.some(
+          (sel) => sel.row === rowIndex && sel.column === colIndex
+        )
+
+        if (isSelected) {
+          // Convert cell to checkbox type
+          return {
+            ...(cell || {}),
+            checkbox: true,
+            v: false, // Default checkbox value to unchecked
+          }
+        }
+
+        return cell
+      })
+    })
+
+    // Update sheet data
+    setSheetData(activeSheet.id, newData)
+
+    // Track history for undo/redo
+    setHistory(prev => {
+      if (currentHistoryIndex === -1) {
+        return [...prev, oldEntry]
+      } else {
+        return prev.slice(0, currentHistoryIndex + 1)
+      }
+    })
+    setHistoryIndex(-1)
+    historyIndexRef.current = -1
+  }, [activeSheet, selectedCells, setSheetData])
+
+  // Handle checkbox toggle when clicking on a checkbox cell
+  const handleCheckboxToggle = useCallback((row: number, column: number, currentValue: boolean) => {
+    if (!activeSheet) return
+
+    // Track history for undo
+    const oldEntry: HistoryEntry = {
+      data: activeSheet.data,
+      columns: activeSheet.columns,
+    }
+    const currentHistoryIndex = historyIndexRef.current
+
+    // Create a deep copy of the data with the checkbox toggled
+    const newData = activeSheet.data.map((rowData, rowIndex) => {
+      return rowData.map((cell, colIndex) => {
+        if (rowIndex === row && colIndex === column) {
+          return {
+            ...(cell || {}),
+            v: !currentValue,
+          }
+        }
+        return cell
+      })
+    })
+
+    // Update sheet data
+    setSheetData(activeSheet.id, newData)
+
+    // Track history for undo/redo
+    setHistory(prev => {
+      if (currentHistoryIndex === -1) {
+        return [...prev, oldEntry]
+      } else {
+        return prev.slice(0, currentHistoryIndex + 1)
+      }
+    })
+    setHistoryIndex(-1)
+    historyIndexRef.current = -1
+  }, [activeSheet, setSheetData])
+
+  // Create the CheckboxCellViewer component with the toggle handler
+  const CheckboxCellViewer = useMemo(
+    () => createCheckboxCellViewer(handleCheckboxToggle),
+    [handleCheckboxToggle]
+  )
+
   // Handle keyboard shortcuts for copy/paste styles, undo/redo, and select-all
   const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
     // Use event.code instead of event.key to detect the physical key pressed
@@ -1670,6 +1769,7 @@ export function SpreadsheetContainer() {
         onItalicChange={handleItalicChange}
         textAlign={textAlign}
         onAlignChange={handleAlignChange}
+        onInsertCheckbox={handleInsertCheckbox}
       />
       <ColumnLetterHeaders
         columns={columns}
@@ -1712,9 +1812,10 @@ export function SpreadsheetContainer() {
           pinnedRows={pinnedRows}
         />
         <Spreadsheet
-          data={spreadsheetData as Matrix<CellBase<string | number | null>>}
+          data={spreadsheetData as Matrix<CellBase<string | number | boolean | null>>}
           onChange={handleDataChange}
           DataEditor={DropdownEditor}
+          DataViewer={CheckboxCellViewer}
           selected={selected}
           onSelect={handleSelectionChange}
         />
