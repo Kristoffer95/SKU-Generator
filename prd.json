@@ -1005,7 +1005,7 @@
       "Multi-sheet export creates multiple pages",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "export-preview",

@@ -10,6 +10,12 @@ vi.mock('@/lib/import-export', () => ({
   importFromExcel: vi.fn(),
 }))
 
+// Mock pdf-export module
+vi.mock('@/lib/pdf-export', () => ({
+  exportToPDF: vi.fn(),
+  exportAllSheetsToPDF: vi.fn(),
+}))
+
 describe('AppLayout', () => {
   beforeEach(() => {
     useSheetsStore.setState({ sheets: [], activeSheetId: null })
@@ -103,6 +109,17 @@ describe('AppLayout', () => {
       const sidebarInset = mainElements.find(el => el.classList.contains('h-svh'))
       expect(sidebarInset).toBeInTheDocument()
       expect(sidebarInset).toHaveClass('overflow-hidden')
+    })
+  })
+
+  describe('PDF export', () => {
+    it('export button can be clicked', () => {
+      render(<AppLayout>content</AppLayout>)
+      const exportButton = screen.getByRole('button', { name: /export/i })
+
+      // Verify export button exists and can be clicked
+      expect(exportButton).toBeInTheDocument()
+      expect(() => fireEvent.click(exportButton)).not.toThrow()
     })
   })
 })

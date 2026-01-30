@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react"
-import { PanelLeft, Settings, Upload, Download, FileSpreadsheet, FileText } from "lucide-react"
+import { PanelLeft, Settings, Upload, Download, FileSpreadsheet, FileText, FileType } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -20,6 +20,7 @@ import {
 import { SettingsDialog } from "@/components/SettingsDialog"
 import { GuidedTourButton } from "@/components/GuidedTourButton"
 import { exportToExcel, exportToCSV, importFromExcel } from "@/lib/import-export"
+import { exportToPDF, exportAllSheetsToPDF } from "@/lib/pdf-export"
 import { registerTourDialogOpeners, unregisterTourDialogOpeners } from "@/lib/guided-tour"
 import { useSheetsStore } from "@/store/sheets"
 
@@ -64,6 +65,17 @@ export function AppLayout({ sidebar, children }: AppLayoutProps) {
     if (activeSheet) {
       exportToCSV(activeSheet)
     }
+  }
+
+  const handleExportPDF = () => {
+    const activeSheet = getActiveSheet()
+    if (activeSheet) {
+      exportToPDF(activeSheet)
+    }
+  }
+
+  const handleExportAllPDF = () => {
+    exportAllSheetsToPDF(sheets, 'sku-data.pdf')
   }
 
   const handleImportClick = () => {
@@ -125,6 +137,14 @@ export function AppLayout({ sidebar, children }: AppLayoutProps) {
                 <DropdownMenuItem onClick={handleExportCSV}>
                   <FileText className="h-4 w-4 mr-2" />
                   Export Current Sheet to CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPDF}>
+                  <FileType className="h-4 w-4 mr-2" />
+                  Export Current Sheet to PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportAllPDF}>
+                  <FileType className="h-4 w-4 mr-2" />
+                  Export All Sheets to PDF
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

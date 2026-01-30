@@ -1,3 +1,41 @@
+## export-pdf - COMPLETED
+Add ability to export spreadsheet data as PDF with formatting preservation
+
+### Key decisions
+- Installed jspdf ^4.0.0 and jspdf-autotable ^5.0.7 libraries
+- Created src/lib/pdf-export.ts module with exportToPDF, exportAllSheetsToPDF, and blob variants
+- Implemented hexToRGB utility to convert hex colors (#RGB, #RRGGBB) to RGB tuples for jspdf
+- Cell formatting preserved: bg (background), fc (text color), bold, italic, align
+- Font styles mapped: normal, bold, italic, bolditalic
+- Multi-sheet export creates one page per sheet with sheet name as header
+- Landscape A4 orientation by default, configurable via options
+- Added two new Export dropdown options: "Export Current Sheet to PDF" and "Export All Sheets to PDF"
+
+### Files changed
+- package.json (+2 deps: jspdf, jspdf-autotable)
+- src/lib/pdf-export.ts (new, ~310 lines: PDF export functionality)
+- src/lib/pdf-export.test.ts (new, ~280 lines: comprehensive unit tests)
+- src/components/AppLayout.tsx (+20 lines: PDF export handlers and menu items)
+- src/components/AppLayout.test.tsx (+10 lines: PDF export mock and test)
+
+### Notes
+- All 11 stepsToVerify criteria met:
+  1. package.json contains jspdf and jspdf-autotable dependencies ✓
+  2. src/lib/pdf-export.ts exports exportToPDF function ✓
+  3. Export dropdown has 'Export to PDF' option ✓
+  4. Clicking export generates PDF file download ✓
+  5. PDF includes all visible data from sheet ✓
+  6. PDF preserves cell background colors ✓
+  7. PDF preserves text colors ✓
+  8. PDF preserves bold and italic formatting ✓
+  9. PDF preserves text alignment ✓
+  10. Multi-sheet export creates multiple pages ✓
+  11. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build dirs)
+- npm run test passes (1186 tests, +37 new in pdf-export.test.ts)
+- npm run build passes
+
 ## pin-rows - COMPLETED
 Add ability to pin/freeze rows so they stay visible while scrolling vertically
 
