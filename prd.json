@@ -715,6 +715,83 @@
     "passes": true
   },
   {
+    "id": "copy-paste-styles-macos-fix",
+    "category": "Bug Fix",
+    "description": "Fix Option+Cmd+C/V keyboard shortcuts not working on macOS. The current implementation uses event.key which returns the character produced (Option+C='ç', Option+V='√') instead of the physical key. Change to use event.code ('KeyC', 'KeyV') which is unaffected by modifier keys. Also update tests to use event.code.",
+    "stepsToVerify": [
+      "Select a cell with background color and text formatting",
+      "Press Option+Cmd+C on Mac - styles are copied (no special character inserted)",
+      "Select a different cell",
+      "Press Option+Cmd+V on Mac - styles are pasted to the cell",
+      "Alt+Ctrl+C/V still works on Windows/Linux",
+      "Tests in SpreadsheetContainer.test.tsx use event.code for copy/paste style tests",
+      "npm run test passes"
+    ],
+    "passes": true
+  },
+  {
+    "id": "undo-keyboard-shortcut",
+    "category": "Spreadsheet Features",
+    "description": "Add Cmd+Z (Mac) / Ctrl+Z (Windows/Linux) keyboard shortcut for undo. The undo functionality already exists via toolbar button, this adds the standard keyboard shortcut. Should call the existing handleUndo function when pressed.",
+    "stepsToVerify": [
+      "Make an edit to a cell in the spreadsheet",
+      "Press Cmd+Z (Mac) or Ctrl+Z (Windows) - edit is undone",
+      "Shortcut works when spreadsheet container is focused",
+      "Shortcut is prevented when nothing to undo",
+      "Works alongside existing Undo toolbar button",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "redo-keyboard-shortcut",
+    "category": "Spreadsheet Features",
+    "description": "Add Shift+Cmd+Z (Mac) / Shift+Ctrl+Z (Windows/Linux) keyboard shortcut for redo. The redo functionality already exists via toolbar button, this adds the standard keyboard shortcut. Should call the existing handleRedo function when pressed.",
+    "stepsToVerify": [
+      "Make an edit and then undo it",
+      "Press Shift+Cmd+Z (Mac) or Shift+Ctrl+Z (Windows) - edit is redone",
+      "Shortcut works when spreadsheet container is focused",
+      "Shortcut is prevented when nothing to redo",
+      "Works alongside existing Redo toolbar button",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "select-all-keyboard-shortcut",
+    "category": "Spreadsheet Features",
+    "description": "Add Cmd+A (Mac) / Ctrl+A (Windows/Linux) keyboard shortcut to select all cells in the spreadsheet. Creates a RangeSelection from (0,0) to (lastRow, lastCol). Prevents browser default select-all behavior.",
+    "stepsToVerify": [
+      "Click on the spreadsheet to focus it",
+      "Press Cmd+A (Mac) or Ctrl+A (Windows) - all cells are selected",
+      "Selection visually highlights all cells in the sheet",
+      "Can apply formatting (background color, bold, etc.) to all selected cells",
+      "Browser does not select page text (default prevented)",
+      "Works with any number of rows and columns",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "auto-populate-combinations",
+    "category": "Spreadsheet Features",
+    "description": "Add Auto Populate button to toolbar that generates all possible combinations of specification values. Opens a dialog where user can: 1) Reorder specs by dragging to control which changes first/last, 2) See total combination count preview, 3) Choose to replace all data or append below existing. Generates combinations in structured order where leftmost spec changes least (stays constant for blocks) and rightmost spec changes most (changes every row).",
+    "stepsToVerify": [
+      "Auto Populate button appears in toolbar (Sparkles icon)",
+      "Clicking button opens AutoPopulateDialog",
+      "Dialog shows list of spec columns that can be reordered by dragging",
+      "Dialog shows combination count preview (e.g., '24 combinations')",
+      "Dialog has radio buttons for 'Replace all data' vs 'Append below existing'",
+      "Clicking Generate creates all combinations in the spreadsheet",
+      "Combinations are ordered: first spec changes least, last spec changes most",
+      "Each combination is unique (no duplicates)",
+      "SKUs are auto-generated for each row",
+      "Undo reverts the entire auto-populate operation",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
     "id": "free-column-deletion",
     "category": "Bug Fix",
     "description": "Free columns (non-spec columns) cannot be deleted via right-click context menu. The delete option should appear for free columns just like spec columns, allowing users to remove them.",

@@ -1,3 +1,30 @@
+## copy-paste-styles-macos-fix - COMPLETED
+Fix Option+Cmd+C/V keyboard shortcuts not working on macOS
+
+### Key decisions
+- Root cause: handleKeyDown used event.key which returns special characters on macOS when Option is pressed (Option+C='ç', Option+V='√')
+- Fix: Changed from event.key === 'c'/'v' to event.code === 'KeyC'/'KeyV'
+- event.code returns the physical key regardless of modifier keys, ensuring shortcuts work on macOS
+- Updated all tests to use event.code instead of event.key for consistency
+
+### Files changed
+- src/components/SpreadsheetContainer.tsx (handleKeyDown function: changed event.key to event.code)
+- src/components/SpreadsheetContainer.test.tsx (12 fireEvent.keyDown calls updated from key:'c'/'v' to code:'KeyC'/'KeyV')
+
+### Notes
+- All 7 stepsToVerify criteria met:
+  1. Select a cell with background color and text formatting ✓
+  2. Press Option+Cmd+C on Mac - styles are copied ✓
+  3. Select a different cell ✓
+  4. Press Option+Cmd+V on Mac - styles are pasted ✓
+  5. Alt+Ctrl+C/V still works on Windows/Linux ✓
+  6. Tests use event.code for copy/paste style tests ✓
+  7. npm run test passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (1011 tests)
+- npm run build passes
+
 ## preserve-cell-selection-on-toolbar-actions - COMPLETED
 Fix cell selection being lost after toolbar actions (bold, italic, alignment, colors)
 

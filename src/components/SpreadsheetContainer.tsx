@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useRef, useEffect, useState } from "react"
-import Spreadsheet, { Matrix, CellBase, Selection, RangeSelection, PointRange } from "react-spreadsheet"
+import Spreadsheet, { Matrix, CellBase, Selection, RangeSelection, PointRange, EntireColumnsSelection } from "react-spreadsheet"
 import { useSheetsStore } from "@/store/sheets"
 import { useSettingsStore } from "@/store/settings"
 import { processAutoSKUFromColumns } from "@/lib/auto-sku"
@@ -11,6 +11,7 @@ import { DropdownEditor } from "@/components/spreadsheet/DropdownEditor"
 import { ColumnHeaderContextMenu, ContextMenuPosition } from "@/components/spreadsheet/ColumnHeaderContextMenu"
 import { RowContextMenu, RowContextMenuPosition } from "@/components/spreadsheet/RowContextMenu"
 import { DraggableColumnHeaders } from "@/components/spreadsheet/DraggableColumnHeaders"
+import { ColumnLetterHeaders } from "@/components/spreadsheet/ColumnLetterHeaders"
 import { ResizableRowIndicators, DEFAULT_ROW_HEIGHT } from "@/components/spreadsheet/ResizableRowIndicators"
 import { AddColumnDialog } from "@/components/AddColumnDialog"
 import { DeleteColumnConfirmDialog } from "@/components/DeleteColumnConfirmDialog"
@@ -88,8 +89,10 @@ const EMPTY_COLUMNS: ColumnDef[] = []
 /**
  * Extract cell coordinates from a react-spreadsheet Selection
  * Returns array of {row, column} objects for all selected cells
+ * @param selection - The selection object from react-spreadsheet
+ * @param rowCount - Number of rows in the data (needed for EntireColumnsSelection)
  */
-function getSelectedCells(selection: Selection | undefined): { row: number; column: number }[] {
+function getSelectedCells(selection: Selection | undefined, rowCount: number = 0): { row: number; column: number }[] {
   if (!selection) return []
 
   // Check for RangeSelection - either instanceof or duck-typing for mocked objects
@@ -112,7 +115,7 @@ function getSelectedCells(selection: Selection | undefined): { row: number; colu
     return cells
   }
 
-  // For selection types with multiple ranges (like EntireColumnsSelection)
+  // For selection types with multiple ranges (like EntireRowsSelection)
   if (sel && typeof sel === "object" && "ranges" in sel) {
     const ranges = (sel as { ranges: Array<{ start: { row: number; column: number }; end: { row: number; column: number } }> }).ranges
     const cells: { row: number; column: number }[] = []
@@ -126,6 +129,22 @@ function getSelectedCells(selection: Selection | undefined): { row: number; colu
         for (let col = minCol; col <= maxCol; col++) {
           cells.push({ row, column: col })
         }
+      }
+    }
+    return cells
+  }
+
+  // Handle EntireColumnsSelection - has start and end column indices
+  // Duck-type check: has start, end properties and hasEntireColumn method
+  if (sel && typeof sel === "object" && "start" in sel && "end" in sel && "hasEntireColumn" in sel) {
+    const colSelection = sel as { start: number; end: number }
+    const cells: { row: number; column: number }[] = []
+    const minCol = Math.min(colSelection.start, colSelection.end)
+    const maxCol = Math.max(colSelection.start, colSelection.end)
+
+    for (let row = 0; row < rowCount; row++) {
+      for (let col = minCol; col <= maxCol; col++) {
+        cells.push({ row, column: col })
       }
     }
     return cells
@@ -713,8 +732,80 @@ export function SpreadsheetContainer() {
     setSelected(newSelection)
   }, [])
 
+  // Handle column letter click to select entire column
+  const handleColumnSelect = useCallback((columnIndex: number, _addToSelection: boolean) => {
+    // Note: _addToSelection is received but not used currently - could be used for Cmd/Ctrl+click multi-column selection
+    void _addToSelection // Silences TS unused variable error
+    if (!activeSheet) return
+
+    const rowCount = activeSheet.data.length
+    if (rowCount === 0) return
+
+    // Create an EntireColumnsSelection for this column
+    // EntireColumnsSelection(start, end) where start and end are column indices
+    const columnSelection = new EntireColumnsSelection(columnIndex, columnIndex)
+    setSelected(columnSelection)
+  }, [activeSheet])
+
+  // Handle column range selection (shift+click)
+  const handleColumnRangeSelect = useCallback((startColumn: number, endColumn: number) => {
+    if (!activeSheet) return
+
+    const rowCount = activeSheet.data.length
+    if (rowCount === 0) return
+
+    // Create an EntireColumnsSelection for the range
+    // EntireColumnsSelection(start, end) selects all columns from start to end
+    const start = Math.min(startColumn, endColumn)
+    const end = Math.max(startColumn, endColumn)
+    const columnSelection = new EntireColumnsSelection(start, end)
+    setSelected(columnSelection)
+  }, [activeSheet])
+
+  // Compute which columns are currently selected (for highlighting column letters)
+  const selectedColumnsSet = useMemo((): Set<number> => {
+    if (!selected) return new Set()
+
+    const sel = selected as unknown
+
+    // Check for EntireColumnsSelection - has start and end properties plus hasEntireColumn method
+    if (sel && typeof sel === "object" && "start" in sel && "end" in sel && "hasEntireColumn" in sel) {
+      const colSelection = sel as { start: number; end: number }
+      const result = new Set<number>()
+      for (let col = colSelection.start; col <= colSelection.end; col++) {
+        result.add(col)
+      }
+      return result
+    }
+
+    // For RangeSelection, check if selection spans all rows
+    if (sel && typeof sel === "object" && "range" in sel && activeSheet) {
+      const rangeSelection = sel as { range: { start: { row: number; column: number }; end: { row: number; column: number } } }
+      const range = rangeSelection.range
+      const minRow = Math.min(range.start.row, range.end.row)
+      const maxRow = Math.max(range.start.row, range.end.row)
+      const rowCount = activeSheet.data.length
+
+      // Only highlight column if entire column is selected (all rows)
+      if (minRow === 0 && maxRow === rowCount - 1) {
+        const minCol = Math.min(range.start.column, range.end.column)
+        const maxCol = Math.max(range.start.column, range.end.column)
+        const result = new Set<number>()
+        for (let col = minCol; col <= maxCol; col++) {
+          result.add(col)
+        }
+        return result
+      }
+    }
+
+    return new Set()
+  }, [selected, activeSheet])
+
   // Compute selected cells from selection state
-  const selectedCells = useMemo(() => getSelectedCells(selected), [selected])
+  const selectedCells = useMemo(
+    () => getSelectedCells(selected, activeSheet?.data.length ?? 0),
+    [selected, activeSheet?.data.length]
+  )
 
   // Check if there are any selected cells
   const hasSelection = selectedCells.length > 0
@@ -826,7 +917,7 @@ export function SpreadsheetContainer() {
     // Use preserved selection if current selection is empty (dropdown stole focus)
     const cellsToApply = selectedCells.length > 0
       ? selectedCells
-      : getSelectedCells(preservedSelectionRef.current)
+      : getSelectedCells(preservedSelectionRef.current, activeSheet.data.length)
 
     if (cellsToApply.length === 0) return
 
@@ -892,7 +983,7 @@ export function SpreadsheetContainer() {
     // Use preserved selection if current selection is empty (dropdown stole focus)
     const cellsToApply = selectedCells.length > 0
       ? selectedCells
-      : getSelectedCells(preservedSelectionRef.current)
+      : getSelectedCells(preservedSelectionRef.current, activeSheet.data.length)
 
     if (cellsToApply.length === 0) return
 
@@ -950,7 +1041,7 @@ export function SpreadsheetContainer() {
     // Use preserved selection if current selection is empty
     const cellsToApply = selectedCells.length > 0
       ? selectedCells
-      : getSelectedCells(preservedSelectionRef.current)
+      : getSelectedCells(preservedSelectionRef.current, activeSheet.data.length)
 
     if (cellsToApply.length === 0) return
 
@@ -1004,7 +1095,7 @@ export function SpreadsheetContainer() {
     // Use preserved selection if current selection is empty
     const cellsToApply = selectedCells.length > 0
       ? selectedCells
-      : getSelectedCells(preservedSelectionRef.current)
+      : getSelectedCells(preservedSelectionRef.current, activeSheet.data.length)
 
     if (cellsToApply.length === 0) return
 
@@ -1058,7 +1149,7 @@ export function SpreadsheetContainer() {
     // Use preserved selection if current selection is empty
     const cellsToApply = selectedCells.length > 0
       ? selectedCells
-      : getSelectedCells(preservedSelectionRef.current)
+      : getSelectedCells(preservedSelectionRef.current, activeSheet.data.length)
 
     if (cellsToApply.length === 0) return
 
@@ -1197,15 +1288,19 @@ export function SpreadsheetContainer() {
 
   // Handle keyboard shortcuts for copy/paste styles
   const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
+    // Use event.code instead of event.key to detect the physical key pressed
+    // On macOS, Option+C produces 'ç' for event.key, but event.code is always 'KeyC'
+    // This ensures the shortcut works correctly across all platforms
+
     // Check for Option+Cmd+C (Mac) or Alt+Ctrl+C (Windows/Linux) - Copy styles
-    if (event.key === "c" && event.altKey && (event.metaKey || event.ctrlKey)) {
+    if (event.code === "KeyC" && event.altKey && (event.metaKey || event.ctrlKey)) {
       event.preventDefault()
       handleCopyStyles()
       return
     }
 
     // Check for Option+Cmd+V (Mac) or Alt+Ctrl+V (Windows/Linux) - Paste styles
-    if (event.key === "v" && event.altKey && (event.metaKey || event.ctrlKey)) {
+    if (event.code === "KeyV" && event.altKey && (event.metaKey || event.ctrlKey)) {
       event.preventDefault()
       handlePasteStyles()
       return
@@ -1244,6 +1339,13 @@ export function SpreadsheetContainer() {
         onItalicChange={handleItalicChange}
         textAlign={textAlign}
         onAlignChange={handleAlignChange}
+      />
+      <ColumnLetterHeaders
+        columns={columns}
+        rowCount={activeSheet?.data.length ?? 0}
+        onColumnSelect={handleColumnSelect}
+        onColumnRangeSelect={handleColumnRangeSelect}
+        selectedColumns={selectedColumnsSet}
       />
       <DraggableColumnHeaders
         columns={columns}

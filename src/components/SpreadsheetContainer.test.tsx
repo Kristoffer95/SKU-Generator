@@ -128,6 +128,17 @@ vi.mock('react-spreadsheet', () => {
     }),
     PointRange: MockPointRange,
     RangeSelection: MockRangeSelection,
+    EntireColumnsSelection: class MockEntireColumnsSelection {
+      start: number
+      end: number
+      constructor(start: number, end: number) {
+        this.start = start
+        this.end = end
+      }
+      hasEntireColumn(column: number) {
+        return column >= this.start && column <= this.end
+      }
+    },
     Selection: class {},
   }
 })
@@ -4483,7 +4494,7 @@ describe('column width styles (column-resize-full-column)', () => {
       // Trigger copy styles with Option+Cmd+C
       const container = screen.getByTestId('spreadsheet-container')
       const scrollContainer = container.querySelector('.sku-spreadsheet')
-      fireEvent.keyDown(scrollContainer!, { key: 'c', altKey: true, metaKey: true })
+      fireEvent.keyDown(scrollContainer!, { code: 'KeyC', altKey: true, metaKey: true })
 
       // Cannot directly verify ref value, but we can verify paste works (in next test)
       // At this point, styles should be copied to the ref
@@ -4518,7 +4529,7 @@ describe('column width styles (column-resize-full-column)', () => {
         }
       })
 
-      fireEvent.keyDown(scrollContainer, { key: 'c', altKey: true, metaKey: true })
+      fireEvent.keyDown(scrollContainer, { code: 'KeyC', altKey: true, metaKey: true })
 
       // Now select the unstyled cell
       act(() => {
@@ -4533,7 +4544,7 @@ describe('column width styles (column-resize-full-column)', () => {
       })
 
       // Paste styles with Option+Cmd+V
-      fireEvent.keyDown(scrollContainer, { key: 'v', altKey: true, metaKey: true })
+      fireEvent.keyDown(scrollContainer, { code: 'KeyV', altKey: true, metaKey: true })
 
       // Verify styles were applied to cell (2, 1) but value is unchanged
       const activeSheet = useSheetsStore.getState().getActiveSheet()
@@ -4573,7 +4584,7 @@ describe('column width styles (column-resize-full-column)', () => {
         }
       })
 
-      fireEvent.keyDown(scrollContainer, { key: 'c', altKey: true, metaKey: true })
+      fireEvent.keyDown(scrollContainer, { code: 'KeyC', altKey: true, metaKey: true })
 
       // Select range (2, 1) to (3, 1)
       act(() => {
@@ -4588,7 +4599,7 @@ describe('column width styles (column-resize-full-column)', () => {
       })
 
       // Paste styles
-      fireEvent.keyDown(scrollContainer, { key: 'v', altKey: true, metaKey: true })
+      fireEvent.keyDown(scrollContainer, { code: 'KeyV', altKey: true, metaKey: true })
 
       // Verify styles were applied to both cells
       const activeSheet = useSheetsStore.getState().getActiveSheet()
@@ -4629,7 +4640,7 @@ describe('column width styles (column-resize-full-column)', () => {
         }
       })
 
-      fireEvent.keyDown(scrollContainer, { key: 'c', altKey: true, metaKey: true })
+      fireEvent.keyDown(scrollContainer, { code: 'KeyC', altKey: true, metaKey: true })
 
       // Paste to cell (2, 1) which has bold, italic, fc
       act(() => {
@@ -4643,7 +4654,7 @@ describe('column width styles (column-resize-full-column)', () => {
         }
       })
 
-      fireEvent.keyDown(scrollContainer, { key: 'v', altKey: true, metaKey: true })
+      fireEvent.keyDown(scrollContainer, { code: 'KeyV', altKey: true, metaKey: true })
 
       // Verify: bg is applied, but bold, italic, fc should be cleared
       const activeSheet = useSheetsStore.getState().getActiveSheet()
@@ -4679,7 +4690,7 @@ describe('column width styles (column-resize-full-column)', () => {
         }
       })
 
-      fireEvent.keyDown(scrollContainer, { key: 'c', altKey: true, metaKey: true })
+      fireEvent.keyDown(scrollContainer, { code: 'KeyC', altKey: true, metaKey: true })
 
       act(() => {
         if (capturedOnSelect) {
@@ -4689,7 +4700,7 @@ describe('column width styles (column-resize-full-column)', () => {
         }
       })
 
-      fireEvent.keyDown(scrollContainer, { key: 'v', altKey: true, metaKey: true })
+      fireEvent.keyDown(scrollContainer, { code: 'KeyV', altKey: true, metaKey: true })
 
       // Verify style was applied
       let activeSheet = useSheetsStore.getState().getActiveSheet()
@@ -4730,7 +4741,7 @@ describe('column width styles (column-resize-full-column)', () => {
       })
 
       // Try to paste styles (nothing should happen)
-      fireEvent.keyDown(scrollContainer, { key: 'v', altKey: true, metaKey: true })
+      fireEvent.keyDown(scrollContainer, { code: 'KeyV', altKey: true, metaKey: true })
 
       // Verify cell is unchanged (no error, no styles applied)
       const activeSheet = useSheetsStore.getState().getActiveSheet()
@@ -4763,7 +4774,7 @@ describe('column width styles (column-resize-full-column)', () => {
         }
       })
 
-      fireEvent.keyDown(scrollContainer, { key: 'c', altKey: true, ctrlKey: true })
+      fireEvent.keyDown(scrollContainer, { code: 'KeyC', altKey: true, ctrlKey: true })
 
       // Paste using Alt+Ctrl+V
       act(() => {
@@ -4774,11 +4785,165 @@ describe('column width styles (column-resize-full-column)', () => {
         }
       })
 
-      fireEvent.keyDown(scrollContainer, { key: 'v', altKey: true, ctrlKey: true })
+      fireEvent.keyDown(scrollContainer, { code: 'KeyV', altKey: true, ctrlKey: true })
 
       // Verify style was pasted
       const activeSheet = useSheetsStore.getState().getActiveSheet()
       expect(activeSheet!.data[2][1].bg).toBe('#a5d6a7')
     })
+  })
+})
+
+describe('SpreadsheetContainer excel-column-letters-header', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('renders ColumnLetterHeaders component above DraggableColumnHeaders', () => {
+    useSheetsStore.getState().initializeWithSampleData()
+    render(<SpreadsheetContainer />)
+
+    // Column letter headers should be rendered
+    expect(screen.getByTestId('column-letter-headers')).toBeInTheDocument()
+
+    // Should also have draggable column headers
+    expect(screen.getByTestId('draggable-column-headers')).toBeInTheDocument()
+  })
+
+  it('renders column letters A, B, C, D for columns', () => {
+    useSheetsStore.getState().initializeWithSampleData()
+    render(<SpreadsheetContainer />)
+
+    // The sample data creates a sheet with SKU + 3 spec columns = 4 columns total
+    // So we should see column letters for all of them
+    expect(screen.getByTestId('column-letter-0')).toHaveTextContent('A')
+    expect(screen.getByTestId('column-letter-1')).toHaveTextContent('B')
+    expect(screen.getByTestId('column-letter-2')).toHaveTextContent('C')
+    expect(screen.getByTestId('column-letter-3')).toHaveTextContent('D')
+  })
+
+  it('clicking on column letter selects entire column', async () => {
+    useSheetsStore.getState().initializeWithSampleData()
+    render(<SpreadsheetContainer />)
+
+    // Click on column B
+    await userEvent.click(screen.getByTestId('column-letter-1'))
+
+    // The selection should be set via onSelect callback
+    // Since we mock Spreadsheet, we just verify the handler was called
+    expect(capturedSelected).toBeTruthy()
+
+    // The selection should be an EntireColumnsSelection (has start and end properties)
+    const selection = capturedSelected as { start: number; end: number }
+    expect(selection.start).toBe(1)
+    expect(selection.end).toBe(1)
+  })
+
+  it('shift+clicking selects range of columns', async () => {
+    useSheetsStore.getState().initializeWithSampleData()
+    render(<SpreadsheetContainer />)
+
+    // First click on column A to set anchor
+    fireEvent.click(screen.getByTestId('column-letter-0'))
+
+    // Verify first click set the selection to column A
+    const firstSelection = capturedSelected as { start: number; end: number }
+    expect(firstSelection.start).toBe(0)
+    expect(firstSelection.end).toBe(0)
+
+    // Then shift+click on column C to select range A-C
+    fireEvent.click(screen.getByTestId('column-letter-2'), { shiftKey: true })
+
+    // The selection should include columns 0, 1, 2
+    const selection = capturedSelected as { start: number; end: number }
+    expect(selection.start).toBe(0)
+    expect(selection.end).toBe(2)
+  })
+
+  it('highlights selected column letters', async () => {
+    useSheetsStore.getState().initializeWithSampleData()
+    render(<SpreadsheetContainer />)
+
+    // Click on column B
+    await userEvent.click(screen.getByTestId('column-letter-1'))
+
+    // Re-render to see updated selection
+    // The ColumnLetterHeaders should show column 1 as selected
+    const col1 = screen.getByTestId('column-letter-1')
+    expect(col1).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('column letter headers align with spreadsheet columns', () => {
+    // Create sheet with specific column widths
+    const columns: ColumnDef[] = [
+      { id: 'sku', type: 'sku', header: 'SKU', width: 100 },
+      { id: 'spec-1', type: 'spec', specId: 'color', header: 'Color', width: 150 },
+      { id: 'spec-2', type: 'spec', specId: 'size', header: 'Size', width: 120 },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+      [{ v: 'R-S' }, { v: 'Red' }, { v: 'Small' }],
+    ]
+    createSheetWithColumns('Test Sheet', data, columns, [])
+    render(<SpreadsheetContainer />)
+
+    // Column letters should have widths matching the column definitions
+    const colA = screen.getByTestId('column-letter-0')
+    const colB = screen.getByTestId('column-letter-1')
+    const colC = screen.getByTestId('column-letter-2')
+
+    expect(colA).toHaveStyle({ width: '100px' })
+    expect(colB).toHaveStyle({ width: '150px' })
+    expect(colC).toHaveStyle({ width: '120px' })
+  })
+
+  it('selecting column allows formatting to be applied', async () => {
+    // Create sheet with data
+    const columns: ColumnDef[] = [
+      { id: 'sku', type: 'sku', header: 'SKU' },
+      { id: 'color', type: 'spec', specId: 'color', header: 'Color' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R' }, { v: 'Red' }],
+      [{ v: 'B' }, { v: 'Blue' }],
+    ]
+    createSheetWithColumns('Test Sheet', data, columns, [])
+    render(<SpreadsheetContainer />)
+
+    // Click on column B to select it
+    await userEvent.click(screen.getByTestId('column-letter-1'))
+
+    // Toolbar should now enable formatting buttons
+    // (hasSelection should be true when a column is selected)
+    const boldButton = screen.getByTestId('spreadsheet-toolbar-bold')
+    expect(boldButton).not.toBeDisabled()
+  })
+
+  it('handles many columns with double-letter labels (AA, AB, etc.)', () => {
+    // Create sheet with 28 columns (A-Z + AA + AB)
+    const columns: ColumnDef[] = Array.from({ length: 28 }, (_, i) => ({
+      id: `col-${i}`,
+      type: 'free' as const,
+      header: `Col ${i}`,
+    }))
+    const headerRow: CellData[] = columns.map((col) => ({ v: col.header }))
+    const dataRow: CellData[] = columns.map(() => ({ v: 'data' }))
+    const data: CellData[][] = [headerRow, dataRow]
+
+    createSheetWithColumns('Wide Sheet', data, columns, [])
+    render(<SpreadsheetContainer />)
+
+    // Should have 28 column letters
+    expect(screen.getByTestId('column-letter-0')).toHaveTextContent('A')
+    expect(screen.getByTestId('column-letter-25')).toHaveTextContent('Z')
+    expect(screen.getByTestId('column-letter-26')).toHaveTextContent('AA')
+    expect(screen.getByTestId('column-letter-27')).toHaveTextContent('AB')
   })
 })
