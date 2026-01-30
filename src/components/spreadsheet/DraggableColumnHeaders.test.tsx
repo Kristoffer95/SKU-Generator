@@ -1002,4 +1002,139 @@ describe("DraggableColumnHeaders", () => {
       expect(screen.getByTestId("column-header-3")).toHaveClass("group")
     })
   })
+
+  describe("pinned columns behavior", () => {
+    it("renders pinned columns with sticky positioning", () => {
+      const columns: ColumnDef[] = [
+        { id: "col-1", type: "sku", header: "SKU", width: 100 },
+        { id: "col-2", type: "spec", specId: "spec-1", header: "Color", width: 120 },
+        { id: "col-3", type: "spec", specId: "spec-2", header: "Size", width: 120 },
+        { id: "col-4", type: "free", header: "Notes" },
+      ]
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          pinnedColumns={2}
+        />
+      )
+
+      // First two columns (indices 0 and 1) should be pinned
+      const header0 = screen.getByTestId("column-header-0")
+      const header1 = screen.getByTestId("column-header-1")
+      const header2 = screen.getByTestId("column-header-2")
+
+      expect(header0).toHaveStyle({ position: "sticky" })
+      expect(header1).toHaveStyle({ position: "sticky" })
+      // Third column should not be sticky
+      expect(header2).not.toHaveStyle({ position: "sticky" })
+    })
+
+    it("calculates correct left offsets for pinned columns", () => {
+      const columns: ColumnDef[] = [
+        { id: "col-1", type: "sku", header: "SKU", width: 100 },
+        { id: "col-2", type: "spec", specId: "spec-1", header: "Color", width: 150 },
+        { id: "col-3", type: "free", header: "Notes" },
+      ]
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          pinnedColumns={2}
+          rowIndicatorWidth={40}
+        />
+      )
+
+      const header0 = screen.getByTestId("column-header-0")
+      const header1 = screen.getByTestId("column-header-1")
+
+      // First pinned column: left = rowIndicatorWidth (40)
+      expect(header0).toHaveStyle({ left: "40px" })
+      // Second pinned column: left = rowIndicatorWidth + first column width (40 + 100)
+      expect(header1).toHaveStyle({ left: "140px" })
+    })
+
+    it("pinned columns are not draggable", () => {
+      const columns: ColumnDef[] = [
+        { id: "col-1", type: "sku", header: "SKU" },
+        { id: "col-2", type: "spec", specId: "spec-1", header: "Color" },
+        { id: "col-3", type: "spec", specId: "spec-2", header: "Size" },
+        { id: "col-4", type: "free", header: "Notes" },
+      ]
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          pinnedColumns={2}
+        />
+      )
+
+      // Pinned columns should not have draggable=true
+      expect(screen.getByTestId("column-header-0")).toHaveAttribute("draggable", "false")
+      expect(screen.getByTestId("column-header-1")).toHaveAttribute("draggable", "false")
+      // Non-pinned columns should be draggable
+      expect(screen.getByTestId("column-header-2")).toHaveAttribute("draggable", "true")
+      expect(screen.getByTestId("column-header-3")).toHaveAttribute("draggable", "true")
+    })
+
+    it("pinned columns do not show drag handle", () => {
+      const columns: ColumnDef[] = [
+        { id: "col-1", type: "sku", header: "SKU" },
+        { id: "col-2", type: "spec", specId: "spec-1", header: "Color" },
+        { id: "col-3", type: "free", header: "Notes" },
+      ]
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          pinnedColumns={2}
+        />
+      )
+
+      // SKU column never has drag handle (separate behavior)
+      expect(screen.queryByTestId("drag-handle-0")).not.toBeInTheDocument()
+      // Pinned spec column should not have drag handle
+      expect(screen.queryByTestId("drag-handle-1")).not.toBeInTheDocument()
+      // Non-pinned free column should have drag handle
+      expect(screen.getByTestId("drag-handle-2")).toBeInTheDocument()
+    })
+
+    it("uses default pinnedColumns of 1 when not specified", () => {
+      const columns: ColumnDef[] = [
+        { id: "col-1", type: "sku", header: "SKU", width: 100 },
+        { id: "col-2", type: "spec", specId: "spec-1", header: "Color", width: 120 },
+      ]
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+        />
+      )
+
+      const header0 = screen.getByTestId("column-header-0")
+      const header1 = screen.getByTestId("column-header-1")
+
+      // Default: only first column (SKU) should be pinned
+      expect(header0).toHaveStyle({ position: "sticky" })
+      // Second column should not be sticky by default
+      expect(header1).not.toHaveStyle({ position: "sticky" })
+    })
+
+    it("row indicator spacer is sticky at left 0", () => {
+      const columns: ColumnDef[] = [
+        { id: "col-1", type: "sku", header: "SKU" },
+      ]
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          pinnedColumns={1}
+        />
+      )
+
+      // The row indicator spacer should be sticky with higher z-index
+      const spacer = screen.getByTestId("draggable-column-headers").querySelector("[aria-hidden='true']")
+      expect(spacer).toHaveStyle({ position: "sticky", left: "0px" })
+    })
+  })
 })

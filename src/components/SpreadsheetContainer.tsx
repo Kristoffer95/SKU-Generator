@@ -155,7 +155,7 @@ function getSelectedCells(selection: Selection | undefined, rowCount: number = 0
 }
 
 export function SpreadsheetContainer() {
-  const { sheets, activeSheetId, setActiveSheet, setSheetData, addSheetWithId, removeSheet, updateSheet, reorderColumns, updateColumnWidth, updateRowHeight, updateFreeColumnHeader, duplicateSheet } = useSheetsStore()
+  const { sheets, activeSheetId, setActiveSheet, setSheetData, addSheetWithId, removeSheet, updateSheet, reorderColumns, updateColumnWidth, updateRowHeight, updateFreeColumnHeader, duplicateSheet, setPinnedColumns } = useSheetsStore()
   // Get active sheet and use its local specifications and columns
   const activeSheet = sheets.find((s) => s.id === activeSheetId)
   const specifications = useMemo(
@@ -169,6 +169,11 @@ export function SpreadsheetContainer() {
   const rowHeights = useMemo(
     () => activeSheet?.rowHeights ?? {},
     [activeSheet?.rowHeights]
+  )
+  // Default pinnedColumns to 1 (SKU column) if not set
+  const pinnedColumns = useMemo(
+    () => activeSheet?.pinnedColumns ?? 1,
+    [activeSheet?.pinnedColumns]
   )
   const delimiter = useSettingsStore((state) => state.delimiter)
   const prefix = useSettingsStore((state) => state.prefix)
@@ -738,6 +743,21 @@ export function SpreadsheetContainer() {
     updateFreeColumnHeader(activeSheetId, columnIndex, newHeader)
   }, [activeSheetId, updateFreeColumnHeader])
 
+  // Handle column pin/unpin toggle
+  // When pinning column N, pins all columns 0 through N
+  // When unpinning column N, unpins columns N and higher (pins 0 through N-1)
+  const handlePinChange = useCallback((columnIndex: number, pinned: boolean) => {
+    if (!activeSheetId) return
+    if (pinned) {
+      // Pin column N and all columns before it: pinnedColumns = N + 1
+      setPinnedColumns(activeSheetId, columnIndex + 1)
+    } else {
+      // Unpin column N and all after: pinnedColumns = N
+      // This means columns 0 through N-1 remain pinned
+      setPinnedColumns(activeSheetId, columnIndex)
+    }
+  }, [activeSheetId, setPinnedColumns])
+
   // State for programmatically triggering column rename (from context menu)
   const [editingColumnIndex, setEditingColumnIndex] = useState<number | null>(null)
 
@@ -862,10 +882,33 @@ export function SpreadsheetContainer() {
       return `.sku-spreadsheet .Spreadsheet__table tr > *:nth-child(${index + 2}) { width: ${width}px; min-width: ${width}px; max-width: ${width}px; }`
     }).join("\n")
 
+    // Generate sticky positioning for pinned columns
+    // Calculate cumulative left offset based on previous column widths
+    // Row indicator column (40px) is always at left: 0
+    const ROW_INDICATOR_WIDTH = 40
+    const stickyStyles: string[] = []
+
+    // Row indicator (th:first-child) is always sticky at left: 0
+    stickyStyles.push(
+      `.sku-spreadsheet .Spreadsheet__table tr > th:first-child { position: sticky; left: 0; z-index: 2; background-color: var(--spreadsheet-header-bg, #f8fafc); }`
+    )
+
+    // Calculate cumulative left offset for pinned columns
+    let leftOffset = ROW_INDICATOR_WIDTH
+    for (let i = 0; i < pinnedColumns; i++) {
+      const width = columns[i]?.width ?? 120
+      // Target all cells (th and td) in this column position
+      // nth-child is 1-indexed, +2 for row indicator column
+      stickyStyles.push(
+        `.sku-spreadsheet .Spreadsheet__table tr > *:nth-child(${i + 2}) { position: sticky; left: ${leftOffset}px; z-index: 2; }`
+      )
+      leftOffset += width
+    }
+
     // Combine styles with proper newline separation
-    const combinedStyles = `${colStyles}\n${cellStyles}`
+    const combinedStyles = `${colStyles}\n${cellStyles}\n${stickyStyles.join("\n")}`
     return <style data-testid="column-width-styles">{combinedStyles}</style>
-  }, [columns])
+  }, [columns, pinnedColumns])
 
   // Generate dynamic row height styles
   const rowHeightStyles = useMemo(() => {
@@ -1548,6 +1591,7 @@ export function SpreadsheetContainer() {
         onColumnSelect={handleColumnSelect}
         onColumnRangeSelect={handleColumnRangeSelect}
         selectedColumns={selectedColumnsSet}
+        pinnedColumns={pinnedColumns}
       />
       <DraggableColumnHeaders
         columns={columns}
@@ -1560,6 +1604,8 @@ export function SpreadsheetContainer() {
         onInsertBefore={handleInsertColumnBefore}
         onInsertAfter={handleInsertColumnAfter}
         onDeleteColumn={handleDeleteColumnRequest}
+        onPinChange={handlePinChange}
+        pinnedColumns={pinnedColumns}
       />
       <div
         ref={spreadsheetContainerRef}

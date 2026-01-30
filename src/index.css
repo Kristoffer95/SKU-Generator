@@ -578,3 +578,45 @@
 .sku-spreadsheet [data-testid^="row-resize-handle-"].resizing {
   background-color: hsl(var(--primary));
 }
+
+/* Column letter headers (A, B, C, D...) row */
+.column-letter-headers {
+  min-height: 24px;
+}
+
+.column-letter-headers [data-column-letter] {
+  user-select: none;
+  color: hsl(var(--muted-foreground));
+}
+
+.column-letter-headers [data-column-letter]:hover {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.column-letter-headers [data-column-letter][aria-selected="true"] {
+  background-color: hsl(var(--primary) / 0.2);
+  color: hsl(var(--primary));
+  font-weight: 600;
+}
+
+/* Dark mode support for column letter headers */
+.dark .column-letter-headers {
+  background-color: hsl(217.2 32.6% 17.5%);
+  border-color: hsl(217.2 32.6% 25%);
+}
+
+.dark .column-letter-headers [data-column-letter] {
+  border-color: hsl(217.2 32.6% 25%);
+  color: hsl(215 20.2% 65.1%);
+}
+
+.dark .column-letter-headers [data-column-letter]:hover {
+  background-color: hsl(217.2 32.6% 22%);
+  color: hsl(var(--foreground));
+}
+
+.dark .column-letter-headers [data-column-letter][aria-selected="true"] {
+  background-color: hsl(var(--primary) / 0.2);
+  color: hsl(var(--primary));
+}

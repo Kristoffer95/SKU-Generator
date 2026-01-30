@@ -1,3 +1,45 @@
+## pin-columns - COMPLETED
+Add ability to pin/freeze columns so they stay visible while scrolling horizontally
+
+### Key decisions
+- Added `pinnedColumns?: number` field to SheetConfig interface for persistence
+- Added `setPinnedColumns` method to sheets store with min=1 (SKU always pinned) and max=column count
+- SKU column (index 0) is pinned by default via pinnedColumns defaulting to 1
+- Sticky positioning via CSS position: sticky with calculated left offsets based on column widths
+- Implemented in three layers: spreadsheet data cells (via dynamic style tag), DraggableColumnHeaders, ColumnLetterHeaders
+- Row indicator always sticky at left: 0 with z-index: 3 (above pinned columns)
+- Pinned columns get z-index: 2 and background color to cover scrolled content
+- Pinned columns cannot be dragged (updated canDragColumn to check `index < pinnedColumns`)
+- Pinned columns cannot receive drops (updated canDropOnColumn similarly)
+- Pin/Unpin toggle in column header dropdown menu calls handlePinChange in SpreadsheetContainer
+- Pinning column N sets pinnedColumns = N + 1; unpinning sets pinnedColumns = N
+
+### Files changed
+- src/types/index.ts (+1 line: pinnedColumns field in SheetConfig)
+- src/store/sheets.ts (+30 lines: setPinnedColumns method, duplicateSheet copies pinnedColumns)
+- src/store/sheets.test.ts (+100 lines: tests for setPinnedColumns and duplicateSheet with pinnedColumns)
+- src/components/SpreadsheetContainer.tsx (+40 lines: pinnedColumns state, handlePinChange, sticky CSS generation, props)
+- src/components/spreadsheet/DraggableColumnHeaders.tsx (+35 lines: getLeftOffset, sticky styles, drag restriction)
+- src/components/spreadsheet/DraggableColumnHeaders.test.tsx (+90 lines: pinned columns behavior tests)
+- src/components/spreadsheet/ColumnLetterHeaders.tsx (+40 lines: pinnedColumns prop, sticky styles, getLeftOffset)
+
+### Notes
+- All 10 stepsToVerify criteria met:
+  1. SheetConfig has 'pinnedColumns?: number' field ✓
+  2. SKU column is pinned by default (position: sticky, left: 0) ✓
+  3. Column header menu has 'Pin column' / 'Unpin column' option ✓ (pre-existing from column-header-dropdown-menu task)
+  4. Pinning column N pins all columns 0 through N ✓
+  5. Pinned columns stay visible when scrolling horizontally ✓
+  6. Pinned columns cannot be dragged/reordered ✓
+  7. Pinned column headers also stay fixed ✓
+  8. Unpinning removes sticky positioning ✓
+  9. Pin state persists after page refresh ✓ (via Zustand persist)
+  10. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (1142 tests, +14 new)
+- npm run build passes
+
 ## sheet-duplication - COMPLETED
 Add ability to duplicate a sheet including all its data, columns, and specifications
 

@@ -2076,4 +2076,164 @@ describe('useSheetsStore', () => {
       expect(result).toBe(false);
     });
   });
+
+  describe('setPinnedColumns', () => {
+    const createSheetWithColumns = (): { sheetId: string } => {
+      const { addSheet } = useSheetsStore.getState();
+      const sheetId = addSheet('Test Sheet');
+
+      // Set up columns
+      useSheetsStore.setState((state) => ({
+        sheets: state.sheets.map((s) =>
+          s.id === sheetId
+            ? {
+                ...s,
+                columns: [
+                  { id: 'col-1', type: 'sku' as const, header: 'SKU' },
+                  { id: 'col-2', type: 'spec' as const, specId: 'spec-1', header: 'Color' },
+                  { id: 'col-3', type: 'spec' as const, specId: 'spec-2', header: 'Size' },
+                  { id: 'col-4', type: 'free' as const, header: 'Notes' },
+                ],
+              }
+            : s
+        ),
+      }));
+
+      return { sheetId };
+    };
+
+    it('should set pinned columns count', () => {
+      const { sheetId } = createSheetWithColumns();
+      const { setPinnedColumns } = useSheetsStore.getState();
+
+      const result = setPinnedColumns(sheetId, 2);
+      expect(result).toBe(true);
+
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.pinnedColumns).toBe(2);
+    });
+
+    it('should enforce minimum of 1 (SKU column always pinned)', () => {
+      const { sheetId } = createSheetWithColumns();
+      const { setPinnedColumns } = useSheetsStore.getState();
+
+      const result = setPinnedColumns(sheetId, 0);
+      expect(result).toBe(true);
+
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.pinnedColumns).toBe(1);
+    });
+
+    it('should enforce maximum of column count', () => {
+      const { sheetId } = createSheetWithColumns();
+      const { setPinnedColumns } = useSheetsStore.getState();
+
+      const result = setPinnedColumns(sheetId, 10);
+      expect(result).toBe(true);
+
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.pinnedColumns).toBe(4); // Only 4 columns
+    });
+
+    it('should return false for non-existent sheet', () => {
+      createSheetWithColumns();
+      const { setPinnedColumns } = useSheetsStore.getState();
+
+      const result = setPinnedColumns('non-existent', 2);
+      expect(result).toBe(false);
+    });
+
+    it('should persist pinnedColumns after state changes', () => {
+      const { sheetId } = createSheetWithColumns();
+      const { setPinnedColumns } = useSheetsStore.getState();
+
+      setPinnedColumns(sheetId, 3);
+
+      // Verify persists after getting state again
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.pinnedColumns).toBe(3);
+    });
+
+    it('should not affect other sheets', () => {
+      const { sheetId: sheetId1 } = createSheetWithColumns();
+      const { addSheet, setPinnedColumns } = useSheetsStore.getState();
+      const sheetId2 = addSheet('Sheet 2');
+
+      // Set up columns for sheet 2
+      useSheetsStore.setState((state) => ({
+        sheets: state.sheets.map((s) =>
+          s.id === sheetId2
+            ? {
+                ...s,
+                columns: [
+                  { id: 'col-a', type: 'sku' as const, header: 'SKU' },
+                  { id: 'col-b', type: 'free' as const, header: 'Data' },
+                ],
+              }
+            : s
+        ),
+      }));
+
+      setPinnedColumns(sheetId1, 3);
+
+      const sheet1 = useSheetsStore.getState().sheets.find((s) => s.id === sheetId1)!;
+      const sheet2 = useSheetsStore.getState().sheets.find((s) => s.id === sheetId2)!;
+
+      expect(sheet1.pinnedColumns).toBe(3);
+      expect(sheet2.pinnedColumns).toBeUndefined();
+    });
+  });
+
+  describe('duplicateSheet with pinnedColumns', () => {
+    it('should copy pinnedColumns to duplicated sheet', () => {
+      const { addSheet, setPinnedColumns, duplicateSheet } = useSheetsStore.getState();
+      const sheetId = addSheet('Source Sheet');
+
+      // Set up columns and pinnedColumns
+      useSheetsStore.setState((state) => ({
+        sheets: state.sheets.map((s) =>
+          s.id === sheetId
+            ? {
+                ...s,
+                columns: [
+                  { id: 'col-1', type: 'sku' as const, header: 'SKU' },
+                  { id: 'col-2', type: 'spec' as const, specId: 'spec-1', header: 'Color' },
+                  { id: 'col-3', type: 'free' as const, header: 'Notes' },
+                ],
+              }
+            : s
+        ),
+      }));
+
+      setPinnedColumns(sheetId, 2);
+
+      const newSheetId = duplicateSheet(sheetId);
+
+      const newSheet = useSheetsStore.getState().sheets.find((s) => s.id === newSheetId)!;
+      expect(newSheet.pinnedColumns).toBe(2);
+    });
+
+    it('should not copy pinnedColumns if source sheet has none', () => {
+      const { addSheet, duplicateSheet } = useSheetsStore.getState();
+      const sheetId = addSheet('Source Sheet');
+
+      useSheetsStore.setState((state) => ({
+        sheets: state.sheets.map((s) =>
+          s.id === sheetId
+            ? {
+                ...s,
+                columns: [
+                  { id: 'col-1', type: 'sku' as const, header: 'SKU' },
+                ],
+              }
+            : s
+        ),
+      }));
+
+      const newSheetId = duplicateSheet(sheetId);
+
+      const newSheet = useSheetsStore.getState().sheets.find((s) => s.id === newSheetId)!;
+      expect(newSheet.pinnedColumns).toBeUndefined();
+    });
+  });
 });

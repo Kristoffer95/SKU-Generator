@@ -84,19 +84,26 @@ export function DraggableColumnHeaders({
   const [editValue, setEditValue] = useState<string>("")
   const editInputRef = useRef<HTMLInputElement>(null)
 
-  // Check if a column can be dragged (SKU column at index 0 cannot be moved)
+  // Check if a column can be dragged (SKU column and pinned columns cannot be moved)
   const canDragColumn = useCallback((index: number) => {
     const column = columns[index]
-    return column && column.type !== "sku"
-  }, [columns])
+    if (!column) return false
+    // SKU column cannot be dragged
+    if (column.type === "sku") return false
+    // Pinned columns cannot be dragged
+    if (index < pinnedColumns) return false
+    return true
+  }, [columns, pinnedColumns])
 
   // Check if a column can receive a drop
   const canDropOnColumn = useCallback((index: number) => {
     // Cannot drop on SKU column (index 0) or on itself
     if (index === 0) return false
     if (index === draggedIndex) return false
+    // Cannot drop onto a pinned column
+    if (index < pinnedColumns) return false
     return true
-  }, [draggedIndex])
+  }, [draggedIndex, pinnedColumns])
 
   const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
     if (!canDragColumn(index)) {
@@ -354,6 +361,17 @@ export function DraggableColumnHeaders({
     return index < pinnedColumns
   }, [pinnedColumns])
 
+  // Calculate left offset for sticky pinned columns
+  const getLeftOffset = useCallback((index: number) => {
+    if (index >= pinnedColumns) return undefined
+    // Start with row indicator width
+    let offset = rowIndicatorWidth
+    for (let i = 0; i < index; i++) {
+      offset += columns[i]?.width ?? defaultColumnWidth
+    }
+    return offset
+  }, [columns, pinnedColumns, rowIndicatorWidth, defaultColumnWidth])
+
   return (
     <div
       className="draggable-column-headers flex items-stretch border-b bg-[var(--spreadsheet-header-bg,#f8fafc)]"
@@ -363,8 +381,14 @@ export function DraggableColumnHeaders({
     >
       {/* Row indicator spacer (matches spreadsheet row indicator width) */}
       <div
-        className="flex-shrink-0 border-r border-[var(--spreadsheet-cell-border,#e2e8f0)]"
-        style={{ width: rowIndicatorWidth, minWidth: rowIndicatorWidth }}
+        className="flex-shrink-0 border-r border-[var(--spreadsheet-cell-border,#e2e8f0)] bg-[var(--spreadsheet-header-bg,#f8fafc)]"
+        style={{
+          width: rowIndicatorWidth,
+          minWidth: rowIndicatorWidth,
+          position: "sticky",
+          left: 0,
+          zIndex: 3, // Above pinned columns
+        }}
         aria-hidden="true"
       />
 
@@ -377,6 +401,8 @@ export function DraggableColumnHeaders({
         const isEditing = editingColumnIndex === index
         const isFreeColumn = column.type === "free"
         const columnWidth = getColumnWidth(column)
+        const isPinned = isColumnPinned(index)
+        const leftOffset = getLeftOffset(index)
 
         return (
           <div
@@ -399,12 +425,19 @@ export function DraggableColumnHeaders({
               isFreeColumn && !isEditing && "cursor-text",
               isDragging && "opacity-50 bg-muted",
               isDropTarget && !isDragging && "bg-primary/10 border-primary",
-              isDropTarget && !isDragging && "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-primary"
+              isDropTarget && !isDragging && "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-primary",
+              // Add background color for pinned columns to cover scrolled content
+              isPinned && "bg-[var(--spreadsheet-header-bg,#f8fafc)]"
             )}
             style={{
               width: columnWidth,
               minWidth: MIN_COLUMN_WIDTH,
               maxWidth: columnWidth,
+              ...(isPinned ? {
+                position: "sticky",
+                left: leftOffset,
+                zIndex: 2,
+              } : {}),
             }}
             role="columnheader"
             aria-colindex={index + 1}
