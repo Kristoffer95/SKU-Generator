@@ -934,7 +934,7 @@
       "Undo/redo works for all row operations",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "sheet-duplication",

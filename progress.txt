@@ -1,3 +1,41 @@
+## row-header-dropdown-menu - COMPLETED
+Add visible dropdown menu to row headers/indicators (since right-click context menu is intercepted by browser)
+
+### Key decisions
+- Created RowHeaderDropdownMenu component using shadcn DropdownMenu (Radix UI)
+- Trigger icon (⋮) appears on hover using Tailwind's group-hover pattern
+- Menu options: Insert row above, Insert row below, Delete row, Pin rows above
+- Header row (row 0) hides delete option since it cannot be deleted
+- Pin rows above option only shows when onPinRowsAbove callback is provided (ready for pin-rows feature)
+- Integrated into ResizableRowIndicators with new props: onInsertRowAbove, onInsertRowBelow, onDeleteRow, onPinRowsAbove, pinnedRows
+- Insert handlers in SpreadsheetContainer track undo/redo history properly
+- Used row-dropdown-area-* testid to avoid conflict with existing row-indicator-* testids in mock
+
+### Files changed
+- src/components/spreadsheet/RowHeaderDropdownMenu.tsx (new, ~145 lines)
+- src/components/spreadsheet/RowHeaderDropdownMenu.test.tsx (new, 16 tests)
+- src/components/spreadsheet/ResizableRowIndicators.tsx (added dropdown integration, new props)
+- src/components/spreadsheet/ResizableRowIndicators.test.tsx (+4 tests for dropdown rendering)
+- src/components/SpreadsheetContainer.tsx (added handleInsertRowAbove, handleInsertRowBelow, connected props)
+- src/components/SpreadsheetContainer.test.tsx (+8 tests for row dropdown menu integration)
+
+### Notes
+- All 11 stepsToVerify criteria met:
+  1. Hover on row number shows dropdown trigger icon ✓
+  2. Clicking trigger opens dropdown menu ✓
+  3. Menu shows 'Insert row above' option ✓
+  4. Menu shows 'Insert row below' option ✓
+  5. Menu shows 'Delete row' option (hidden for header row) ✓
+  6. Menu shows 'Pin rows above' option ✓
+  7. Insert row above adds empty row before current row ✓
+  8. Insert row below adds empty row after current row ✓
+  9. Delete row removes row and shifts data ✓ (uses existing confirmation dialog)
+  10. Undo/redo works for all row operations ✓
+  11. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (1111 tests, +28 new)
+
 ## column-header-dropdown-menu - COMPLETED
 Add visible dropdown menu to column headers (since right-click context menu is intercepted by browser)
 

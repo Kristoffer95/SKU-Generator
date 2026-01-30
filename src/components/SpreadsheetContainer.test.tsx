@@ -5746,3 +5746,208 @@ describe('SpreadsheetContainer select-all keyboard shortcut (select-all-keyboard
     expect(selection?.range?.end.column).toBe(cols - 1)  // 4
   })
 })
+
+/**
+ * Row header dropdown menu tests
+ * Verifies the dropdown menu in row headers for insert/delete operations
+ */
+describe('Row header dropdown menu', () => {
+  const colorSpec: Specification = {
+    id: 'color-spec',
+    name: 'Color',
+    order: 0,
+    values: [
+      { id: 'red', displayValue: 'Red', skuFragment: 'R' },
+      { id: 'blue', displayValue: 'Blue', skuFragment: 'B' },
+    ],
+  }
+
+  beforeEach(() => {
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+    capturedOnChange = null
+    capturedOnSelect = null
+    capturedData = []
+    capturedSelected = null
+  })
+
+  function createSheetWithRows() {
+    const columns: ColumnDef[] = [
+      { id: 'col-0', type: 'sku', header: 'SKU' },
+      { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
+    ]
+    const data: CellData[][] = [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: 'R' }, { v: 'Red' }],
+      [{ v: 'B' }, { v: 'Blue' }],
+    ]
+
+    const sheetId = `sheet-${Date.now()}`
+    useSheetsStore.setState({
+      sheets: [{
+        id: sheetId,
+        name: 'Products',
+        type: 'data',
+        data,
+        specifications: [colorSpec],
+        columns,
+      }],
+      activeSheetId: sheetId,
+    })
+
+    return sheetId
+  }
+
+  it('renders row dropdown menu triggers', () => {
+    createSheetWithRows()
+    render(<SpreadsheetContainer />)
+
+    // Should have dropdown trigger for each row (header + 2 data rows)
+    expect(screen.getByTestId('row-menu-trigger-0')).toBeInTheDocument()
+    expect(screen.getByTestId('row-menu-trigger-1')).toBeInTheDocument()
+    expect(screen.getByTestId('row-menu-trigger-2')).toBeInTheDocument()
+  })
+
+  it('shows dropdown menu on click', async () => {
+    createSheetWithRows()
+    render(<SpreadsheetContainer />)
+
+    const trigger = screen.getByTestId('row-menu-trigger-1')
+    await userEvent.click(trigger)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('row-menu-insert-above-1')).toBeInTheDocument()
+      expect(screen.getByTestId('row-menu-insert-below-1')).toBeInTheDocument()
+      expect(screen.getByTestId('row-menu-delete-1')).toBeInTheDocument()
+    })
+  })
+
+  it('inserts row above when menu option clicked', async () => {
+    const sheetId = createSheetWithRows()
+    render(<SpreadsheetContainer />)
+
+    // Click dropdown trigger for row 1
+    const trigger = screen.getByTestId('row-menu-trigger-1')
+    await userEvent.click(trigger)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('row-menu-insert-above-1')).toBeInTheDocument()
+    })
+
+    // Click "Insert row above"
+    await userEvent.click(screen.getByTestId('row-menu-insert-above-1'))
+
+    // Verify row was inserted
+    const sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)
+    expect(sheet?.data.length).toBe(4) // Was 3, now 4
+  })
+
+  it('inserts row below when menu option clicked', async () => {
+    const sheetId = createSheetWithRows()
+    render(<SpreadsheetContainer />)
+
+    // Click dropdown trigger for row 1
+    const trigger = screen.getByTestId('row-menu-trigger-1')
+    await userEvent.click(trigger)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('row-menu-insert-below-1')).toBeInTheDocument()
+    })
+
+    // Click "Insert row below"
+    await userEvent.click(screen.getByTestId('row-menu-insert-below-1'))
+
+    // Verify row was inserted
+    const sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)
+    expect(sheet?.data.length).toBe(4) // Was 3, now 4
+  })
+
+  it('opens delete confirmation dialog when delete row clicked', async () => {
+    createSheetWithRows()
+    render(<SpreadsheetContainer />)
+
+    // Click dropdown trigger for row 1
+    const trigger = screen.getByTestId('row-menu-trigger-1')
+    await userEvent.click(trigger)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('row-menu-delete-1')).toBeInTheDocument()
+    })
+
+    // Click "Delete row"
+    await userEvent.click(screen.getByTestId('row-menu-delete-1'))
+
+    // Delete row confirmation dialog should be open
+    expect(screen.getByTestId('delete-row-dialog')).toBeInTheDocument()
+  })
+
+  it('does not show delete option for header row', async () => {
+    createSheetWithRows()
+    render(<SpreadsheetContainer />)
+
+    // Click dropdown trigger for row 0 (header)
+    const trigger = screen.getByTestId('row-menu-trigger-0')
+    await userEvent.click(trigger)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('row-menu-insert-above-0')).toBeInTheDocument()
+    })
+
+    // Delete option should not be present for header row
+    expect(screen.queryByTestId('row-menu-delete-0')).not.toBeInTheDocument()
+  })
+
+  it('undo reverts insert row above', async () => {
+    const sheetId = createSheetWithRows()
+    render(<SpreadsheetContainer />)
+
+    // Insert row above row 1
+    const trigger = screen.getByTestId('row-menu-trigger-1')
+    await userEvent.click(trigger)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('row-menu-insert-above-1')).toBeInTheDocument()
+    })
+
+    await userEvent.click(screen.getByTestId('row-menu-insert-above-1'))
+
+    // Verify row was inserted
+    let sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)
+    expect(sheet?.data.length).toBe(4)
+
+    // Click Undo
+    const undoButton = screen.getByTestId('spreadsheet-toolbar-undo')
+    await userEvent.click(undoButton)
+
+    // Verify row was removed (reverted)
+    sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)
+    expect(sheet?.data.length).toBe(3)
+  })
+
+  it('undo reverts insert row below', async () => {
+    const sheetId = createSheetWithRows()
+    render(<SpreadsheetContainer />)
+
+    // Insert row below row 1
+    const trigger = screen.getByTestId('row-menu-trigger-1')
+    await userEvent.click(trigger)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('row-menu-insert-below-1')).toBeInTheDocument()
+    })
+
+    await userEvent.click(screen.getByTestId('row-menu-insert-below-1'))
+
+    // Verify row was inserted
+    let sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)
+    expect(sheet?.data.length).toBe(4)
+
+    // Click Undo
+    const undoButton = screen.getByTestId('spreadsheet-toolbar-undo')
+    await userEvent.click(undoButton)
+
+    // Verify row was removed (reverted)
+    sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)
+    expect(sheet?.data.length).toBe(3)
+  })
+})

@@ -26,9 +26,50 @@ describe('ResizableRowIndicators', () => {
       expect(screen.queryByTestId('resizable-row-indicators')).not.toBeInTheDocument()
     })
 
-    it('should not render when onRowResize is not provided', () => {
+    it('should not render when no interactive callbacks are provided', () => {
       render(<ResizableRowIndicators rowCount={5} />)
       expect(screen.queryByTestId('resizable-row-indicators')).not.toBeInTheDocument()
+    })
+
+    it('should render when only row dropdown callbacks are provided', () => {
+      render(
+        <ResizableRowIndicators
+          rowCount={5}
+          onInsertRowAbove={vi.fn()}
+          onInsertRowBelow={vi.fn()}
+          onDeleteRow={vi.fn()}
+        />
+      )
+      expect(screen.getByTestId('resizable-row-indicators')).toBeInTheDocument()
+    })
+
+    it('should render row dropdown menus for each row', () => {
+      render(
+        <ResizableRowIndicators
+          rowCount={3}
+          onInsertRowAbove={vi.fn()}
+          onInsertRowBelow={vi.fn()}
+          onDeleteRow={vi.fn()}
+        />
+      )
+
+      for (let i = 0; i < 3; i++) {
+        expect(screen.getByTestId(`row-dropdown-area-${i}`)).toBeInTheDocument()
+        expect(screen.getByTestId(`row-menu-trigger-${i}`)).toBeInTheDocument()
+      }
+    })
+
+    it('should not render resize handles when only row operations provided', () => {
+      render(
+        <ResizableRowIndicators
+          rowCount={3}
+          onInsertRowAbove={vi.fn()}
+          onInsertRowBelow={vi.fn()}
+          onDeleteRow={vi.fn()}
+        />
+      )
+
+      expect(screen.queryByTestId('row-resize-handle-0')).not.toBeInTheDocument()
     })
 
     it('should use default row height when rowHeights is empty', () => {

@@ -595,6 +595,93 @@ export function SpreadsheetContainer() {
     setRowToDelete(null)
   }, [activeSheet, rowToDelete])
 
+  // Handle insert row above via dropdown menu
+  const handleInsertRowAbove = useCallback((rowIndex: number) => {
+    if (!activeSheet) return
+
+    // Save current state for undo
+    const oldEntry: HistoryEntry = {
+      data: activeSheet.data,
+      columns: activeSheet.columns,
+    }
+    const currentHistoryIndex = historyIndexRef.current
+
+    // Create a new empty row with the same number of columns
+    const numCols = activeSheet.data[0]?.length ?? specifications.length + 1
+    const newRow: CellData[] = Array(numCols).fill(null).map(() => ({}))
+
+    // Insert the new row at the specified position
+    const newData = [
+      ...activeSheet.data.slice(0, rowIndex),
+      newRow,
+      ...activeSheet.data.slice(rowIndex),
+    ]
+
+    // Update the sheet with new data
+    useSheetsStore.setState(state => ({
+      sheets: state.sheets.map(sheet =>
+        sheet.id === activeSheet.id
+          ? { ...sheet, data: newData }
+          : sheet
+      )
+    }))
+
+    // Track history for undo/redo
+    setHistory(prev => {
+      if (currentHistoryIndex === -1) {
+        return [...prev, oldEntry]
+      } else {
+        return prev.slice(0, currentHistoryIndex + 1)
+      }
+    })
+    setHistoryIndex(-1)
+    historyIndexRef.current = -1
+  }, [activeSheet, specifications.length])
+
+  // Handle insert row below via dropdown menu
+  const handleInsertRowBelow = useCallback((rowIndex: number) => {
+    if (!activeSheet) return
+
+    // Save current state for undo
+    const oldEntry: HistoryEntry = {
+      data: activeSheet.data,
+      columns: activeSheet.columns,
+    }
+    const currentHistoryIndex = historyIndexRef.current
+
+    // Create a new empty row with the same number of columns
+    const numCols = activeSheet.data[0]?.length ?? specifications.length + 1
+    const newRow: CellData[] = Array(numCols).fill(null).map(() => ({}))
+
+    // Insert the new row after the specified position
+    const insertPosition = rowIndex + 1
+    const newData = [
+      ...activeSheet.data.slice(0, insertPosition),
+      newRow,
+      ...activeSheet.data.slice(insertPosition),
+    ]
+
+    // Update the sheet with new data
+    useSheetsStore.setState(state => ({
+      sheets: state.sheets.map(sheet =>
+        sheet.id === activeSheet.id
+          ? { ...sheet, data: newData }
+          : sheet
+      )
+    }))
+
+    // Track history for undo/redo
+    setHistory(prev => {
+      if (currentHistoryIndex === -1) {
+        return [...prev, oldEntry]
+      } else {
+        return prev.slice(0, currentHistoryIndex + 1)
+      }
+    })
+    setHistoryIndex(-1)
+    historyIndexRef.current = -1
+  }, [activeSheet, specifications.length])
+
   // Handle column reorder via drag-and-drop
   const handleColumnReorder = useCallback((oldIndex: number, newIndex: number) => {
     if (!activeSheetId || !activeSheet) return
@@ -1478,6 +1565,9 @@ export function SpreadsheetContainer() {
           rowHeights={rowHeights}
           onRowResize={handleRowResize}
           spreadsheetRef={spreadsheetContainerRef}
+          onInsertRowAbove={handleInsertRowAbove}
+          onInsertRowBelow={handleInsertRowBelow}
+          onDeleteRow={handleDeleteRowRequest}
         />
         <Spreadsheet
           data={spreadsheetData as Matrix<CellBase<string | number | null>>}

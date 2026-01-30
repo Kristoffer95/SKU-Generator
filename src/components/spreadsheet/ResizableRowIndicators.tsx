@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react"
 import { cn } from "@/lib/utils"
+import { RowHeaderDropdownMenu } from "./RowHeaderDropdownMenu"
 
 /** Default height for rows without explicit height */
 export const DEFAULT_ROW_HEIGHT = 32
@@ -17,6 +18,16 @@ export interface ResizableRowIndicatorsProps {
   spreadsheetRef?: React.RefObject<HTMLDivElement>
   /** Width of this indicator column (should match react-spreadsheet row indicator width) */
   width?: number
+  /** Called when user selects "Insert row above" from dropdown menu */
+  onInsertRowAbove?: (rowIndex: number) => void
+  /** Called when user selects "Insert row below" from dropdown menu */
+  onInsertRowBelow?: (rowIndex: number) => void
+  /** Called when user selects "Delete row" from dropdown menu */
+  onDeleteRow?: (rowIndex: number) => void
+  /** Called when user selects "Pin rows above" from dropdown menu */
+  onPinRowsAbove?: (rowIndex: number) => void
+  /** Number of currently pinned rows */
+  pinnedRows?: number
 }
 
 /**
@@ -30,6 +41,11 @@ export function ResizableRowIndicators({
   onRowResize,
   spreadsheetRef,
   width = 40,
+  onInsertRowAbove,
+  onInsertRowBelow,
+  onDeleteRow,
+  onPinRowsAbove,
+  pinnedRows = 0,
 }: ResizableRowIndicatorsProps) {
   const [resizingRowIndex, setResizingRowIndex] = useState<number | null>(null)
   const resizeStartYRef = useRef<number>(0)
@@ -126,7 +142,9 @@ export function ResizableRowIndicators({
     onRowResize(rowIndex, maxHeight)
   }, [spreadsheetRef, onRowResize])
 
-  if (rowCount === 0 || !onRowResize) return null
+  // Check if we have any interactive functionality
+  const hasRowOperations = onInsertRowAbove || onInsertRowBelow || onDeleteRow
+  if (rowCount === 0 || (!onRowResize && !hasRowOperations)) return null
 
   // Calculate total height for the overlay
   const totalHeight = getRowOffset(rowCount)
@@ -145,27 +163,46 @@ export function ResizableRowIndicators({
         return (
           <div
             key={rowIndex}
-            className="absolute w-full"
+            className="absolute w-full group"
             style={{
               top: rowOffset,
               height: rowHeight,
             }}
           >
+            {/* Dropdown menu trigger area */}
+            {hasRowOperations && (
+              <div
+                className="absolute inset-0 flex items-center justify-center pointer-events-auto"
+                data-testid={`row-dropdown-area-${rowIndex}`}
+              >
+                <RowHeaderDropdownMenu
+                  rowIndex={rowIndex}
+                  onInsertAbove={onInsertRowAbove ?? (() => {})}
+                  onInsertBelow={onInsertRowBelow ?? (() => {})}
+                  onDelete={onDeleteRow ?? (() => {})}
+                  onPinRowsAbove={onPinRowsAbove}
+                  pinnedRows={pinnedRows}
+                />
+              </div>
+            )}
+
             {/* Resize handle at bottom edge */}
-            <div
-              className={cn(
-                "absolute left-0 right-0 h-1 cursor-row-resize z-30 pointer-events-auto",
-                "hover:bg-primary/50 active:bg-primary",
-                isResizing && "bg-primary"
-              )}
-              style={{
-                bottom: 0,
-              }}
-              data-testid={`row-resize-handle-${rowIndex}`}
-              onMouseDown={(e) => handleResizeStart(e, rowIndex)}
-              onDoubleClick={(e) => handleResizeDoubleClick(e, rowIndex)}
-              aria-label={`Resize row ${rowIndex + 1}`}
-            />
+            {onRowResize && (
+              <div
+                className={cn(
+                  "absolute left-0 right-0 h-1 cursor-row-resize z-30 pointer-events-auto",
+                  "hover:bg-primary/50 active:bg-primary",
+                  isResizing && "bg-primary"
+                )}
+                style={{
+                  bottom: 0,
+                }}
+                data-testid={`row-resize-handle-${rowIndex}`}
+                onMouseDown={(e) => handleResizeStart(e, rowIndex)}
+                onDoubleClick={(e) => handleResizeDoubleClick(e, rowIndex)}
+                aria-label={`Resize row ${rowIndex + 1}`}
+              />
+            )}
           </div>
         )
       })}
