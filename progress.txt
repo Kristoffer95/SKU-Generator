@@ -1,3 +1,35 @@
+## fix-pinned-row-background - COMPLETED
+Verify and document pinned row background styling with CSS variable for dark mode support
+
+### Key decisions
+- Verified that pinned rows already use --spreadsheet-pinned-tint CSS variable (not --spreadsheet-cell-bg)
+- CSS variable has proper dark mode variant: hsl(217.2 32.6% 12%) in dark mode vs #f8fafc in light mode
+- Pinned row cells at line 999 apply: background-color: var(--spreadsheet-pinned-tint, #f8fafc)
+- Intersection cells (pinned rows AND columns) get z-index: 4 but inherit background from row-level rule
+- All 7 stepsToVerify criteria were already met by existing implementation
+
+### Files changed
+- src/components/SpreadsheetContainer.test.tsx (+60 lines: 3 new tests for pinned row background scenarios)
+
+### Tests added
+1. "pinned row uses CSS variable with fallback for dark mode support" - verifies multiple pinned rows
+2. "intersection of pinned rows and pinned columns has elevated z-index" - verifies z-index: 4 for intersections
+3. "pinned row cells inherit background from the row-level style" - verifies background inheritance
+
+### Notes
+- All 7 stepsToVerify criteria met:
+  1. Pin row 1 via row header dropdown ✓ (RowHeaderDropdownMenu provides "Pin rows above")
+  2. Scroll vertically - row stays visible ✓ (position: sticky applied)
+  3. Pinned row has #f8fafc background ✓ (var(--spreadsheet-pinned-tint, #f8fafc))
+  4. Scrolled content does NOT show through ✓ (explicit background-color set)
+  5. Dark mode uses dark tint ✓ (hsl(217.2 32.6% 12%) defined in index.css)
+  6. Intersection cells have consistent background ✓ (inherit from row-level rule)
+  7. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (1328 tests, +3 new in SpreadsheetContainer.test.tsx)
+- Implementation was already complete; this task verified correctness and added tests
+
 ## fix-pinned-column-border - COMPLETED
 Add 2px solid right border to the last pinned column to clearly separate pinned from scrollable content
 

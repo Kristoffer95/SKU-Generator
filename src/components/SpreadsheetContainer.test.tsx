@@ -6106,6 +6106,80 @@ describe('Row header dropdown menu', () => {
     expect(styleContent).toContain('position: sticky')
   })
 
+  it('pinned row uses CSS variable with fallback for dark mode support', () => {
+    const sheetId = createSheetWithRows()
+
+    // Set pinnedRows to 2 (first two rows)
+    useSheetsStore.getState().setPinnedRows(sheetId, 2)
+
+    render(<SpreadsheetContainer />)
+
+    const styleElement = document.querySelector('[data-testid="row-height-styles"]')
+    expect(styleElement).toBeInTheDocument()
+
+    const styleContent = styleElement?.textContent ?? ''
+
+    // The CSS variable --spreadsheet-pinned-tint has dark mode variant defined in index.css:
+    // Light mode: #f8fafc
+    // Dark mode: hsl(217.2 32.6% 12%)
+    // The fallback #f8fafc is used when CSS variable is not available
+    expect(styleContent).toContain('var(--spreadsheet-pinned-tint, #f8fafc)')
+
+    // All pinned rows should have the background-color set
+    expect(styleContent).toContain('tr:nth-child(1) > * { position: sticky; top: 0px; z-index: 3; background-color: var(--spreadsheet-pinned-tint, #f8fafc)')
+    expect(styleContent).toContain('tr:nth-child(2) > * { position: sticky')
+  })
+
+  it('intersection of pinned rows and pinned columns has elevated z-index', () => {
+    const sheetId = createSheetWithRows()
+
+    // Set both pinned rows and pinned columns
+    useSheetsStore.getState().setPinnedRows(sheetId, 2)
+    useSheetsStore.getState().setPinnedColumns(sheetId, 2)
+
+    render(<SpreadsheetContainer />)
+
+    const styleElement = document.querySelector('[data-testid="row-height-styles"]')
+    expect(styleElement).toBeInTheDocument()
+
+    const styleContent = styleElement?.textContent ?? ''
+
+    // Intersection cells (pinned rows AND pinned columns) should have z-index: 4
+    // This ensures they stay on top of both horizontal and vertical scrolling
+    // Row 1, Column 1 (row indicator)
+    expect(styleContent).toContain('tr:nth-child(1) > th:first-child { z-index: 4')
+    // Row 1, Column 2 (first data column, pinned)
+    expect(styleContent).toContain('tr:nth-child(1) > *:nth-child(2) { z-index: 4')
+    // Row 2 intersection cells
+    expect(styleContent).toContain('tr:nth-child(2) > th:first-child { z-index: 4')
+    expect(styleContent).toContain('tr:nth-child(2) > *:nth-child(2) { z-index: 4')
+  })
+
+  it('pinned row cells inherit background from the row-level style', () => {
+    const sheetId = createSheetWithRows()
+
+    // Set pinnedRows and pinnedColumns
+    useSheetsStore.getState().setPinnedRows(sheetId, 1)
+    useSheetsStore.getState().setPinnedColumns(sheetId, 2)
+
+    render(<SpreadsheetContainer />)
+
+    const styleElement = document.querySelector('[data-testid="row-height-styles"]')
+    expect(styleElement).toBeInTheDocument()
+
+    const styleContent = styleElement?.textContent ?? ''
+
+    // The pinned row style applies to ALL cells in the row (> *)
+    // This includes both pinned and non-pinned columns
+    // The intersection z-index rules DON'T override background, they only add z-index
+    expect(styleContent).toContain('tr:nth-child(1) > * { position: sticky; top: 0px; z-index: 3; background-color: var(--spreadsheet-pinned-tint')
+
+    // The z-index override rules are separate and don't include background-color
+    // (they inherit background from the row-level rule)
+    expect(styleContent).toContain('tr:nth-child(1) > th:first-child { z-index: 4; }')
+    expect(styleContent).toContain('tr:nth-child(1) > *:nth-child(2) { z-index: 4; }')
+  })
+
   it('generates 2px right border on the last pinned column', () => {
     const sheetId = createSheetWithRows()
 
