@@ -180,7 +180,7 @@ describe('SpreadsheetContainer', () => {
     useSheetsStore.getState().initializeWithSampleData()
 
     render(<SpreadsheetContainer />)
-    expect(screen.getByTestId('sheet-tabs')).toBeInTheDocument()
+    expect(screen.getByTestId('grouped-sheet-tabs')).toBeInTheDocument()
   })
 
   it('renders SpreadsheetToolbar above spreadsheet', () => {
@@ -197,13 +197,13 @@ describe('SpreadsheetContainer', () => {
     expect(screen.getByTestId('spreadsheet-container')).toBeInTheDocument()
   })
 
-  it('includes multiple sheets in SheetTabs', () => {
+  it('includes multiple sheets in GroupedSheetTabs', () => {
     useSheetsStore.getState().initializeWithSampleData()
     useSheetsStore.getState().addSheet('Sheet 1')
 
     render(<SpreadsheetContainer />)
-    // Check SheetTabs shows both sheets
-    const sheetTabs = screen.getByTestId('sheet-tabs')
+    // Check GroupedSheetTabs shows both sheets
+    const sheetTabs = screen.getByTestId('grouped-sheet-tabs')
     expect(within(sheetTabs).getByText('Sample Products')).toBeInTheDocument()
     expect(within(sheetTabs).getByText('Sheet 1')).toBeInTheDocument()
   })

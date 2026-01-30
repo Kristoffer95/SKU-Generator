@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { SheetConfig, CellData, ColumnDef, Specification, SpecValue } from '../types';
+import type { SheetConfig, CellData, ColumnDef, Specification, SpecValue, SheetGroup } from '../types';
 import { createSampleProductSheet, getSampleSpecifications, createColumnsFromSpecs, isFirstLaunch, markAsInitialized } from '../lib/sample-data';
 import { useSpecificationsStore } from './specifications';
 import { migrateConfigSheetData } from '../lib/migration';
@@ -8,6 +8,7 @@ import { needsHeaderRepair, repairAllSheetHeaders } from '../lib/header-repair';
 
 interface SheetsState {
   sheets: SheetConfig[];
+  groups: SheetGroup[];
   activeSheetId: string | null;
   addSheet: (name?: string) => string;
   addSheetWithId: (id: string, name: string) => void;
@@ -97,6 +98,56 @@ interface SheetsState {
    * @param pinnedRows - Number of rows to pin (min: 0)
    */
   setPinnedRows: (sheetId: string, pinnedRows: number) => boolean;
+
+  // Sheet group management methods
+
+  /**
+   * Create a new sheet group.
+   * @param name - Name for the new group
+   * @returns ID of the new group
+   */
+  addGroup: (name: string) => string;
+
+  /**
+   * Update a group's properties (name, collapsed state, color).
+   * @param groupId - ID of the group to update
+   * @param updates - Properties to update
+   */
+  updateGroup: (groupId: string, updates: Partial<Pick<SheetGroup, 'name' | 'collapsed' | 'color'>>) => boolean;
+
+  /**
+   * Remove a group.
+   * @param groupId - ID of the group to remove
+   * @param deleteSheets - If true, delete all sheets in the group. If false, move sheets to ungrouped.
+   */
+  removeGroup: (groupId: string, deleteSheets?: boolean) => boolean;
+
+  /**
+   * Move a sheet into a group.
+   * Removes the sheet from its current group (if any) and adds it to the target group.
+   * @param sheetId - ID of the sheet to move
+   * @param groupId - ID of the target group, or null to move to ungrouped
+   */
+  moveSheetToGroup: (sheetId: string, groupId: string | null) => boolean;
+
+  /**
+   * Toggle the collapsed state of a group.
+   * @param groupId - ID of the group to toggle
+   */
+  toggleGroupCollapsed: (groupId: string) => boolean;
+
+  /**
+   * Get the group that a sheet belongs to.
+   * @param sheetId - ID of the sheet
+   * @returns The group, or undefined if the sheet is ungrouped
+   */
+  getSheetGroup: (sheetId: string) => SheetGroup | undefined;
+
+  /**
+   * Get ungrouped sheets (sheets not in any group).
+   * @returns Array of sheet IDs not in any group
+   */
+  getUngroupedSheetIds: () => string[];
 }
 
 const generateId = () => crypto.randomUUID();
@@ -172,6 +223,7 @@ export const useSheetsStore = create<SheetsState>()(
   persist(
     (set, get) => ({
       sheets: [],
+      groups: [],
       activeSheetId: null,
 
       /**
@@ -789,6 +841,111 @@ export const useSheetsStore = create<SheetsState>()(
 
         return true;
       },
+
+      // Sheet group management methods
+
+      addGroup: (name: string) => {
+        const groupId = generateId();
+        const newGroup: SheetGroup = {
+          id: groupId,
+          name,
+          collapsed: false,
+          sheetIds: [],
+        };
+
+        set((state) => ({
+          groups: [...state.groups, newGroup],
+        }));
+
+        return groupId;
+      },
+
+      updateGroup: (groupId: string, updates: Partial<Pick<SheetGroup, 'name' | 'collapsed' | 'color'>>) => {
+        const { groups } = get();
+        const group = groups.find((g) => g.id === groupId);
+        if (!group) return false;
+
+        set((state) => ({
+          groups: state.groups.map((g) =>
+            g.id === groupId ? { ...g, ...updates } : g
+          ),
+        }));
+
+        return true;
+      },
+
+      removeGroup: (groupId: string, deleteSheets = false) => {
+        const { groups, removeSheet } = get();
+        const group = groups.find((g) => g.id === groupId);
+        if (!group) return false;
+
+        if (deleteSheets) {
+          // Delete all sheets in the group
+          group.sheetIds.forEach((sheetId) => {
+            removeSheet(sheetId);
+          });
+        }
+
+        // Remove the group
+        set((state) => ({
+          groups: state.groups.filter((g) => g.id !== groupId),
+        }));
+
+        return true;
+      },
+
+      moveSheetToGroup: (sheetId: string, groupId: string | null) => {
+        const { sheets, groups } = get();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        if (!sheet) return false;
+
+        // If moving to a specific group, verify it exists
+        if (groupId !== null) {
+          const targetGroup = groups.find((g) => g.id === groupId);
+          if (!targetGroup) return false;
+        }
+
+        set((state) => ({
+          groups: state.groups.map((g) => {
+            // Remove sheet from current group if it's there
+            if (g.sheetIds.includes(sheetId)) {
+              return { ...g, sheetIds: g.sheetIds.filter((id) => id !== sheetId) };
+            }
+            // Add sheet to target group
+            if (g.id === groupId) {
+              return { ...g, sheetIds: [...g.sheetIds, sheetId] };
+            }
+            return g;
+          }),
+        }));
+
+        return true;
+      },
+
+      toggleGroupCollapsed: (groupId: string) => {
+        const { groups } = get();
+        const group = groups.find((g) => g.id === groupId);
+        if (!group) return false;
+
+        set((state) => ({
+          groups: state.groups.map((g) =>
+            g.id === groupId ? { ...g, collapsed: !g.collapsed } : g
+          ),
+        }));
+
+        return true;
+      },
+
+      getSheetGroup: (sheetId: string) => {
+        const { groups } = get();
+        return groups.find((g) => g.sheetIds.includes(sheetId));
+      },
+
+      getUngroupedSheetIds: () => {
+        const { sheets, groups } = get();
+        const groupedSheetIds = new Set(groups.flatMap((g) => g.sheetIds));
+        return sheets.map((s) => s.id).filter((id) => !groupedSheetIds.has(id));
+      },
     }),
     {
       name: 'sku-sheets',
@@ -800,9 +957,14 @@ export const useSheetsStore = create<SheetsState>()(
           const sampleSpecs = getSampleSpecifications();
           useSpecificationsStore.setState({ specifications: sampleSpecs });
           state.sheets = [productSheet];
+          state.groups = [];
           state.activeSheetId = productSheet.id;
           markAsInitialized();
         } else if (state && state.sheets.length > 0) {
+          // Ensure groups array exists (for existing users without groups)
+          if (!state.groups) {
+            state.groups = [];
+          }
           // Check if migration from Config sheet is needed
           const configSheet = state.sheets.find((s) => s.type === 'config');
           const specsStore = useSpecificationsStore.getState();

@@ -1,3 +1,43 @@
+## sheet-groups - COMPLETED
+Add ability to organize sheets into collapsible groups/folders
+
+### Key decisions
+- Created SheetGroup interface in types/index.ts with id, name, collapsed, sheetIds, color? fields
+- Added groups array and 7 group management methods to useSheetsStore (addGroup, updateGroup, removeGroup, moveSheetToGroup, toggleGroupCollapsed, getSheetGroup, getUngroupedSheetIds)
+- Created GroupedSheetTabs component replacing SheetTabs with full group support
+- Drag-and-drop implemented via HTML5 drag API with visual feedback (ring highlight on drop target)
+- Groups appear as collapsible sections with chevron icon and sheet count
+- Context menu via shadcn DropdownMenu with rename and two delete options (keep sheets vs delete sheets)
+- Group color support included (border-left and background tint) for sheet-group-colors task
+- Groups persisted via Zustand persist middleware alongside sheets
+
+### Files changed
+- src/types/index.ts (+12 lines: SheetGroup interface with color field)
+- src/store/sheets.ts (+120 lines: groups array, 7 management methods, onRehydrateStorage groups init)
+- src/store/sheets.test.ts (+250 lines: comprehensive tests for all group methods)
+- src/components/spreadsheet/GroupedSheetTabs.tsx (new, ~500 lines: full component with groups, drag-drop, context menu)
+- src/components/spreadsheet/GroupedSheetTabs.test.tsx (new, ~450 lines: 35+ tests covering all interactions)
+- src/components/SpreadsheetContainer.tsx (+35 lines: group handlers, integration with GroupedSheetTabs)
+- src/components/SpreadsheetContainer.test.tsx (+3 lines: updated testids for GroupedSheetTabs)
+
+### Notes
+- All 11 stepsToVerify criteria met:
+  1. SheetGroup interface defined in types/index.ts ✓
+  2. SheetsState has 'groups: SheetGroup[]' field ✓
+  3. Can create new group via button ✓ (FolderPlus button + inline input)
+  4. Groups appear as collapsible sections with chevron ✓
+  5. Clicking group header expands/collapses the group ✓
+  6. Can drag sheet into a group ✓
+  7. Can drag sheet out of group to ungrouped area ✓
+  8. Group context menu shows rename/delete options ✓ (via dropdown menu, not right-click due to browser interception)
+  9. Deleting group can optionally delete sheets or move to ungrouped ✓
+  10. Groups persist after page refresh ✓ (via Zustand persist)
+  11. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (build dir warnings only, pre-existing)
+- npm run test passes (1265 tests, +35 new in GroupedSheetTabs.test.tsx, +18 new in sheets.test.ts)
+- npm run build passes
+
 ## export-preview - COMPLETED
 Add export preview dialog that shows what export will look like before downloading
 

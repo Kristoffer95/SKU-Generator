@@ -2412,4 +2412,265 @@ describe('useSheetsStore', () => {
       expect(newSheet.pinnedRows).toBeUndefined();
     });
   });
+
+  describe('Sheet Groups', () => {
+    beforeEach(() => {
+      useSheetsStore.setState({ sheets: [], groups: [], activeSheetId: null });
+    });
+
+    describe('addGroup', () => {
+      it('should create a new group with given name', () => {
+        const { addGroup } = useSheetsStore.getState();
+        const groupId = addGroup('My Group');
+
+        const { groups } = useSheetsStore.getState();
+        expect(groups).toHaveLength(1);
+        expect(groups[0].id).toBe(groupId);
+        expect(groups[0].name).toBe('My Group');
+        expect(groups[0].collapsed).toBe(false);
+        expect(groups[0].sheetIds).toEqual([]);
+      });
+
+      it('should allow creating multiple groups', () => {
+        const { addGroup } = useSheetsStore.getState();
+        addGroup('Group 1');
+        addGroup('Group 2');
+
+        const { groups } = useSheetsStore.getState();
+        expect(groups).toHaveLength(2);
+        expect(groups[0].name).toBe('Group 1');
+        expect(groups[1].name).toBe('Group 2');
+      });
+    });
+
+    describe('updateGroup', () => {
+      it('should update group name', () => {
+        const { addGroup, updateGroup } = useSheetsStore.getState();
+        const groupId = addGroup('Old Name');
+
+        const result = updateGroup(groupId, { name: 'New Name' });
+
+        expect(result).toBe(true);
+        const { groups } = useSheetsStore.getState();
+        expect(groups[0].name).toBe('New Name');
+      });
+
+      it('should update group collapsed state', () => {
+        const { addGroup, updateGroup } = useSheetsStore.getState();
+        const groupId = addGroup('My Group');
+
+        const result = updateGroup(groupId, { collapsed: true });
+
+        expect(result).toBe(true);
+        const { groups } = useSheetsStore.getState();
+        expect(groups[0].collapsed).toBe(true);
+      });
+
+      it('should update group color', () => {
+        const { addGroup, updateGroup } = useSheetsStore.getState();
+        const groupId = addGroup('My Group');
+
+        const result = updateGroup(groupId, { color: '#ff0000' });
+
+        expect(result).toBe(true);
+        const { groups } = useSheetsStore.getState();
+        expect(groups[0].color).toBe('#ff0000');
+      });
+
+      it('should return false for non-existent group', () => {
+        const { updateGroup } = useSheetsStore.getState();
+        const result = updateGroup('non-existent', { name: 'New Name' });
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('removeGroup', () => {
+      it('should remove group and keep sheets ungrouped by default', () => {
+        const { addSheet, addGroup, moveSheetToGroup, removeGroup } = useSheetsStore.getState();
+        const sheetId = addSheet('Sheet 1');
+        const groupId = addGroup('My Group');
+        moveSheetToGroup(sheetId, groupId);
+
+        const result = removeGroup(groupId, false);
+
+        expect(result).toBe(true);
+        const { groups, sheets } = useSheetsStore.getState();
+        expect(groups).toHaveLength(0);
+        expect(sheets).toHaveLength(1);
+        expect(sheets[0].id).toBe(sheetId);
+      });
+
+      it('should remove group and delete sheets when deleteSheets is true', () => {
+        const { addSheet, addGroup, moveSheetToGroup, removeGroup } = useSheetsStore.getState();
+        const sheetId = addSheet('Sheet 1');
+        const groupId = addGroup('My Group');
+        moveSheetToGroup(sheetId, groupId);
+
+        // Need to add another sheet since removeSheet won't delete the last sheet
+        addSheet('Sheet 2');
+
+        const result = removeGroup(groupId, true);
+
+        expect(result).toBe(true);
+        const { groups, sheets } = useSheetsStore.getState();
+        expect(groups).toHaveLength(0);
+        expect(sheets.find((s) => s.id === sheetId)).toBeUndefined();
+      });
+
+      it('should return false for non-existent group', () => {
+        const { removeGroup } = useSheetsStore.getState();
+        const result = removeGroup('non-existent');
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('moveSheetToGroup', () => {
+      it('should add sheet to a group', () => {
+        const { addSheet, addGroup, moveSheetToGroup } = useSheetsStore.getState();
+        const sheetId = addSheet('Sheet 1');
+        const groupId = addGroup('My Group');
+
+        const result = moveSheetToGroup(sheetId, groupId);
+
+        expect(result).toBe(true);
+        const { groups } = useSheetsStore.getState();
+        expect(groups[0].sheetIds).toContain(sheetId);
+      });
+
+      it('should move sheet from one group to another', () => {
+        const { addSheet, addGroup, moveSheetToGroup } = useSheetsStore.getState();
+        const sheetId = addSheet('Sheet 1');
+        const group1Id = addGroup('Group 1');
+        const group2Id = addGroup('Group 2');
+
+        moveSheetToGroup(sheetId, group1Id);
+        moveSheetToGroup(sheetId, group2Id);
+
+        const { groups } = useSheetsStore.getState();
+        const group1 = groups.find((g) => g.id === group1Id)!;
+        const group2 = groups.find((g) => g.id === group2Id)!;
+        expect(group1.sheetIds).not.toContain(sheetId);
+        expect(group2.sheetIds).toContain(sheetId);
+      });
+
+      it('should move sheet to ungrouped (null group)', () => {
+        const { addSheet, addGroup, moveSheetToGroup } = useSheetsStore.getState();
+        const sheetId = addSheet('Sheet 1');
+        const groupId = addGroup('My Group');
+
+        moveSheetToGroup(sheetId, groupId);
+        moveSheetToGroup(sheetId, null);
+
+        const { groups } = useSheetsStore.getState();
+        expect(groups[0].sheetIds).not.toContain(sheetId);
+      });
+
+      it('should return false for non-existent sheet', () => {
+        const { addGroup, moveSheetToGroup } = useSheetsStore.getState();
+        addGroup('My Group');
+        const result = moveSheetToGroup('non-existent', 'group-id');
+        expect(result).toBe(false);
+      });
+
+      it('should return false for non-existent target group', () => {
+        const { addSheet, moveSheetToGroup } = useSheetsStore.getState();
+        const sheetId = addSheet('Sheet 1');
+        const result = moveSheetToGroup(sheetId, 'non-existent');
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('toggleGroupCollapsed', () => {
+      it('should toggle collapsed state from false to true', () => {
+        const { addGroup, toggleGroupCollapsed } = useSheetsStore.getState();
+        const groupId = addGroup('My Group');
+
+        const result = toggleGroupCollapsed(groupId);
+
+        expect(result).toBe(true);
+        const { groups } = useSheetsStore.getState();
+        expect(groups[0].collapsed).toBe(true);
+      });
+
+      it('should toggle collapsed state from true to false', () => {
+        const { addGroup, updateGroup, toggleGroupCollapsed } = useSheetsStore.getState();
+        const groupId = addGroup('My Group');
+        updateGroup(groupId, { collapsed: true });
+
+        const result = toggleGroupCollapsed(groupId);
+
+        expect(result).toBe(true);
+        const { groups } = useSheetsStore.getState();
+        expect(groups[0].collapsed).toBe(false);
+      });
+
+      it('should return false for non-existent group', () => {
+        const { toggleGroupCollapsed } = useSheetsStore.getState();
+        const result = toggleGroupCollapsed('non-existent');
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('getSheetGroup', () => {
+      it('should return the group containing the sheet', () => {
+        const { addSheet, addGroup, moveSheetToGroup, getSheetGroup } = useSheetsStore.getState();
+        const sheetId = addSheet('Sheet 1');
+        const groupId = addGroup('My Group');
+        moveSheetToGroup(sheetId, groupId);
+
+        const group = getSheetGroup(sheetId);
+
+        expect(group).toBeDefined();
+        expect(group!.id).toBe(groupId);
+      });
+
+      it('should return undefined for ungrouped sheet', () => {
+        const { addSheet, getSheetGroup } = useSheetsStore.getState();
+        const sheetId = addSheet('Sheet 1');
+
+        const group = getSheetGroup(sheetId);
+
+        expect(group).toBeUndefined();
+      });
+    });
+
+    describe('getUngroupedSheetIds', () => {
+      it('should return all sheets when no groups exist', () => {
+        const { addSheet, getUngroupedSheetIds } = useSheetsStore.getState();
+        const sheet1Id = addSheet('Sheet 1');
+        const sheet2Id = addSheet('Sheet 2');
+
+        const ungrouped = getUngroupedSheetIds();
+
+        expect(ungrouped).toContain(sheet1Id);
+        expect(ungrouped).toContain(sheet2Id);
+        expect(ungrouped).toHaveLength(2);
+      });
+
+      it('should exclude sheets that are in groups', () => {
+        const { addSheet, addGroup, moveSheetToGroup, getUngroupedSheetIds } = useSheetsStore.getState();
+        const sheet1Id = addSheet('Sheet 1');
+        const sheet2Id = addSheet('Sheet 2');
+        const groupId = addGroup('My Group');
+        moveSheetToGroup(sheet1Id, groupId);
+
+        const ungrouped = getUngroupedSheetIds();
+
+        expect(ungrouped).not.toContain(sheet1Id);
+        expect(ungrouped).toContain(sheet2Id);
+        expect(ungrouped).toHaveLength(1);
+      });
+
+      it('should return empty array when all sheets are grouped', () => {
+        const { addSheet, addGroup, moveSheetToGroup, getUngroupedSheetIds } = useSheetsStore.getState();
+        const sheet1Id = addSheet('Sheet 1');
+        const groupId = addGroup('My Group');
+        moveSheetToGroup(sheet1Id, groupId);
+
+        const ungrouped = getUngroupedSheetIds();
+
+        expect(ungrouped).toHaveLength(0);
+      });
+    });
+  });
 });

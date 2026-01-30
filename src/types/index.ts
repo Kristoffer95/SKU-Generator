@@ -131,3 +131,15 @@ export interface ColumnDef {
   header: string;   // Column header text
   width?: number;   // Column width in pixels (default: 120, min: 80)
 }
+
+/**
+ * A group/folder for organizing sheets
+ * Groups appear as collapsible sections in the sheet tabs area
+ */
+export interface SheetGroup {
+  id: string;
+  name: string;
+  collapsed: boolean;
+  sheetIds: string[];
+  color?: string;   // Optional group color (hex)
+}

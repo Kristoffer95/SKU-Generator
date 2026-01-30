@@ -5,7 +5,7 @@ import { useSettingsStore } from "@/store/settings"
 import { processAutoSKUFromColumns, processAutoSKUForAllRowsFromColumns } from "@/lib/auto-sku"
 import { validateDataSheetFromColumns, findDuplicateSKUs, ValidationError } from "@/lib/validation"
 import { ValidationPanel } from "@/components/ValidationPanel"
-import { SheetTabs } from "@/components/spreadsheet/SheetTabs"
+import { GroupedSheetTabs } from "@/components/spreadsheet/GroupedSheetTabs"
 import { SpreadsheetToolbar } from "@/components/spreadsheet/SpreadsheetToolbar"
 import { DropdownEditor } from "@/components/spreadsheet/DropdownEditor"
 import { ColumnHeaderContextMenu, ContextMenuPosition } from "@/components/spreadsheet/ColumnHeaderContextMenu"
@@ -155,7 +155,7 @@ function getSelectedCells(selection: Selection | undefined, rowCount: number = 0
 }
 
 export function SpreadsheetContainer() {
-  const { sheets, activeSheetId, setActiveSheet, setSheetData, addSheetWithId, removeSheet, updateSheet, reorderColumns, updateColumnWidth, updateRowHeight, updateFreeColumnHeader, duplicateSheet, setPinnedColumns, setPinnedRows } = useSheetsStore()
+  const { sheets, groups, activeSheetId, setActiveSheet, setSheetData, addSheetWithId, removeSheet, updateSheet, reorderColumns, updateColumnWidth, updateRowHeight, updateFreeColumnHeader, duplicateSheet, setPinnedColumns, setPinnedRows, addGroup, updateGroup, removeGroup, moveSheetToGroup, toggleGroupCollapsed, getUngroupedSheetIds } = useSheetsStore()
   // Get active sheet and use its local specifications and columns
   const activeSheet = sheets.find((s) => s.id === activeSheetId)
   const specifications = useMemo(
@@ -274,6 +274,31 @@ export function SpreadsheetContainer() {
     setHistory([])
     setHistoryIndex(-1)
   }, [duplicateSheet])
+
+  // Group management handlers
+  const handleAddGroup = useCallback((name: string) => {
+    addGroup(name)
+  }, [addGroup])
+
+  const handleRenameGroup = useCallback((groupId: string, newName: string) => {
+    updateGroup(groupId, { name: newName })
+  }, [updateGroup])
+
+  const handleDeleteGroup = useCallback((groupId: string, deleteSheets: boolean) => {
+    removeGroup(groupId, deleteSheets)
+  }, [removeGroup])
+
+  const handleToggleGroup = useCallback((groupId: string) => {
+    toggleGroupCollapsed(groupId)
+  }, [toggleGroupCollapsed])
+
+  const handleMoveSheetToGroup = useCallback((sheetId: string, groupId: string | null) => {
+    moveSheetToGroup(sheetId, groupId)
+  }, [moveSheetToGroup])
+
+  // Get ungrouped sheet IDs - sheets and groups in deps ensure reactivity when they change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const ungroupedSheetIds = useMemo(() => getUngroupedSheetIds(), [getUngroupedSheetIds, sheets, groups])
 
   // Handle spreadsheet data change
   const handleDataChange = useCallback((data: Matrix<CellBase<string | number | null>>) => {
@@ -1690,14 +1715,21 @@ export function SpreadsheetContainer() {
           onSelect={handleSelectionChange}
         />
       </div>
-      <SheetTabs
+      <GroupedSheetTabs
         sheets={sheetTabsData}
+        groups={groups}
         activeSheetId={activeSheetId}
         onActivate={handleSheetActivate}
         onRename={handleSheetRename}
         onDelete={handleSheetDelete}
         onDuplicate={handleSheetDuplicate}
         onAdd={handleSheetAdd}
+        onAddGroup={handleAddGroup}
+        onRenameGroup={handleRenameGroup}
+        onDeleteGroup={handleDeleteGroup}
+        onToggleGroup={handleToggleGroup}
+        onMoveSheetToGroup={handleMoveSheetToGroup}
+        ungroupedSheetIds={ungroupedSheetIds}
       />
       <ValidationPanel
         errors={validationErrors}
