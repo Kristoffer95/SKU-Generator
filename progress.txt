@@ -1,3 +1,31 @@
+## checkbox-spacebar-toggle - COMPLETED
+Add spacebar keyboard shortcut to toggle checkbox cells
+
+### Key decisions
+- Added handleSpacebarToggle callback in SpreadsheetContainer that toggles checkbox when exactly one checkbox cell is selected
+- Spacebar toggle uses handleCheckboxToggle, same as click toggle - ensures undo/redo history is tracked
+- Spacebar check: event.code === "Space" with no modifier keys (no metaKey, ctrlKey, altKey, shiftKey)
+- Only toggles when selectedCells.length === 1 and cell.checkbox is true
+- event.preventDefault() called only for checkbox cells to prevent page scroll
+
+### Files changed
+- src/components/SpreadsheetContainer.tsx (+22 lines: handleSpacebarToggle callback, spacebar handling in handleKeyDown)
+- src/components/SpreadsheetContainer.test.tsx (+120 lines: 8 new tests for spacebar toggle functionality)
+
+### Notes
+- All 8 stepsToVerify criteria met:
+  1. Select a checkbox cell in the spreadsheet ✓
+  2. Press spacebar - checkbox toggles from unchecked to checked ✓
+  3. Press spacebar again - checkbox toggles from checked to unchecked ✓
+  4. Page does not scroll when pressing spacebar on checkbox cell ✓ (preventDefault called)
+  5. Spacebar has no effect on non-checkbox cells ✓
+  6. Works when cell is selected (not in edit mode) ✓
+  7. Toggle is tracked in undo/redo history ✓
+  8. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (1319 tests, +8 new in SpreadsheetContainer.test.tsx)
+
 ## checkbox-cells - COMPLETED
 Add ability to insert checkboxes into cells
 

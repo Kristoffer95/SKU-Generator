@@ -1093,6 +1093,6 @@
       "Toggle is tracked in undo/redo history",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   }
 ]

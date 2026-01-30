@@ -1691,11 +1691,40 @@ export function SpreadsheetContainer() {
     [handleCheckboxToggle]
   )
 
-  // Handle keyboard shortcuts for copy/paste styles, undo/redo, and select-all
+  // Handle spacebar toggle for checkbox cells
+  const handleSpacebarToggle = useCallback(() => {
+    if (!activeSheet || selectedCells.length !== 1) return
+
+    const { row, column } = selectedCells[0]
+    const cell = activeSheet.data[row]?.[column]
+
+    // Only toggle if cell is a checkbox type
+    if (!cell?.checkbox) return
+
+    const currentValue = cell.v === true
+    handleCheckboxToggle(row, column, currentValue)
+  }, [activeSheet, selectedCells, handleCheckboxToggle])
+
+  // Handle keyboard shortcuts for copy/paste styles, undo/redo, select-all, and spacebar toggle
   const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
     // Use event.code instead of event.key to detect the physical key pressed
     // On macOS, Option+C produces 'ç' for event.key, but event.code is always 'KeyC'
     // This ensures the shortcut works correctly across all platforms
+
+    // Check for Spacebar - toggle checkbox cell
+    // Only trigger when no modifier keys are pressed
+    if (event.code === "Space" && !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey) {
+      // Check if we have exactly one cell selected that is a checkbox
+      if (activeSheet && selectedCells.length === 1) {
+        const { row, column } = selectedCells[0]
+        const cell = activeSheet.data[row]?.[column]
+        if (cell?.checkbox) {
+          event.preventDefault() // Prevent page scroll
+          handleSpacebarToggle()
+          return
+        }
+      }
+    }
 
     // Check for Option+Cmd+C (Mac) or Alt+Ctrl+C (Windows/Linux) - Copy styles
     if (event.code === "KeyC" && event.altKey && (event.metaKey || event.ctrlKey)) {
@@ -1733,7 +1762,7 @@ export function SpreadsheetContainer() {
       handleSelectAll()
       return
     }
-  }, [handleCopyStyles, handlePasteStyles, handleUndo, handleRedo, handleSelectAll])
+  }, [handleCopyStyles, handlePasteStyles, handleUndo, handleRedo, handleSelectAll, activeSheet, selectedCells, handleSpacebarToggle])
 
   if (sheets.length === 0) {
     return (
