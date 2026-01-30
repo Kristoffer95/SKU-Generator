@@ -741,7 +741,7 @@
       "Works alongside existing Undo toolbar button",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "redo-keyboard-shortcut",

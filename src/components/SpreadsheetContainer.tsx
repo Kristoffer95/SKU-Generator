@@ -1286,7 +1286,7 @@ export function SpreadsheetContainer() {
     historyIndexRef.current = -1
   }, [activeSheet, selectedCells, setSheetData])
 
-  // Handle keyboard shortcuts for copy/paste styles
+  // Handle keyboard shortcuts for copy/paste styles and undo/redo
   const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
     // Use event.code instead of event.key to detect the physical key pressed
     // On macOS, Option+C produces 'ç' for event.key, but event.code is always 'KeyC'
@@ -1305,7 +1305,15 @@ export function SpreadsheetContainer() {
       handlePasteStyles()
       return
     }
-  }, [handleCopyStyles, handlePasteStyles])
+
+    // Check for Cmd+Z (Mac) or Ctrl+Z (Windows/Linux) - Undo
+    // Only trigger when not combined with Shift (Shift+Cmd+Z is for redo)
+    if (event.code === "KeyZ" && (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey) {
+      event.preventDefault()
+      handleUndo()
+      return
+    }
+  }, [handleCopyStyles, handlePasteStyles, handleUndo])
 
   if (sheets.length === 0) {
     return (

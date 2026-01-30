@@ -1,3 +1,29 @@
+## undo-keyboard-shortcut - COMPLETED
+Add Cmd+Z (Mac) / Ctrl+Z (Windows/Linux) keyboard shortcut for undo
+
+### Key decisions
+- Extended existing handleKeyDown function in SpreadsheetContainer.tsx
+- Added check for event.code === 'KeyZ' with metaKey (Mac) or ctrlKey (Win/Linux)
+- Excluded shiftKey to avoid conflict with redo shortcut (Shift+Cmd+Z)
+- Excluded altKey to avoid conflict with copy styles shortcut (Option+Cmd+Z)
+- Calls existing handleUndo function, maintaining consistent behavior with toolbar button
+
+### Files changed
+- src/components/SpreadsheetContainer.tsx (handleKeyDown function: added undo shortcut)
+- src/components/SpreadsheetContainer.test.tsx (+6 tests for undo keyboard shortcut)
+
+### Notes
+- All 6 stepsToVerify criteria met:
+  1. Make an edit to a cell in the spreadsheet ✓
+  2. Press Cmd+Z (Mac) or Ctrl+Z (Windows) - edit is undone ✓
+  3. Shortcut works when spreadsheet container is focused ✓
+  4. Shortcut is prevented when nothing to undo ✓
+  5. Works alongside existing Undo toolbar button ✓
+  6. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (1017 tests, +6 new)
+
 ## copy-paste-styles-macos-fix - COMPLETED
 Fix Option+Cmd+C/V keyboard shortcuts not working on macOS
 
