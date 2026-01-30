@@ -109,7 +109,7 @@ describe("RowHeaderDropdownMenu", () => {
     expect(mockOnDelete).toHaveBeenCalledWith(1)
   })
 
-  it("does not show delete option for header row (row 0)", async () => {
+  it("shows delete option for row 0 (first data row)", async () => {
     const user = userEvent.setup()
     render(
       <RowHeaderDropdownMenu
@@ -125,11 +125,11 @@ describe("RowHeaderDropdownMenu", () => {
       expect(screen.getByTestId("row-menu-insert-above-0")).toBeInTheDocument()
     })
 
-    // Delete option should not be present for header row
-    expect(screen.queryByTestId("row-menu-delete-0")).not.toBeInTheDocument()
+    // Row 0 is now a valid data row, so delete should be available
+    expect(screen.getByTestId("row-menu-delete-0")).toBeInTheDocument()
   })
 
-  it("shows insert options for header row", async () => {
+  it("shows all options for row 0", async () => {
     const user = userEvent.setup()
     render(
       <RowHeaderDropdownMenu
@@ -145,6 +145,7 @@ describe("RowHeaderDropdownMenu", () => {
     await waitFor(() => {
       expect(screen.getByTestId("row-menu-insert-above-0")).toBeInTheDocument()
       expect(screen.getByTestId("row-menu-insert-below-0")).toBeInTheDocument()
+      expect(screen.getByTestId("row-menu-delete-0")).toBeInTheDocument()
     })
   })
 

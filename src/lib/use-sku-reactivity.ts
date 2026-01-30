@@ -114,9 +114,8 @@ function updateDisplayValuesInSheet(
 
   // Create a copy of the data to modify
   let modified = false;
-  const newData: CellData[][] = sheet.data.map((row, rowIndex) => {
-    // Skip header row (row 0)
-    if (rowIndex === 0) return [...row];
+  const newData: CellData[][] = sheet.data.map((row) => {
+    // All rows are data rows now - no header row to skip
 
     const newRow = [...row];
     for (const [colIndex, change] of columnChanges) {
@@ -155,14 +154,14 @@ function regenerateSheetSKUs(
   const { sheets, setSheetData } = useSheetsStore.getState();
   const sheet = sheets.find(s => s.id === sheetId);
 
-  if (!sheet || sheet.type !== 'data' || sheet.data.length <= 1) return;
+  if (!sheet || sheet.type !== 'data' || sheet.data.length === 0) return;
   if (specifications.length === 0) return;
 
   // Create a copy of the data to modify
   const newData = sheet.data.map((row) => [...row]);
 
-  // Update SKU for each data row (skip header row 0)
-  for (let rowIndex = 1; rowIndex < newData.length; rowIndex++) {
+  // Update SKU for each data row (all rows are data rows now)
+  for (let rowIndex = 0; rowIndex < newData.length; rowIndex++) {
     updateRowSKUFromColumns(newData, rowIndex, columns, specifications, settings);
   }
 

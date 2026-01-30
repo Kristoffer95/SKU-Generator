@@ -38,48 +38,49 @@ describe('spreadsheet-adapter', () => {
       expect(result).toEqual([]);
     });
 
-    it('converts header row without readOnly or dropdownOptions', () => {
+    it('sets readOnly: true and dropdownOptions on all data rows', () => {
+      // All rows are now data rows (no header row in data array)
       const data: CellData[][] = [
-        [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }, { v: 'Size', m: 'Size' }],
+        [{ v: 'SKU-001' }, { v: 'Red' }, { v: 'Small' }],
       ];
 
       const result = convertToSpreadsheetData(data, mockColumns, mockSpecifications);
 
       expect(result).toHaveLength(1);
-      // Header row should not have readOnly or dropdownOptions
-      expect(result[0][0]).toEqual({ value: 'SKU' });
-      expect(result[0][1]).toEqual({ value: 'Color' });
-      expect(result[0][2]).toEqual({ value: 'Size' });
+      // Row 0 is a data row - has readOnly on SKU column
+      expect(result[0][0]?.readOnly).toBe(true);
+      expect(result[0][0]?.value).toBe('SKU-001');
+      // Has dropdown options for spec columns
+      expect(result[0][1]?.dropdownOptions).toEqual(['Red', 'Blue']);
+      expect(result[0][2]?.dropdownOptions).toEqual(['Small', 'Large']);
     });
 
-    it('sets readOnly: true on SKU column for data rows', () => {
+    it('sets readOnly: true on SKU column for all data rows', () => {
       const data: CellData[][] = [
-        [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
         [{ v: 'SKU-001' }, { v: 'Red' }, { v: 'Small' }],
+        [{ v: 'SKU-002' }, { v: 'Blue' }, { v: 'Large' }],
       ];
 
       const result = convertToSpreadsheetData(data, mockColumns, mockSpecifications);
 
-      // Row 0 (header) - no readOnly
-      expect(result[0][0]?.readOnly).toBeUndefined();
-      // Row 1 (data) - readOnly on SKU column
+      // All rows are data rows - all have readOnly on SKU column
+      expect(result[0][0]?.readOnly).toBe(true);
+      expect(result[0][0]?.value).toBe('SKU-001');
       expect(result[1][0]?.readOnly).toBe(true);
-      expect(result[1][0]?.value).toBe('SKU-001');
+      expect(result[1][0]?.value).toBe('SKU-002');
     });
 
     it('populates dropdownOptions from specifications for spec columns', () => {
       const data: CellData[][] = [
-        [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
         [{ v: 'SKU-001' }, { v: 'Red' }, { v: 'Small' }],
+        [{ v: 'SKU-002' }, { v: 'Blue' }, { v: 'Large' }],
       ];
 
       const result = convertToSpreadsheetData(data, mockColumns, mockSpecifications);
 
-      // Row 0 (header) - no dropdown options
-      expect(result[0][1]?.dropdownOptions).toBeUndefined();
-      expect(result[0][2]?.dropdownOptions).toBeUndefined();
-
-      // Row 1 (data) - dropdown options for spec columns
+      // All rows are data rows - all have dropdown options for spec columns
+      expect(result[0][1]?.dropdownOptions).toEqual(['Red', 'Blue']);
+      expect(result[0][2]?.dropdownOptions).toEqual(['Small', 'Large']);
       expect(result[1][1]?.dropdownOptions).toEqual(['Red', 'Blue']);
       expect(result[1][2]?.dropdownOptions).toEqual(['Small', 'Large']);
     });
@@ -93,16 +94,15 @@ describe('spreadsheet-adapter', () => {
       ];
 
       const data: CellData[][] = [
-        [{ v: 'SKU' }, { v: 'Size' }, { v: 'Color' }],
         [{ v: 'SKU-001' }, { v: 'Small' }, { v: 'Red' }],
       ];
 
       const result = convertToSpreadsheetData(data, reorderedColumns, mockSpecifications);
 
       // Col 1 should have Size dropdown options (linked to spec-2)
-      expect(result[1][1]?.dropdownOptions).toEqual(['Small', 'Large']);
+      expect(result[0][1]?.dropdownOptions).toEqual(['Small', 'Large']);
       // Col 2 should have Color dropdown options (linked to spec-1)
-      expect(result[1][2]?.dropdownOptions).toEqual(['Red', 'Blue']);
+      expect(result[0][2]?.dropdownOptions).toEqual(['Red', 'Blue']);
     });
 
     it('handles empty cells correctly', () => {
@@ -111,16 +111,15 @@ describe('spreadsheet-adapter', () => {
         { id: 'col-color', type: 'spec', specId: 'spec-1', header: 'Color' },
       ];
       const data: CellData[][] = [
-        [{ v: 'SKU' }, { v: 'Color' }],
         [{}, {}], // Empty cells
       ];
 
       const result = convertToSpreadsheetData(data, columnsWithTwoCols, mockSpecifications);
 
       // Empty SKU cell should be readOnly with null value
-      expect(result[1][0]).toEqual({ value: null, readOnly: true });
+      expect(result[0][0]).toEqual({ value: null, readOnly: true });
       // Empty spec cell should have dropdown options
-      expect(result[1][1]).toEqual({ value: null, dropdownOptions: ['Red', 'Blue'] });
+      expect(result[0][1]).toEqual({ value: null, dropdownOptions: ['Red', 'Blue'] });
     });
 
     it('preserves background color as className', () => {
@@ -128,13 +127,12 @@ describe('spreadsheet-adapter', () => {
         { id: 'col-sku', type: 'sku', header: 'SKU' },
       ];
       const data: CellData[][] = [
-        [{ v: 'SKU' }],
         [{ v: 'SKU-001', bg: '#fef3c7' }], // amber duplicate warning
       ];
 
       const result = convertToSpreadsheetData(data, skuOnlyColumns, mockSpecifications);
 
-      expect(result[1][0]?.className).toBe('bg-[#fef3c7]');
+      expect(result[0][0]?.className).toBe('bg-[#fef3c7]');
     });
 
     it('preserves font color as className', () => {
@@ -142,13 +140,12 @@ describe('spreadsheet-adapter', () => {
         { id: 'col-sku', type: 'sku', header: 'SKU' },
       ];
       const data: CellData[][] = [
-        [{ v: 'SKU' }],
         [{ v: 'SKU-001', fc: '#dc2626' }], // red text
       ];
 
       const result = convertToSpreadsheetData(data, skuOnlyColumns, mockSpecifications);
 
-      expect(result[1][0]?.className).toBe('text-[#dc2626]');
+      expect(result[0][0]?.className).toBe('text-[#dc2626]');
     });
 
     it('preserves both background and font color as combined className', () => {
@@ -156,13 +153,12 @@ describe('spreadsheet-adapter', () => {
         { id: 'col-sku', type: 'sku', header: 'SKU' },
       ];
       const data: CellData[][] = [
-        [{ v: 'SKU' }],
         [{ v: 'SKU-001', bg: '#fce4ec', fc: '#dc2626' }], // pink bg, red text
       ];
 
       const result = convertToSpreadsheetData(data, skuOnlyColumns, mockSpecifications);
 
-      expect(result[1][0]?.className).toBe('bg-[#fce4ec] text-[#dc2626]');
+      expect(result[0][0]?.className).toBe('bg-[#fce4ec] text-[#dc2626]');
     });
 
     it('preserves bold formatting as className', () => {
@@ -170,13 +166,12 @@ describe('spreadsheet-adapter', () => {
         { id: 'col-sku', type: 'sku', header: 'SKU' },
       ];
       const data: CellData[][] = [
-        [{ v: 'SKU' }],
         [{ v: 'SKU-001', bold: true }],
       ];
 
       const result = convertToSpreadsheetData(data, skuOnlyColumns, mockSpecifications);
 
-      expect(result[1][0]?.className).toBe('cell-bold');
+      expect(result[0][0]?.className).toBe('cell-bold');
     });
 
     it('preserves italic formatting as className', () => {
@@ -184,13 +179,12 @@ describe('spreadsheet-adapter', () => {
         { id: 'col-sku', type: 'sku', header: 'SKU' },
       ];
       const data: CellData[][] = [
-        [{ v: 'SKU' }],
         [{ v: 'SKU-001', italic: true }],
       ];
 
       const result = convertToSpreadsheetData(data, skuOnlyColumns, mockSpecifications);
 
-      expect(result[1][0]?.className).toBe('cell-italic');
+      expect(result[0][0]?.className).toBe('cell-italic');
     });
 
     it('preserves text alignment as className', () => {
@@ -198,7 +192,6 @@ describe('spreadsheet-adapter', () => {
         { id: 'col-sku', type: 'sku', header: 'SKU' },
       ];
       const data: CellData[][] = [
-        [{ v: 'SKU' }],
         [{ v: 'Left', align: 'left' }],
         [{ v: 'Center', align: 'center' }],
         [{ v: 'Right', align: 'right' }],
@@ -206,9 +199,9 @@ describe('spreadsheet-adapter', () => {
 
       const result = convertToSpreadsheetData(data, skuOnlyColumns, mockSpecifications);
 
-      expect(result[1][0]?.className).toBe('cell-align-left');
-      expect(result[2][0]?.className).toBe('cell-align-center');
-      expect(result[3][0]?.className).toBe('cell-align-right');
+      expect(result[0][0]?.className).toBe('cell-align-left');
+      expect(result[1][0]?.className).toBe('cell-align-center');
+      expect(result[2][0]?.className).toBe('cell-align-right');
     });
 
     it('preserves all formatting options combined as className', () => {
@@ -216,13 +209,12 @@ describe('spreadsheet-adapter', () => {
         { id: 'col-sku', type: 'sku', header: 'SKU' },
       ];
       const data: CellData[][] = [
-        [{ v: 'SKU' }],
         [{ v: 'SKU-001', bg: '#fce4ec', fc: '#dc2626', bold: true, italic: true, align: 'center' }],
       ];
 
       const result = convertToSpreadsheetData(data, skuOnlyColumns, mockSpecifications);
 
-      expect(result[1][0]?.className).toBe('bg-[#fce4ec] text-[#dc2626] cell-bold cell-italic cell-align-center');
+      expect(result[0][0]?.className).toBe('bg-[#fce4ec] text-[#dc2626] cell-bold cell-italic cell-align-center');
     });
 
     it('handles cells with only m (display text) value', () => {
@@ -230,13 +222,13 @@ describe('spreadsheet-adapter', () => {
         { id: 'col-sku', type: 'sku', header: 'SKU' },
       ];
       const data: CellData[][] = [
-        [{ m: 'SKU' }],
+        [{ m: 'SKU-001' }],
         [{ m: 'Red' }],
       ];
 
       const result = convertToSpreadsheetData(data, skuOnlyColumns, mockSpecifications);
 
-      expect(result[0][0]?.value).toBe('SKU');
+      expect(result[0][0]?.value).toBe('SKU-001');
       expect(result[1][0]?.value).toBe('Red');
     });
 
@@ -247,17 +239,16 @@ describe('spreadsheet-adapter', () => {
         { id: 'col-notes', type: 'free', header: 'Notes' },
       ];
       const data: CellData[][] = [
-        [{ v: 'SKU' }, { v: 'Color' }, { v: 'Notes' }],
         [{ v: 'SKU-001' }, { v: 'Red' }, { v: 'Test note' }],
       ];
 
       const result = convertToSpreadsheetData(data, columnsWithFree, mockSpecifications);
 
       // Spec column should have dropdown
-      expect(result[1][1]?.dropdownOptions).toEqual(['Red', 'Blue']);
+      expect(result[0][1]?.dropdownOptions).toEqual(['Red', 'Blue']);
       // Free column should NOT have dropdown
-      expect(result[1][2]?.dropdownOptions).toBeUndefined();
-      expect(result[1][2]?.value).toBe('Test note');
+      expect(result[0][2]?.dropdownOptions).toBeUndefined();
+      expect(result[0][2]?.value).toBe('Test note');
     });
 
     it('free columns are not readOnly', () => {
@@ -266,16 +257,15 @@ describe('spreadsheet-adapter', () => {
         { id: 'col-notes', type: 'free', header: 'Notes' },
       ];
       const data: CellData[][] = [
-        [{ v: 'SKU' }, { v: 'Notes' }],
         [{ v: 'SKU-001' }, { v: 'Test note' }],
       ];
 
       const result = convertToSpreadsheetData(data, columnsWithFree, mockSpecifications);
 
       // SKU column should be readOnly
-      expect(result[1][0]?.readOnly).toBe(true);
+      expect(result[0][0]?.readOnly).toBe(true);
       // Free column should NOT be readOnly
-      expect(result[1][1]?.readOnly).toBeUndefined();
+      expect(result[0][1]?.readOnly).toBeUndefined();
     });
   });
 
@@ -416,8 +406,8 @@ describe('spreadsheet-adapter', () => {
 
   describe('roundtrip conversion', () => {
     it('preserves data through convert -> convertFrom cycle', () => {
+      // No header row - all rows are data rows
       const original: CellData[][] = [
-        [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }, { v: 'Size', m: 'Size' }],
         [{ v: 'SKU-R-S', m: 'SKU-R-S' }, { v: 'Red', m: 'Red' }, { v: 'Small', m: 'Small' }],
         [{ v: 'SKU-B-L', m: 'SKU-B-L' }, { v: 'Blue', m: 'Blue' }, { v: 'Large', m: 'Large' }],
       ];
@@ -426,10 +416,9 @@ describe('spreadsheet-adapter', () => {
       const result = convertFromSpreadsheetData(spreadsheetData);
 
       // Values should be preserved
-      expect(result[0][0]?.v).toBe('SKU');
-      expect(result[1][0]?.v).toBe('SKU-R-S');
-      expect(result[1][1]?.v).toBe('Red');
-      expect(result[2][2]?.v).toBe('Large');
+      expect(result[0][0]?.v).toBe('SKU-R-S');
+      expect(result[0][1]?.v).toBe('Red');
+      expect(result[1][2]?.v).toBe('Large');
     });
   });
 
@@ -441,14 +430,14 @@ describe('spreadsheet-adapter', () => {
 
     describe('convertToSpreadsheetData with checkbox cells', () => {
       it('preserves checkbox flag on cells', () => {
+        // No header row - all rows are data rows
         const data: CellData[][] = [
-          [{ v: 'SKU', m: 'SKU' }, { v: 'Status', m: 'Status' }],
           [{ v: 'SKU-1', m: 'SKU-1' }, { v: true, checkbox: true }],
         ];
 
         const result = convertToSpreadsheetData(data, freeColumns, []);
 
-        expect(result[1][1]).toMatchObject({
+        expect(result[0][1]).toMatchObject({
           value: true,
           checkbox: true,
         });
@@ -456,117 +445,108 @@ describe('spreadsheet-adapter', () => {
 
       it('converts boolean true value for checkbox cells', () => {
         const data: CellData[][] = [
-          [{ v: 'SKU' }, { v: 'Status' }],
           [{ v: 'SKU-1' }, { v: true, checkbox: true }],
         ];
 
         const result = convertToSpreadsheetData(data, freeColumns, []);
 
-        expect(result[1][1]?.checkbox).toBe(true);
-        expect(result[1][1]?.value).toBe(true);
+        expect(result[0][1]?.checkbox).toBe(true);
+        expect(result[0][1]?.value).toBe(true);
       });
 
       it('converts boolean false value for checkbox cells', () => {
         const data: CellData[][] = [
-          [{ v: 'SKU' }, { v: 'Status' }],
           [{ v: 'SKU-1' }, { v: false, checkbox: true }],
         ];
 
         const result = convertToSpreadsheetData(data, freeColumns, []);
 
-        expect(result[1][1]?.checkbox).toBe(true);
-        expect(result[1][1]?.value).toBe(false);
+        expect(result[0][1]?.checkbox).toBe(true);
+        expect(result[0][1]?.value).toBe(false);
       });
 
       it('converts string "true" to boolean true for checkbox cells', () => {
         const data: CellData[][] = [
-          [{ v: 'SKU' }, { v: 'Status' }],
           [{ v: 'SKU-1' }, { v: 'true', checkbox: true }],
         ];
 
         const result = convertToSpreadsheetData(data, freeColumns, []);
 
-        expect(result[1][1]?.checkbox).toBe(true);
-        expect(result[1][1]?.value).toBe(true);
+        expect(result[0][1]?.checkbox).toBe(true);
+        expect(result[0][1]?.value).toBe(true);
       });
 
       it('converts string "TRUE" to boolean true for checkbox cells', () => {
         const data: CellData[][] = [
-          [{ v: 'SKU' }, { v: 'Status' }],
           [{ v: 'SKU-1' }, { v: 'TRUE', checkbox: true }],
         ];
 
         const result = convertToSpreadsheetData(data, freeColumns, []);
 
-        expect(result[1][1]?.checkbox).toBe(true);
-        expect(result[1][1]?.value).toBe(true);
+        expect(result[0][1]?.checkbox).toBe(true);
+        expect(result[0][1]?.value).toBe(true);
       });
 
       it('converts other string values to boolean false for checkbox cells', () => {
         const data: CellData[][] = [
-          [{ v: 'SKU' }, { v: 'Status' }],
           [{ v: 'SKU-1' }, { v: 'false', checkbox: true }],
         ];
 
         const result = convertToSpreadsheetData(data, freeColumns, []);
 
-        expect(result[1][1]?.checkbox).toBe(true);
-        expect(result[1][1]?.value).toBe(false);
+        expect(result[0][1]?.checkbox).toBe(true);
+        expect(result[0][1]?.value).toBe(false);
       });
 
       it('converts null to boolean false for checkbox cells', () => {
         const data: CellData[][] = [
-          [{ v: 'SKU' }, { v: 'Status' }],
           [{ v: 'SKU-1' }, { v: null, checkbox: true }],
         ];
 
         const result = convertToSpreadsheetData(data, freeColumns, []);
 
-        expect(result[1][1]?.checkbox).toBe(true);
-        expect(result[1][1]?.value).toBe(false);
+        expect(result[0][1]?.checkbox).toBe(true);
+        expect(result[0][1]?.value).toBe(false);
       });
     });
 
     describe('convertFromSpreadsheetData with checkbox cells', () => {
       it('preserves checkbox flag when converting back', () => {
         const matrix: SKUMatrix = [
-          [{ value: 'SKU' }, { value: 'Status' }],
           [{ value: 'SKU-1' }, { value: true, checkbox: true }],
         ];
 
         const result = convertFromSpreadsheetData(matrix);
 
-        expect(result[1][1]?.checkbox).toBe(true);
-        expect(result[1][1]?.v).toBe(true);
+        expect(result[0][1]?.checkbox).toBe(true);
+        expect(result[0][1]?.v).toBe(true);
       });
 
       it('does not set display text (m) for checkbox cells', () => {
         const matrix: SKUMatrix = [
-          [{ value: 'SKU' }, { value: 'Status' }],
           [{ value: 'SKU-1' }, { value: true, checkbox: true }],
         ];
 
         const result = convertFromSpreadsheetData(matrix);
 
-        expect(result[1][1]?.m).toBeUndefined();
+        expect(result[0][1]?.m).toBeUndefined();
       });
 
       it('sets display text (m) for non-checkbox cells', () => {
         const matrix: SKUMatrix = [
-          [{ value: 'SKU' }, { value: 'Status' }],
           [{ value: 'SKU-1' }, { value: 'Active' }],
         ];
 
         const result = convertFromSpreadsheetData(matrix);
 
-        expect(result[1][1]?.m).toBe('Active');
+        expect(result[0][1]?.m).toBe('Active');
       });
     });
 
     describe('round-trip conversion with checkbox cells', () => {
       it('preserves checkbox state through round-trip', () => {
+        // No header row - all rows are data rows
         const original: CellData[][] = [
-          [{ v: 'SKU' }, { v: 'Done' }],
           [{ v: 'SKU-1' }, { v: true, checkbox: true }],
           [{ v: 'SKU-2' }, { v: false, checkbox: true }],
         ];
@@ -574,10 +554,10 @@ describe('spreadsheet-adapter', () => {
         const spreadsheetData = convertToSpreadsheetData(original, freeColumns, []);
         const result = convertFromSpreadsheetData(spreadsheetData);
 
-        expect(result[1][1]?.v).toBe(true);
+        expect(result[0][1]?.v).toBe(true);
+        expect(result[0][1]?.checkbox).toBe(true);
+        expect(result[1][1]?.v).toBe(false);
         expect(result[1][1]?.checkbox).toBe(true);
-        expect(result[2][1]?.v).toBe(false);
-        expect(result[2][1]?.checkbox).toBe(true);
       });
     });
   });

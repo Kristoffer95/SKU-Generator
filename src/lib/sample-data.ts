@@ -74,6 +74,7 @@ export function getSampleConfigData(): CellData[][] {
 /**
  * Returns sample products data sheet with 5 pre-filled products demonstrating SKU generation.
  * SKU column is first (Column A), followed by Color, Size, Material columns.
+ * NOTE: Headers are now in columns[].header, NOT in data[0]. This returns only data rows.
  *
  * Sample products demonstrate various SKU combinations:
  * - R-S-COT (Red, Small, Cotton)
@@ -84,13 +85,6 @@ export function getSampleConfigData(): CellData[][] {
  */
 export function getSampleProductData(): CellData[][] {
   return [
-    // Header row: SKU first, then spec columns
-    [
-      { v: 'SKU', m: 'SKU' },
-      { v: 'Color', m: 'Color' },
-      { v: 'Size', m: 'Size' },
-      { v: 'Material', m: 'Material' },
-    ],
     // Product 1: Red, Small, Cotton -> R-S-COT
     [
       { v: 'R-S-COT', m: 'R-S-COT' },

@@ -70,8 +70,8 @@ function applyDuplicateHighlighting(matrix: SKUMatrix, duplicateRows: Set<number
   return matrix.map((row, rowIndex) => {
     if (!row) return row
     return row.map((cell, colIndex) => {
-      // Only apply to SKU column (col 0) for data rows (row > 0)
-      if (colIndex === 0 && rowIndex > 0) {
+      // Apply to SKU column (col 0) for all data rows (all rows are data rows now)
+      if (colIndex === 0) {
         const bgColor = duplicateRows.has(rowIndex) ? DUPLICATE_SKU_BG_COLOR : SKU_COLUMN_BG_COLOR
         return {
           ...cell,
@@ -206,7 +206,7 @@ export function SpreadsheetContainer() {
   // Context menu state
   const [contextMenuPosition, setContextMenuPosition] = useState<ContextMenuPosition | null>(null)
   const [contextMenuColumn, setContextMenuColumn] = useState<ColumnDef | null>(null)
-  const [contextMenuColumnIndex, setContextMenuColumnIndex] = useState<number>(0)
+  const [contextMenuColumnIndex] = useState<number>(0)
 
   // Add column dialog state
   const [addColumnDialogOpen, setAddColumnDialogOpen] = useState(false)
@@ -483,27 +483,18 @@ export function SpreadsheetContainer() {
 
     // Check if this is a row indicator (first cell, cellIndex === 0)
     // Row indicator is the leftmost cell showing row numbers
-    // Only show row context menu for data rows (rowIndex > 0), not header row
-    if (cellIndex === 0 && rowIndex > 0) {
+    // All rows are data rows now - show row context menu for any row
+    if (cellIndex === 0) {
       event.preventDefault()
       setRowContextMenuPosition({ x: event.clientX, y: event.clientY })
       setRowContextMenuRowIndex(rowIndex)
       return
     }
 
-    // Otherwise, check if this is the header row for column context menu
-    if (rowIndex !== 0) return // Only show column context menu for header row
-
-    if (cellIndex <= 0) return // Skip row indicator column (index 0)
-
-    const columnIndex = cellIndex - 1 // Adjust for row indicator column
-    if (columnIndex < 0 || columnIndex >= columns.length) return
-
-    event.preventDefault()
-    const column = columns[columnIndex]
-    setContextMenuPosition({ x: event.clientX, y: event.clientY })
-    setContextMenuColumn(column)
-    setContextMenuColumnIndex(columnIndex)
+    // Column header context menu is handled by DraggableColumnHeaders component
+    // which is rendered above the data table. Data cells don't get the column context menu.
+    // All rows in the spreadsheet are now data rows (no header row), so we don't show
+    // the column context menu for any row here.
   }, [columns])
 
   // Close column context menu
@@ -595,16 +586,16 @@ export function SpreadsheetContainer() {
 
   // Handle delete row request (opens confirmation dialog)
   const handleDeleteRowRequest = useCallback((rowIndex: number) => {
-    // rowIndex is the data array index, where 0 is header row
-    // Header row (row 0) cannot be deleted - this should never be called for row 0
-    if (rowIndex === 0) return
+    // All rows are data rows now - any row can be deleted
+    if (rowIndex < 0) return
     setRowToDelete(rowIndex)
     setDeleteRowDialogOpen(true)
   }, [])
 
   // Handle delete row confirmation
   const handleDeleteRowConfirm = useCallback(() => {
-    if (!activeSheet || rowToDelete === null || rowToDelete === 0) return
+    // All rows are data rows now - any row can be deleted
+    if (!activeSheet || rowToDelete === null || rowToDelete < 0) return
 
     // Save current state for undo
     const oldEntry: HistoryEntry = {
@@ -855,9 +846,8 @@ export function SpreadsheetContainer() {
     let newData: CellData[][]
 
     if (mode === 'replace') {
-      // Keep header row, replace all data rows
-      const headerRow = activeSheet.data[0] ?? []
-      newData = [headerRow, ...rows]
+      // Replace all data rows (no header row to preserve)
+      newData = rows
     } else {
       // Append rows to existing data
       newData = [...activeSheet.data, ...rows]

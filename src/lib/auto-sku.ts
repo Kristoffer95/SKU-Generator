@@ -1,5 +1,5 @@
 import type { CellData, Specification, AppSettings, ColumnDef } from '../types';
-import { generateRowSKU, extractColumnHeaders, generateRowSKUFromColumns } from './sheet-sku';
+import { generateRowSKU, generateRowSKUFromColumns } from './sheet-sku';
 
 /**
  * Update SKU for a single row in a data sheet using column definitions
@@ -13,7 +13,8 @@ export function updateRowSKUFromColumns(
   specifications: Specification[],
   settings: AppSettings
 ): void {
-  if (rowIndex === 0 || rowIndex >= data.length) return; // Skip header row
+  // All rows are data rows now - no header row in data array
+  if (rowIndex < 0 || rowIndex >= data.length) return;
 
   const row = data[rowIndex];
   if (!row || row.length === 0) return;
@@ -38,22 +39,24 @@ export function updateRowSKU(
   data: CellData[][],
   rowIndex: number,
   specifications: Specification[],
-  settings: AppSettings
+  settings: AppSettings,
+  headers?: string[]
 ): void {
-  if (rowIndex === 0 || rowIndex >= data.length) return; // Skip header row
+  // All rows are data rows now - no header row in data array
+  if (rowIndex < 0 || rowIndex >= data.length) return;
 
   const row = data[rowIndex];
   if (!row || row.length === 0) return;
 
-  // Get headers from first row (excluding SKU column at index 0)
-  const headers = data[0] ? extractColumnHeaders(data[0]) : [];
-  if (headers.length === 0) return;
+  // Headers must be passed in (no longer in data[0])
+  const columnHeaders = headers ?? [];
+  if (columnHeaders.length === 0) return;
 
   // Get row values for the spec columns (starting from index 1, skip SKU column)
-  const rowValues = row.slice(1, headers.length + 1);
+  const rowValues = row.slice(1, columnHeaders.length + 1);
 
   // Generate SKU
-  const sku = generateRowSKU(rowValues, headers, specifications, settings);
+  const sku = generateRowSKU(rowValues, columnHeaders, specifications, settings);
 
   // SKU is always at index 0
   row[0] = { v: sku, m: sku };
@@ -62,7 +65,7 @@ export function updateRowSKU(
 /**
  * Compare two sheet data arrays and find rows that have changed
  * Uses column definitions to determine which columns to compare (excludes SKU columns)
- * Returns array of row indices that differ (excluding header row 0)
+ * Returns array of row indices that differ (all rows are data rows)
  */
 export function findChangedRowsFromColumns(
   oldData: CellData[][],
@@ -72,7 +75,8 @@ export function findChangedRowsFromColumns(
   const changedRows: number[] = [];
   const maxRows = Math.max(oldData.length, newData.length);
 
-  for (let rowIndex = 1; rowIndex < maxRows; rowIndex++) {
+  // All rows are data rows now - start from 0
+  for (let rowIndex = 0; rowIndex < maxRows; rowIndex++) {
     const oldRow = oldData[rowIndex];
     const newRow = newData[rowIndex];
 
@@ -103,13 +107,14 @@ export function findChangedRowsFromColumns(
 /**
  * Compare two sheet data arrays and find rows that have changed
  * @deprecated Use findChangedRowsFromColumns with columns for proper column type handling
- * Returns array of row indices that differ (excluding header row 0)
+ * Returns array of row indices that differ (all rows are data rows)
  */
 export function findChangedRows(oldData: CellData[][], newData: CellData[][]): number[] {
   const changedRows: number[] = [];
   const maxRows = Math.max(oldData.length, newData.length);
 
-  for (let rowIndex = 1; rowIndex < maxRows; rowIndex++) {
+  // All rows are data rows now - start from 0
+  for (let rowIndex = 0; rowIndex < maxRows; rowIndex++) {
     const oldRow = oldData[rowIndex];
     const newRow = newData[rowIndex];
 
@@ -159,11 +164,12 @@ export function processAutoSKU(
   oldData: CellData[][],
   newData: CellData[][],
   specifications: Specification[],
-  settings: AppSettings
+  settings: AppSettings,
+  headers?: string[]
 ): void {
   const changedRows = findChangedRows(oldData, newData);
   changedRows.forEach(rowIndex => {
-    updateRowSKU(newData, rowIndex, specifications, settings);
+    updateRowSKU(newData, rowIndex, specifications, settings, headers);
   });
 }
 
@@ -177,8 +183,8 @@ export function processAutoSKUForAllRowsFromColumns(
   specifications: Specification[],
   settings: AppSettings
 ): void {
-  // Process all rows except header (row 0)
-  for (let rowIndex = 1; rowIndex < data.length; rowIndex++) {
+  // All rows are data rows now - start from 0
+  for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
     updateRowSKUFromColumns(data, rowIndex, columns, specifications, settings);
   }
 }
@@ -191,10 +197,11 @@ export function processAutoSKUForAllRowsFromColumns(
 export function processAutoSKUForAllRows(
   data: CellData[][],
   specifications: Specification[],
-  settings: AppSettings
+  settings: AppSettings,
+  headers?: string[]
 ): void {
-  // Process all rows except header (row 0)
-  for (let rowIndex = 1; rowIndex < data.length; rowIndex++) {
-    updateRowSKU(data, rowIndex, specifications, settings);
+  // All rows are data rows now - start from 0
+  for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
+    updateRowSKU(data, rowIndex, specifications, settings, headers);
   }
 }

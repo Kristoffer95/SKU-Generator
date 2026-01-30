@@ -345,8 +345,8 @@ describe("SpecificationList", () => {
       }
 
       // Create a data sheet with sample data - initial SKU is R-S (Color first, Size second)
+      // Data rows only - no header row in data array
       const sheetData: CellData[][] = [
-        [{ v: "SKU", m: "SKU" }, { v: "Color", m: "Color" }, { v: "Size", m: "Size" }],
         [{ v: "R-S", m: "R-S" }, { v: "Red", m: "Red" }, { v: "Small", m: "Small" }],
       ]
 
@@ -358,14 +358,18 @@ describe("SpecificationList", () => {
           name: "Products",
           type: "data",
           data: sheetData,
-          columns: [],
+          columns: [
+            { id: "col-0", type: "sku", header: "SKU" },
+            { id: "col-1", type: "spec", header: "Color", specId: "spec-color" },
+            { id: "col-2", type: "spec", header: "Size", specId: "spec-size" },
+          ],
           specifications: [colorSpec, sizeSpec],
         }],
         activeSheetId: sheetId,
       })
 
-      // Verify initial SKU is R-S
-      expect(useSheetsStore.getState().sheets[0].data[1][0].v).toBe("R-S")
+      // Verify initial SKU is R-S (first data row at index 0)
+      expect(useSheetsStore.getState().sheets[0].data[0][0].v).toBe("R-S")
 
       // Render component - necessary for the reorder logic to be available
       render(<SpecificationList />)
@@ -383,10 +387,14 @@ describe("SpecificationList", () => {
         const sheets = useSheetsStore.getState().sheets
 
         sheets.forEach((sheet) => {
-          if (sheet.type !== "data" || sheet.data.length <= 1) return
+          if (sheet.type !== "data" || sheet.data.length === 0) return
           const newData = sheet.data.map((row) => [...row])
-          for (let rowIndex = 1; rowIndex < newData.length; rowIndex++) {
-            updateRowSKU(newData, rowIndex, updatedSpecs, settings)
+          // Extract headers from columns (skip SKU column at index 0)
+          const sheetColumns = sheet.columns ?? []
+          const headers = sheetColumns.slice(1).map(col => col.header ?? '')
+          // All rows are data rows now - start from 0
+          for (let rowIndex = 0; rowIndex < newData.length; rowIndex++) {
+            updateRowSKU(newData, rowIndex, updatedSpecs, settings, headers)
           }
           useSheetsStore.getState().setSheetData(sheet.id, newData)
         })
@@ -397,9 +405,9 @@ describe("SpecificationList", () => {
       expect(updatedSpecs.find((s) => s.id === "spec-size")?.order).toBe(0)
       expect(updatedSpecs.find((s) => s.id === "spec-color")?.order).toBe(1)
 
-      // SKU should now be S-R (Size first, Color second)
+      // SKU should now be S-R (Size first, Color second) - first data row at index 0
       const sheets = useSheetsStore.getState().sheets
-      expect(sheets[0].data[1][0].v).toBe("S-R")
+      expect(sheets[0].data[0][0].v).toBe("S-R")
     })
 
     it("persists order after store state change", () => {
@@ -1045,8 +1053,8 @@ describe("SpecificationList", () => {
         { id: "col-sku", type: "sku", header: "SKU" },
         { id: "col-color", type: "spec", header: "Color", specId: "spec-color" },
       ]
+      // Data rows only - no header row in data array
       const data: CellData[][] = [
-        [{ v: "SKU", m: "SKU" }, { v: "Color", m: "Color" }],
         [{ v: "R", m: "R" }, { v: "Red", m: "Red" }],
       ]
 
@@ -1071,9 +1079,6 @@ describe("SpecificationList", () => {
 
         // Column header should be updated
         expect(sheet?.columns[1].header).toBe("Shade")
-
-        // Header row data should also be updated
-        expect(sheet?.data[0][1].v).toBe("Shade")
       })
     })
 
@@ -1090,9 +1095,8 @@ describe("SpecificationList", () => {
         { id: "col-color1", type: "spec", header: "Color", specId: "spec-color" },
         { id: "col-color2", type: "spec", header: "Color", specId: "spec-color" },
       ]
-      const data: CellData[][] = [
-        [{ v: "SKU" }, { v: "Color" }, { v: "Color" }],
-      ]
+      // Data rows only - no header row in data array (empty in this test)
+      const data: CellData[][] = []
 
       createSheetWithSpecs("Test Sheet", data, [spec], columns)
 
@@ -1108,15 +1112,13 @@ describe("SpecificationList", () => {
       await user.clear(input)
       await user.type(input, "Hue{Enter}")
 
-      // Verify both columns updated
+      // Verify both column definitions updated
       await waitFor(() => {
         const { sheets, activeSheetId } = useSheetsStore.getState()
         const sheet = sheets.find((s) => s.id === activeSheetId)
 
         expect(sheet?.columns[1].header).toBe("Hue")
         expect(sheet?.columns[2].header).toBe("Hue")
-        expect(sheet?.data[0][1].v).toBe("Hue")
-        expect(sheet?.data[0][2].v).toBe("Hue")
       })
     })
 

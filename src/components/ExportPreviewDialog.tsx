@@ -76,21 +76,26 @@ interface SheetPreviewTableProps {
 }
 
 function SheetPreviewTable({ sheet, maxRows, maxCols }: SheetPreviewTableProps) {
-  const { displayData, isTruncatedRows, isTruncatedCols, totalRows, totalCols } = useMemo(() => {
+  const { displayData, headers, isTruncatedRows, isTruncatedCols, totalRows, totalCols } = useMemo(() => {
     const data = sheet.data
+    const columns = sheet.columns ?? []
     const totalRows = data.length
-    const totalCols = data.length > 0 ? Math.max(...data.map(row => row.length)) : 0
+    const totalCols = columns.length > 0 ? columns.length : (data.length > 0 ? Math.max(...data.map(row => row.length)) : 0)
 
+    // Headers come from columns[].header (no header row in data anymore)
+    const headers = columns.slice(0, maxCols).map(col => col.header)
+
+    // All rows in data are now data rows (no header row)
     const isTruncatedRows = totalRows > maxRows
     const isTruncatedCols = totalCols > maxCols
 
     // Slice the data to fit within limits
     const displayData = data.slice(0, maxRows).map(row => row.slice(0, maxCols))
 
-    return { displayData, isTruncatedRows, isTruncatedCols, totalRows, totalCols }
-  }, [sheet.data, maxRows, maxCols])
+    return { displayData, headers, isTruncatedRows, isTruncatedCols, totalRows, totalCols }
+  }, [sheet.data, sheet.columns, maxRows, maxCols])
 
-  if (displayData.length === 0) {
+  if (displayData.length === 0 && headers.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-8">
         No data to preview
@@ -102,6 +107,22 @@ function SheetPreviewTable({ sheet, maxRows, maxCols }: SheetPreviewTableProps) 
     <div className="space-y-2">
       <div className="overflow-auto max-h-[300px] border rounded-md">
         <table className="w-full border-collapse text-sm">
+          {/* Header row from columns[].header */}
+          {headers.length > 0 && (
+            <thead>
+              <tr>
+                {headers.map((header, colIndex) => (
+                  <td
+                    key={colIndex}
+                    className="border border-gray-300 px-2 py-1 text-xs truncate max-w-[150px] bg-gray-100 font-semibold"
+                    title={header}
+                  >
+                    {header}
+                  </td>
+                ))}
+              </tr>
+            </thead>
+          )}
           <tbody>
             {displayData.map((row, rowIndex) => (
               <tr key={rowIndex}>
@@ -109,7 +130,7 @@ function SheetPreviewTable({ sheet, maxRows, maxCols }: SheetPreviewTableProps) 
                   <PreviewCell
                     key={colIndex}
                     cell={cell}
-                    isHeader={rowIndex === 0}
+                    isHeader={false}
                   />
                 ))}
               </tr>

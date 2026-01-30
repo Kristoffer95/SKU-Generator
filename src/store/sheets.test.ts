@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useSheetsStore } from './sheets';
+import { useSheetsStore, isLikelyHeaderRow, removeHeaderRowFromSheet } from './sheets';
 import { useSpecificationsStore } from './specifications';
 import type { SheetConfig, CellData } from '../types';
 
@@ -68,7 +68,7 @@ describe('useSheetsStore', () => {
       expect(sheets).toHaveLength(1);
       expect(sheets[0].name).toBe('Sample Products');
       expect(sheets[0].type).toBe('data');
-      expect(sheets[0].data).toHaveLength(6); // header + 5 products
+      expect(sheets[0].data).toHaveLength(5); // 5 products (no header row in data anymore)
       expect(activeSheetId).toBe(sheets[0].id);
       // Verify no Config sheet
       expect(sheets.find((s) => s.type === 'config')).toBeUndefined();
@@ -188,20 +188,20 @@ describe('useSheetsStore', () => {
   });
 
   describe('addSheet', () => {
-    it('should add a sheet with default name, SKU header, and 50 empty rows', () => {
+    it('should add a sheet with default name and 50 empty data rows (no header row in data)', () => {
       const { addSheet } = useSheetsStore.getState();
       const id = addSheet();
 
       const { sheets, activeSheetId } = useSheetsStore.getState();
       expect(sheets).toHaveLength(1);
       expect(sheets[0].name).toBe('Sheet 1');
-      // New sheets have header row + 50 empty data rows = 51 total
-      expect(sheets[0].data).toHaveLength(51);
-      // Header row only has SKU when no specs exist
-      expect(sheets[0].data[0]).toEqual([{ v: 'SKU', m: 'SKU' }]);
+      // New sheets have 50 empty data rows (no header row in data anymore)
+      expect(sheets[0].data).toHaveLength(50);
       // Each empty row has one empty cell for SKU column
-      expect(sheets[0].data[1]).toEqual([{}]);
-      expect(sheets[0].data[50]).toEqual([{}]);
+      expect(sheets[0].data[0]).toEqual([{}]);
+      expect(sheets[0].data[49]).toEqual([{}]);
+      // Column headers are in columns[].header now
+      expect(sheets[0].columns[0].header).toBe('SKU');
       expect(activeSheetId).toBe(id);
     });
 
@@ -220,12 +220,13 @@ describe('useSheetsStore', () => {
 
       const { sheets } = useSheetsStore.getState();
       // New sheets only have SKU column - specs are now per-sheet and start empty
-      // 51 rows = 1 header + 50 empty data rows
-      expect(sheets[0].data).toHaveLength(51);
-      expect(sheets[0].data[0]).toEqual([{ v: 'SKU', m: 'SKU' }]);
+      // 50 data rows (no header row in data anymore)
+      expect(sheets[0].data).toHaveLength(50);
+      expect(sheets[0].data[0]).toEqual([{}]); // empty data row
       expect(sheets[0].specifications).toEqual([]);
       expect(sheets[0].columns).toHaveLength(1);
       expect(sheets[0].columns[0].type).toBe('sku');
+      expect(sheets[0].columns[0].header).toBe('SKU');
     });
 
     it('should add a sheet with custom name', () => {
@@ -248,12 +249,12 @@ describe('useSheetsStore', () => {
   });
 
   describe('sheet-default-rows feature', () => {
-    it('new sheets should have exactly 51 rows (1 header + 50 data rows)', () => {
+    it('new sheets should have exactly 50 data rows (no header row in data)', () => {
       const { addSheet } = useSheetsStore.getState();
       addSheet('Test Sheet');
 
       const { sheets } = useSheetsStore.getState();
-      expect(sheets[0].data).toHaveLength(51);
+      expect(sheets[0].data).toHaveLength(50);
     });
 
     it('new sheets should have only SKU column initially', () => {
@@ -267,23 +268,25 @@ describe('useSheetsStore', () => {
       expect(sheets[0].columns[0].header).toBe('SKU');
     });
 
-    it('header row should have only SKU column header', () => {
+    it('column headers should be in columns array, not in data', () => {
       const { addSheet } = useSheetsStore.getState();
       addSheet('Test Sheet');
 
       const { sheets } = useSheetsStore.getState();
-      // Row 0 is header with SKU
+      // Header is in columns[0].header, not data[0]
+      expect(sheets[0].columns[0].header).toBe('SKU');
+      // Row 0 is a data row (empty cell), not a header row
       expect(sheets[0].data[0]).toHaveLength(1);
-      expect(sheets[0].data[0][0]).toEqual({ v: 'SKU', m: 'SKU' });
+      expect(sheets[0].data[0][0]).toEqual({});
     });
 
-    it('each empty row should have an empty cell for the SKU column', () => {
+    it('each data row should have an empty cell for the SKU column', () => {
       const { addSheet } = useSheetsStore.getState();
       addSheet('Test Sheet');
 
       const { sheets } = useSheetsStore.getState();
-      // Rows 1-50 are empty data rows with one empty cell each
-      for (let i = 1; i <= 50; i++) {
+      // All 50 rows are data rows with one empty cell each
+      for (let i = 0; i < 50; i++) {
         expect(sheets[0].data[i]).toHaveLength(1);
         expect(sheets[0].data[i][0]).toEqual({});
       }
@@ -298,12 +301,8 @@ describe('useSheetsStore', () => {
 
       // Simulate adding a spec column by manually updating the sheet data
       // (In practice, this would be done through the store's column management methods)
-      const newData = sheet.data.map((row, index) => {
-        if (index === 0) {
-          // Update header row
-          return [...row, { v: 'Color', m: 'Color' }];
-        }
-        // Add empty cell for new column in data rows
+      // All rows are data rows now - just add empty cell for new column
+      const newData = sheet.data.map((row) => {
         return [...row, {}];
       });
 
@@ -312,12 +311,11 @@ describe('useSheetsStore', () => {
       // The sheet can be updated with new columns
       const { sheets: updatedSheets } = useSheetsStore.getState();
       expect(updatedSheets[0].data[0]).toHaveLength(2);
-      expect(updatedSheets[0].data[0][1]).toEqual({ v: 'Color', m: 'Color' });
     });
   });
 
   describe('addSheetWithId', () => {
-    it('should add a sheet with specific ID, SKU header, and 50 empty rows', () => {
+    it('should add a sheet with specific ID and 50 empty data rows (no header row in data)', () => {
       const { addSheetWithId } = useSheetsStore.getState();
       addSheetWithId('custom-id-123', 'External Sheet');
 
@@ -326,12 +324,12 @@ describe('useSheetsStore', () => {
       expect(sheets[0].id).toBe('custom-id-123');
       expect(sheets[0].name).toBe('External Sheet');
       expect(sheets[0].type).toBe('data');
-      // New sheets have header row + 50 empty data rows = 51 total
-      expect(sheets[0].data).toHaveLength(51);
-      // Header row only has SKU when no specs exist
-      expect(sheets[0].data[0]).toEqual([{ v: 'SKU', m: 'SKU' }]);
-      // Each empty row has one empty cell for SKU column
-      expect(sheets[0].data[1]).toEqual([{}]);
+      // New sheets have 50 data rows (no header row in data anymore)
+      expect(sheets[0].data).toHaveLength(50);
+      // Column header is in columns[].header, not data[0]
+      expect(sheets[0].columns[0].header).toBe('SKU');
+      // Each data row has one empty cell for SKU column
+      expect(sheets[0].data[0]).toEqual([{}]);
       expect(activeSheetId).toBe('custom-id-123');
     });
 
@@ -349,9 +347,10 @@ describe('useSheetsStore', () => {
 
       const { sheets } = useSheetsStore.getState();
       // New sheets only have SKU column - specs are now per-sheet and start empty
-      // 51 rows = 1 header + 50 empty data rows
-      expect(sheets[0].data).toHaveLength(51);
-      expect(sheets[0].data[0]).toEqual([{ v: 'SKU', m: 'SKU' }]);
+      // 50 data rows (no header row in data anymore)
+      expect(sheets[0].data).toHaveLength(50);
+      expect(sheets[0].data[0]).toEqual([{}]); // empty data row
+      expect(sheets[0].columns[0].header).toBe('SKU'); // header in columns
       expect(sheets[0].specifications).toEqual([]);
       expect(sheets[0].columns).toHaveLength(1);
       expect(sheets[0].columns[0].type).toBe('sku');
@@ -1226,6 +1225,310 @@ describe('useSheetsStore', () => {
     });
   });
 
+  describe('Redundant header row removal (remove-redundant-header-row)', () => {
+    describe('isLikelyHeaderRow', () => {
+      it('should return true when data[0] matches column headers', () => {
+        const sheet: SheetConfig = {
+          id: 'test',
+          name: 'Test',
+          type: 'data',
+          data: [
+            [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
+            [{ v: 'R-S' }, { v: 'Red' }, { v: 'Small' }],
+          ],
+          columns: [
+            { id: 'c1', type: 'sku', header: 'SKU' },
+            { id: 'c2', type: 'spec', header: 'Color' },
+            { id: 'c3', type: 'spec', header: 'Size' },
+          ],
+          specifications: [],
+        };
+        expect(isLikelyHeaderRow(sheet)).toBe(true);
+      });
+
+      it('should return false when data[0] does not match column headers', () => {
+        const sheet: SheetConfig = {
+          id: 'test',
+          name: 'Test',
+          type: 'data',
+          data: [
+            [{ v: 'R-S' }, { v: 'Red' }, { v: 'Small' }],
+            [{ v: 'B-L' }, { v: 'Blue' }, { v: 'Large' }],
+          ],
+          columns: [
+            { id: 'c1', type: 'sku', header: 'SKU' },
+            { id: 'c2', type: 'spec', header: 'Color' },
+            { id: 'c3', type: 'spec', header: 'Size' },
+          ],
+          specifications: [],
+        };
+        expect(isLikelyHeaderRow(sheet)).toBe(false);
+      });
+
+      it('should return false when sheet has no data', () => {
+        const sheet: SheetConfig = {
+          id: 'test',
+          name: 'Test',
+          type: 'data',
+          data: [],
+          columns: [{ id: 'c1', type: 'sku', header: 'SKU' }],
+          specifications: [],
+        };
+        expect(isLikelyHeaderRow(sheet)).toBe(false);
+      });
+
+      it('should return false when sheet has no columns', () => {
+        const sheet: SheetConfig = {
+          id: 'test',
+          name: 'Test',
+          type: 'data',
+          data: [[{ v: 'SKU' }]],
+          columns: [],
+          specifications: [],
+        };
+        expect(isLikelyHeaderRow(sheet)).toBe(false);
+      });
+
+      it('should return true when using m field instead of v', () => {
+        const sheet: SheetConfig = {
+          id: 'test',
+          name: 'Test',
+          type: 'data',
+          data: [
+            [{ m: 'SKU' }, { m: 'Color' }],
+            [{ v: 'R-S' }, { v: 'Red' }],
+          ],
+          columns: [
+            { id: 'c1', type: 'sku', header: 'SKU' },
+            { id: 'c2', type: 'spec', header: 'Color' },
+          ],
+          specifications: [],
+        };
+        expect(isLikelyHeaderRow(sheet)).toBe(true);
+      });
+
+      it('should require at least 50% match to detect header row', () => {
+        // 1 out of 4 columns match (25%) - should not be detected as header
+        const sheet: SheetConfig = {
+          id: 'test',
+          name: 'Test',
+          type: 'data',
+          data: [
+            [{ v: 'SKU' }, { v: 'NotColor' }, { v: 'NotSize' }, { v: 'NotMaterial' }],
+          ],
+          columns: [
+            { id: 'c1', type: 'sku', header: 'SKU' },
+            { id: 'c2', type: 'spec', header: 'Color' },
+            { id: 'c3', type: 'spec', header: 'Size' },
+            { id: 'c4', type: 'spec', header: 'Material' },
+          ],
+          specifications: [],
+        };
+        expect(isLikelyHeaderRow(sheet)).toBe(false);
+      });
+    });
+
+    describe('removeHeaderRowFromSheet', () => {
+      it('should remove header row when data[0] matches columns', () => {
+        const sheet: SheetConfig = {
+          id: 'test',
+          name: 'Test',
+          type: 'data',
+          data: [
+            [{ v: 'SKU' }, { v: 'Color' }],
+            [{ v: 'R' }, { v: 'Red' }],
+            [{ v: 'B' }, { v: 'Blue' }],
+          ],
+          columns: [
+            { id: 'c1', type: 'sku', header: 'SKU' },
+            { id: 'c2', type: 'spec', header: 'Color' },
+          ],
+          specifications: [],
+        };
+
+        const result = removeHeaderRowFromSheet(sheet);
+        expect(result.data).toHaveLength(2);
+        expect(result.data[0]).toEqual([{ v: 'R' }, { v: 'Red' }]);
+        expect(result.data[1]).toEqual([{ v: 'B' }, { v: 'Blue' }]);
+      });
+
+      it('should not modify sheet if data[0] does not match columns', () => {
+        const sheet: SheetConfig = {
+          id: 'test',
+          name: 'Test',
+          type: 'data',
+          data: [
+            [{ v: 'R' }, { v: 'Red' }],
+            [{ v: 'B' }, { v: 'Blue' }],
+          ],
+          columns: [
+            { id: 'c1', type: 'sku', header: 'SKU' },
+            { id: 'c2', type: 'spec', header: 'Color' },
+          ],
+          specifications: [],
+        };
+
+        const result = removeHeaderRowFromSheet(sheet);
+        expect(result.data).toHaveLength(2);
+        expect(result.data).toEqual(sheet.data);
+      });
+
+      it('should decrement pinnedRows by 1 when > 0', () => {
+        const sheet: SheetConfig = {
+          id: 'test',
+          name: 'Test',
+          type: 'data',
+          data: [
+            [{ v: 'SKU' }, { v: 'Color' }],
+            [{ v: 'R' }, { v: 'Red' }],
+          ],
+          columns: [
+            { id: 'c1', type: 'sku', header: 'SKU' },
+            { id: 'c2', type: 'spec', header: 'Color' },
+          ],
+          specifications: [],
+          pinnedRows: 2, // Pin header + first data row
+        };
+
+        const result = removeHeaderRowFromSheet(sheet);
+        expect(result.pinnedRows).toBe(1); // Decremented by 1
+      });
+
+      it('should keep pinnedRows as 0 if already 0', () => {
+        const sheet: SheetConfig = {
+          id: 'test',
+          name: 'Test',
+          type: 'data',
+          data: [
+            [{ v: 'SKU' }],
+            [{ v: 'R' }],
+          ],
+          columns: [{ id: 'c1', type: 'sku', header: 'SKU' }],
+          specifications: [],
+          pinnedRows: 0,
+        };
+
+        const result = removeHeaderRowFromSheet(sheet);
+        expect(result.pinnedRows).toBe(0);
+      });
+
+      it('should shift rowHeights indices down by 1', () => {
+        const sheet: SheetConfig = {
+          id: 'test',
+          name: 'Test',
+          type: 'data',
+          data: [
+            [{ v: 'SKU' }],
+            [{ v: 'R' }],
+            [{ v: 'B' }],
+          ],
+          columns: [{ id: 'c1', type: 'sku', header: 'SKU' }],
+          specifications: [],
+          rowHeights: {
+            0: 40, // Header row (will be dropped)
+            1: 50, // First data row -> becomes row 0
+            2: 60, // Second data row -> becomes row 1
+          },
+        };
+
+        const result = removeHeaderRowFromSheet(sheet);
+        expect(result.rowHeights).toEqual({
+          0: 50, // Was row 1
+          1: 60, // Was row 2
+        });
+      });
+
+      it('should drop rowHeights entirely if only header row had custom height', () => {
+        const sheet: SheetConfig = {
+          id: 'test',
+          name: 'Test',
+          type: 'data',
+          data: [
+            [{ v: 'SKU' }],
+            [{ v: 'R' }],
+          ],
+          columns: [{ id: 'c1', type: 'sku', header: 'SKU' }],
+          specifications: [],
+          rowHeights: { 0: 40 }, // Only header row has custom height
+        };
+
+        const result = removeHeaderRowFromSheet(sheet);
+        expect(result.rowHeights).toBeUndefined();
+      });
+
+      it('should not modify config sheets', () => {
+        const configSheet: SheetConfig = {
+          id: 'config',
+          name: 'Config',
+          type: 'config',
+          data: [
+            [{ v: 'Specification' }, { v: 'Value' }, { v: 'SKU Code' }],
+            [{ v: 'Color' }, { v: 'Red' }, { v: 'R' }],
+          ],
+          columns: [],
+          specifications: [],
+        };
+
+        const result = removeHeaderRowFromSheet(configSheet);
+        expect(result.data).toHaveLength(2);
+        expect(result).toEqual(configSheet);
+      });
+
+      it('should preserve other sheet properties', () => {
+        const sheet: SheetConfig = {
+          id: 'test-id',
+          name: 'My Sheet',
+          type: 'data',
+          data: [
+            [{ v: 'SKU' }],
+            [{ v: 'R' }],
+          ],
+          columns: [{ id: 'c1', type: 'sku', header: 'SKU' }],
+          specifications: [{ id: 's1', name: 'Color', order: 0, values: [] }],
+          pinnedColumns: 2,
+        };
+
+        const result = removeHeaderRowFromSheet(sheet);
+        expect(result.id).toBe('test-id');
+        expect(result.name).toBe('My Sheet');
+        expect(result.type).toBe('data');
+        expect(result.columns).toEqual(sheet.columns);
+        expect(result.specifications).toEqual(sheet.specifications);
+        expect(result.pinnedColumns).toBe(2);
+      });
+    });
+
+    describe('integration with store', () => {
+      it('row indices in UI should match data array indices after migration', () => {
+        // This test verifies that after header removal, row 1 in UI = data[0]
+        const sheet: SheetConfig = {
+          id: 'test',
+          name: 'Test',
+          type: 'data',
+          data: [
+            [{ v: 'SKU' }, { v: 'Color' }],  // Header row (will be removed)
+            [{ v: 'R' }, { v: 'Red' }],       // data[1] -> data[0]
+            [{ v: 'B' }, { v: 'Blue' }],      // data[2] -> data[1]
+          ],
+          columns: [
+            { id: 'c1', type: 'sku', header: 'SKU' },
+            { id: 'c2', type: 'spec', header: 'Color' },
+          ],
+          specifications: [],
+        };
+
+        const result = removeHeaderRowFromSheet(sheet);
+
+        // After migration:
+        // - data[0] is the first data row (was data[1])
+        // - data[1] is the second data row (was data[2])
+        // - Row numbers in UI (1, 2, ...) map to data[0], data[1], ...
+        expect(result.data[0]).toEqual([{ v: 'R' }, { v: 'Red' }]); // Row 1 in UI
+        expect(result.data[1]).toEqual([{ v: 'B' }, { v: 'Blue' }]); // Row 2 in UI
+      });
+    });
+  });
+
   describe('Sheet-scoped specification methods (spec-store-migration)', () => {
     let sheetId: string;
 
@@ -1978,6 +2281,7 @@ describe('useSheetsStore', () => {
       const sheetId = addSheet('Test Sheet');
 
       // Set up columns including a free column
+      // Note: headers are only in columns[].header now, not in data[0]
       useSheetsStore.setState((state) => ({
         sheets: state.sheets.map((s) =>
           s.id === sheetId
@@ -1989,7 +2293,7 @@ describe('useSheetsStore', () => {
                   { id: 'col-3', type: 'free' as const, header: 'Notes' },
                 ],
                 data: [
-                  [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }, { v: 'Notes', m: 'Notes' }],
+                  // Data rows only (no header row)
                   [{ v: 'SKU-001', m: 'SKU-001' }, { v: 'Red', m: 'Red' }, { v: 'Note 1', m: 'Note 1' }],
                 ],
               }
@@ -2008,10 +2312,8 @@ describe('useSheetsStore', () => {
 
       expect(result).toBe(true);
       const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      // Header is only in columns[].header now
       expect(sheet.columns[2].header).toBe('Comments');
-      // Header row data should also be updated
-      expect(sheet.data[0][2].v).toBe('Comments');
-      expect(sheet.data[0][2].m).toBe('Comments');
     });
 
     it('should not rename a spec column', () => {

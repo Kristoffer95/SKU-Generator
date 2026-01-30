@@ -40,7 +40,7 @@ beforeEach(() => {
         name: 'Sheet 1',
         type: 'data',
         data: [
-          [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
+          // Data rows only - no header row
           [{ v: '' }, { v: 'Red' }],
           [{ v: '' }, { v: 'Blue' }],
         ],
@@ -339,16 +339,16 @@ describe('AddColumnDialog', () => {
       expect(columns[2].specId).toBeDefined()
     })
 
-    it('adds column header to data row 0', () => {
+    it('adds column header to columns array', () => {
       render(<AddColumnDialog open={true} onOpenChange={() => {}} />)
 
       fireEvent.change(screen.getByTestId('new-spec-name'), { target: { value: 'Size' } })
       fireEvent.change(screen.getByTestId('value-label-0'), { target: { value: 'Small' } })
       fireEvent.click(screen.getByTestId('submit-button'))
 
-      const data = getActiveSheetData()
-      expect(data[0]).toHaveLength(3)
-      expect(data[0][2].v).toBe('Size')
+      const columns = getActiveSheetColumns()
+      expect(columns).toHaveLength(3)
+      expect(columns[2].header).toBe('Size')
     })
 
     it('adds empty cells to data rows', () => {
@@ -359,10 +359,11 @@ describe('AddColumnDialog', () => {
       fireEvent.click(screen.getByTestId('submit-button'))
 
       const data = getActiveSheetData()
+      // Data rows now start at index 0 (no header row)
+      expect(data[0]).toHaveLength(3)
+      expect(data[0][2]).toEqual({})
       expect(data[1]).toHaveLength(3)
       expect(data[1][2]).toEqual({})
-      expect(data[2]).toHaveLength(3)
-      expect(data[2][2]).toEqual({})
     })
   })
 
@@ -408,17 +409,21 @@ describe('AddColumnDialog', () => {
       expect(columns[2].specId).toBeUndefined()
     })
 
-    it('adds column header and empty cells to data', () => {
+    it('adds column header to columns and empty cells to data', () => {
       render(<AddColumnDialog open={true} onOpenChange={() => {}} />)
 
       fireEvent.click(screen.getByTestId('column-type-free'))
       fireEvent.change(screen.getByTestId('free-column-name'), { target: { value: 'Notes' } })
       fireEvent.click(screen.getByTestId('submit-button'))
 
+      // Header is now in columns array
+      const columns = getActiveSheetColumns()
+      expect(columns[2].header).toBe('Notes')
+
+      // Data rows have empty cells
       const data = getActiveSheetData()
-      expect(data[0][2].v).toBe('Notes')
+      expect(data[0][2]).toEqual({})
       expect(data[1][2]).toEqual({})
-      expect(data[2][2]).toEqual({})
     })
   })
 
@@ -457,14 +462,16 @@ describe('AddColumnDialog', () => {
       fireEvent.change(screen.getByTestId('position-selector'), { target: { value: '1' } })
       fireEvent.click(screen.getByTestId('submit-button'))
 
+      // Headers are in columns array
+      const columns = getActiveSheetColumns()
+      expect(columns[0].header).toBe('SKU')
+      expect(columns[1].header).toBe('Notes')
+      expect(columns[2].header).toBe('Color')
+
+      // Data rows only contain values, no header row
       const data = getActiveSheetData()
-      // Header row
-      expect(data[0][0].v).toBe('SKU')
-      expect(data[0][1].v).toBe('Notes')
-      expect(data[0][2].v).toBe('Color')
-      // Data rows
-      expect(data[1][1]).toEqual({})
-      expect(data[1][2].v).toBe('Red')
+      expect(data[0][1]).toEqual({})
+      expect(data[0][2].v).toBe('Red')
     })
   })
 

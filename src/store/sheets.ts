@@ -165,11 +165,73 @@ const CONFIG_SHEET_HEADERS: CellData[] = [
 const generateColumnId = () => crypto.randomUUID();
 
 /**
- * Creates the header row from columns definitions
+ * Checks if a sheet's data[0] appears to be a header row (redundant with columns[].header).
+ * A header row is detected when data[0] values match the column headers.
  */
-const createHeaderRowFromColumns = (columns: ColumnDef[]): CellData[] => {
-  return columns.map(col => ({ v: col.header, m: col.header }));
-};
+function isLikelyHeaderRow(sheet: SheetConfig): boolean {
+  if (!sheet.data || sheet.data.length === 0) return false;
+  if (!sheet.columns || sheet.columns.length === 0) return false;
+
+  const firstRow = sheet.data[0];
+  if (!firstRow || firstRow.length === 0) return false;
+
+  // Check if first row values match column headers
+  let matchCount = 0;
+  const minLength = Math.min(firstRow.length, sheet.columns.length);
+
+  for (let i = 0; i < minLength; i++) {
+    const cellValue = String(firstRow[i]?.v ?? firstRow[i]?.m ?? '').trim();
+    const columnHeader = sheet.columns[i]?.header?.trim() ?? '';
+    if (cellValue === columnHeader && cellValue !== '') {
+      matchCount++;
+    }
+  }
+
+  // If majority of cells match column headers, it's likely a header row
+  return matchCount >= Math.min(2, minLength) && matchCount >= minLength * 0.5;
+}
+
+/**
+ * Removes header row from sheet data if it exists (migration for remove-redundant-header-row).
+ * Also adjusts pinnedRows if needed.
+ */
+function removeHeaderRowFromSheet(sheet: SheetConfig): SheetConfig {
+  if (sheet.type === 'config') return sheet;
+  if (!isLikelyHeaderRow(sheet)) return sheet;
+
+  // Remove the first row (header row)
+  const newData = sheet.data.slice(1);
+
+  // Decrement pinnedRows if > 0 (since row indices shift down by 1)
+  const newPinnedRows = sheet.pinnedRows && sheet.pinnedRows > 0
+    ? sheet.pinnedRows - 1
+    : sheet.pinnedRows;
+
+  // Adjust rowHeights - shift all keys down by 1 (row 1 becomes row 0, etc.)
+  let newRowHeights: Record<number, number> | undefined;
+  if (sheet.rowHeights && Object.keys(sheet.rowHeights).length > 0) {
+    newRowHeights = {};
+    for (const [key, value] of Object.entries(sheet.rowHeights)) {
+      const oldIndex = parseInt(key, 10);
+      if (oldIndex > 0) {
+        newRowHeights[oldIndex - 1] = value;
+      }
+      // Drop row 0 heights (header row is removed)
+    }
+    // Only keep if non-empty
+    if (Object.keys(newRowHeights).length === 0) {
+      newRowHeights = undefined;
+    }
+  }
+
+  return {
+    ...sheet,
+    data: newData,
+    ...(newPinnedRows !== undefined && { pinnedRows: newPinnedRows }),
+    // Explicitly set rowHeights to the new shifted value, or undefined if empty
+    rowHeights: newRowHeights,
+  };
+}
 
 /**
  * Creates the default column (just SKU) for a new empty sheet
@@ -191,16 +253,17 @@ const createEmptyDataRows = (columnCount: number, rowCount: number): CellData[][
 /**
  * Creates an empty sheet with default SKU column and empty specifications.
  * New sheets start with just the SKU column and 50 empty data rows; users add spec columns as needed.
+ * Column headers are stored in columns[].header, NOT in data[0].
  */
 const createEmptySheet = (name: string, type: SheetConfig['type'] = 'data'): SheetConfig => {
   const columns = type === 'data' ? createDefaultColumns() : [];
-  const headerRow = type === 'data' ? createHeaderRowFromColumns(columns) : [];
+  // Data array contains only data rows, no header row - headers live in columns[].header
   const emptyRows = type === 'data' ? createEmptyDataRows(columns.length, 50) : [];
   return {
     id: generateId(),
     name,
     type,
-    data: headerRow.length > 0 ? [headerRow, ...emptyRows] : [],
+    data: emptyRows,
     columns,
     specifications: [],
   };
@@ -285,13 +348,13 @@ export const useSheetsStore = create<SheetsState>()(
         if (sheets.some((s) => s.id === id)) return;
 
         const columns = createDefaultColumns();
-        const headerRow = createHeaderRowFromColumns(columns);
+        // Data array contains only data rows, no header row - headers live in columns[].header
         const emptyRows = createEmptyDataRows(columns.length, 50);
         const newSheet: SheetConfig = {
           id,
           name,
           type: 'data',
-          data: headerRow.length > 0 ? [headerRow, ...emptyRows] : [],
+          data: emptyRows,
           columns,
           specifications: [],
         };
@@ -468,10 +531,23 @@ export const useSheetsStore = create<SheetsState>()(
 
         const newSpec: Specification = { id: specId, name, order, values: [] };
 
+        // Create new column for the specification
+        const newColumn: ColumnDef = { id: generateId(), type: 'spec', header: name, specId };
+
+        // If columns is empty, add SKU column first
+        const currentColumns = sheet.columns ?? [];
+        const updatedColumns = currentColumns.length === 0
+          ? [{ id: generateId(), type: 'sku' as const, header: 'SKU' }, newColumn]
+          : [...currentColumns, newColumn];
+
         set((state) => ({
           sheets: state.sheets.map((s) =>
             s.id === sheetId
-              ? { ...s, specifications: [...(s.specifications ?? []), newSpec] }
+              ? {
+                  ...s,
+                  specifications: [...(s.specifications ?? []), newSpec],
+                  columns: updatedColumns,
+                }
               : s
           ),
         }));
@@ -771,7 +847,7 @@ export const useSheetsStore = create<SheetsState>()(
         const trimmedHeader = header.trim();
         if (!trimmedHeader) return false;
 
-        // Update both the column definition and the header row data
+        // Update only the column definition - headers now live only in columns[].header
         set((state) => ({
           sheets: state.sheets.map((s) => {
             if (s.id !== sheetId) return s;
@@ -781,18 +857,7 @@ export const useSheetsStore = create<SheetsState>()(
               idx === columnIndex ? { ...col, header: trimmedHeader } : col
             );
 
-            // Update header row (row 0) cell
-            const updatedData = [...s.data];
-            if (updatedData.length > 0 && updatedData[0].length > columnIndex) {
-              updatedData[0] = [...updatedData[0]];
-              updatedData[0][columnIndex] = {
-                ...updatedData[0][columnIndex],
-                v: trimmedHeader,
-                m: trimmedHeader,
-              };
-            }
-
-            return { ...s, columns: updatedColumns, data: updatedData };
+            return { ...s, columns: updatedColumns };
           }),
         }));
 
@@ -1029,9 +1094,16 @@ export const useSheetsStore = create<SheetsState>()(
             };
           });
 
+          // Migration: Remove redundant header row from data array
+          // Headers now live only in columns[].header, not in data[0]
+          state.sheets = state.sheets.map((sheet) => removeHeaderRowFromSheet(sheet));
+
           markAsInitialized();
         }
       },
     }
   )
 );
+
+// Export migration functions for testing
+export { isLikelyHeaderRow, removeHeaderRowFromSheet };

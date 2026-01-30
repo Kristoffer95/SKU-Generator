@@ -244,16 +244,7 @@ function SpecItem({ sheetId, spec, allSpecifications, isFirst, onDelete }: SpecI
             : col
         )
 
-        // Update header row (row 0) to match column headers
-        const updatedData = [...sheet.data]
-        if (updatedData.length > 0) {
-          updatedData[0] = updatedColumns.map((col) => ({
-            v: col.header,
-            m: col.header,
-          }))
-        }
-
-        return { ...sheet, columns: updatedColumns, data: updatedData }
+        return { ...sheet, columns: updatedColumns }
       }),
     }))
 
@@ -449,16 +440,20 @@ export function SpecificationList() {
   // Regenerate all SKUs in active sheet only (specs are now per-sheet)
   const regenerateAllSKUs = useCallback((updatedSpecs: Specification[]) => {
     if (!activeSheet || updatedSpecs.length === 0) return
-    if (activeSheet.type !== "data" || activeSheet.data.length <= 1) return
+    if (activeSheet.type !== "data" || activeSheet.data.length === 0) return
 
     const settings = { delimiter, prefix, suffix }
+
+    // Extract headers from columns (skip SKU column at index 0)
+    const sheetColumns = activeSheet.columns ?? []
+    const headers = sheetColumns.slice(1).map(col => col.header ?? '')
 
     // Create a copy of the data to modify
     const newData = activeSheet.data.map((row) => [...row])
 
-    // Update SKU for each data row (skip header row 0)
-    for (let rowIndex = 1; rowIndex < newData.length; rowIndex++) {
-      updateRowSKU(newData, rowIndex, updatedSpecs, settings)
+    // Update SKU for each data row - all rows are data rows now (no header row)
+    for (let rowIndex = 0; rowIndex < newData.length; rowIndex++) {
+      updateRowSKU(newData, rowIndex, updatedSpecs, settings, headers)
     }
 
     // Update the sheet in the store
@@ -550,8 +545,9 @@ export function SpecificationList() {
 
         // 5. Regenerate all SKUs with the updated data, columns, and specs
         // Skip if no data rows or no remaining spec columns
-        if (newData.length > 1) {
-          for (let rowIndex = 1; rowIndex < newData.length; rowIndex++) {
+        // All rows are data rows now (no header row)
+        if (newData.length > 0) {
+          for (let rowIndex = 0; rowIndex < newData.length; rowIndex++) {
             updateRowSKUFromColumns(newData, rowIndex, newColumns, reorderedSpecs, settings)
           }
         }

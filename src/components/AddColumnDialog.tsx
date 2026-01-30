@@ -205,15 +205,11 @@ export function AddColumnDialog({ open, onOpenChange, defaultPosition }: AddColu
     newColumns.splice(insertIndex, 0, newColumn)
 
     // Update sheet data to add new column at position
-    const newData = activeSheet.data.map((row, rowIndex) => {
+    // All rows are data rows now - no header row in data array (headers in columns[].header)
+    const newData = activeSheet.data.map((row) => {
       const newRow = [...row]
-      if (rowIndex === 0) {
-        // Header row: insert column header
-        newRow.splice(insertIndex, 0, { v: newColumn.header, m: newColumn.header })
-      } else {
-        // Data row: insert empty cell
-        newRow.splice(insertIndex, 0, {})
-      }
+      // All rows get an empty cell for the new column
+      newRow.splice(insertIndex, 0, {})
       return newRow
     })
 

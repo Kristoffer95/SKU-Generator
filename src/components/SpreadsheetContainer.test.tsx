@@ -577,18 +577,18 @@ describe('SpreadsheetContainer read-only SKU column', () => {
     expect(row1[0]?.readOnly).toBe(true)
   })
 
-  it('does not set header row cells as readOnly', () => {
+  it('sets readOnly on first data row (row 0)', () => {
     const sheetId = useSheetsStore.getState().addSheet('Products')
+    // No header row - all rows are data rows now
     useSheetsStore.getState().setSheetData(sheetId, [
-      [{ v: 'SKU' }, { v: 'Color' }],
       [{ v: 'R-S' }, { v: 'Red' }],
     ])
 
     render(<SpreadsheetContainer />)
 
-    // Row 0, col 0 (header) should NOT be readOnly
+    // Row 0, col 0 (SKU data cell) should be readOnly
     const row0 = capturedData[0] as Array<{ readOnly?: boolean }>
-    expect(row0[0]?.readOnly).not.toBe(true)
+    expect(row0[0]?.readOnly).toBe(true)
   })
 
   it('sets readOnly on all SKU column data rows', () => {
@@ -674,20 +674,19 @@ describe('SpreadsheetContainer SKU column visual styling', () => {
     expect(row1[0]?.className).toContain('bg-[#f1f5f9]')
   })
 
-  it('does not apply background className to header row', () => {
+  it('applies background className to first data row (row 0)', () => {
     const sheetId = useSheetsStore.getState().addSheet('Products')
+    // No header row - all rows are data rows now
     useSheetsStore.getState().setSheetData(sheetId, [
-      [{ v: 'SKU' }, { v: 'Color' }],
       [{ v: 'R-S' }, { v: 'Red' }],
     ])
 
     render(<SpreadsheetContainer />)
 
-    // Row 0 (header) cells should not have the SKU column background styling
-    // Header cells may be null or have no className
+    // Row 0 (data row) should have the SKU column background styling
     const row0 = capturedData[0] as Array<{ className?: string } | null>
-    const headerClassName = row0[0]?.className ?? ''
-    expect(headerClassName).not.toContain('bg-[#f1f5f9]')
+    const dataClassName = row0[0]?.className ?? ''
+    expect(dataClassName).toContain('bg-[#f1f5f9]')
   })
 
   it('applies className to all SKU column data rows', () => {
@@ -856,10 +855,10 @@ describe('SpreadsheetContainer ValidationPanel integration', () => {
       },
     ]
 
+    // Data rows only - no header row in data array
     createSheetWithSpecs(
       'Products',
       [
-        [{ v: 'SKU' }, { v: 'Color' }],
         [{ v: 'Y' }, { v: 'Yellow' }], // Invalid value (Yellow not in Color spec)
       ],
       specs
@@ -875,8 +874,8 @@ describe('SpreadsheetContainer ValidationPanel integration', () => {
 
   it('renders ValidationPanel when there are duplicate SKU errors', () => {
     const sheetId = useSheetsStore.getState().addSheet('Products')
+    // Data rows only - no header row in data array
     useSheetsStore.getState().setSheetData(sheetId, [
-      [{ v: 'SKU' }, { v: 'Color' }],
       [{ v: 'R-S' }, { v: 'Red' }],
       [{ v: 'R-S' }, { v: 'Red' }], // Duplicate SKU
     ])
@@ -902,10 +901,10 @@ describe('SpreadsheetContainer ValidationPanel integration', () => {
       },
     ]
 
+    // Data rows only - no header row in data array
     createSheetWithSpecs(
       'Products',
       [
-        [{ v: 'SKU' }, { v: 'Color' }],
         [{ v: 'R' }, { v: 'Red' }],
         [{ v: 'R' }, { v: 'Red' }], // Duplicate SKU
         [{ v: 'Y' }, { v: 'Yellow' }], // Invalid value
@@ -935,10 +934,10 @@ describe('SpreadsheetContainer ValidationPanel integration', () => {
     ]
 
     // Create two sheets - one with errors, one without
+    // Data rows only - no header row in data array
     const sheet1Id = createSheetWithSpecs(
       'Sheet 1',
       [
-        [{ v: 'SKU' }, { v: 'Color' }],
         [{ v: 'R' }, { v: 'Red' }], // Valid
       ],
       specs
@@ -947,7 +946,6 @@ describe('SpreadsheetContainer ValidationPanel integration', () => {
     createSheetWithSpecs(
       'Sheet 2',
       [
-        [{ v: 'SKU' }, { v: 'Color' }],
         [{ v: 'Y' }, { v: 'Yellow' }], // Invalid
       ],
       specs
@@ -974,10 +972,10 @@ describe('SpreadsheetContainer ValidationPanel integration', () => {
       },
     ]
 
+    // Data rows only - no header row in data array
     const sheet1Id = createSheetWithSpecs(
       'Sheet 1',
       [
-        [{ v: 'SKU' }, { v: 'Color' }],
         [{ v: 'R' }, { v: 'Red' }],
       ],
       specs
@@ -986,7 +984,6 @@ describe('SpreadsheetContainer ValidationPanel integration', () => {
     const sheet2Id = createSheetWithSpecs(
       'Sheet 2',
       [
-        [{ v: 'SKU' }, { v: 'Color' }],
         [{ v: 'Y' }, { v: 'Yellow' }],
       ],
       specs
@@ -1040,11 +1037,11 @@ describe('SpreadsheetContainer click-to-navigate (migration-click-navigate)', ()
       },
     ]
 
+    // Data rows only - no header row in data array
     createSheetWithSpecs(
       'Products',
       [
-        [{ v: 'SKU' }, { v: 'Color' }],
-        [{ v: 'Y' }, { v: 'Yellow' }], // Invalid value at row 1, col 1
+        [{ v: 'Y' }, { v: 'Yellow' }], // Invalid value at row 0, col 1
       ],
       specs
     )
@@ -1067,19 +1064,19 @@ describe('SpreadsheetContainer click-to-navigate (migration-click-navigate)', ()
 
     // Verify that selected was set (capturedSelected should be a RangeSelection)
     expect(capturedSelected).not.toBeNull()
-    // The selection should point to row 1, column 1 (where the invalid value is)
+    // The selection should point to row 0, column 1 (where the invalid value is - data row 0 is now the first data row)
     const selection = capturedSelected as { range: { start: { row: number; column: number } } }
-    expect(selection.range.start.row).toBe(1)
+    expect(selection.range.start.row).toBe(0)
     expect(selection.range.start.column).toBe(1)
   })
 
   it('clicking duplicate SKU error selects the affected SKU cell', async () => {
     // stepsToVerify 4: Works for duplicate-sku error types
     const sheetId = useSheetsStore.getState().addSheet('Products')
+    // Data rows only - no header row in data array
     useSheetsStore.getState().setSheetData(sheetId, [
-      [{ v: 'SKU' }, { v: 'Color' }],
       [{ v: 'R-S' }, { v: 'Red' }],
-      [{ v: 'R-S' }, { v: 'Red' }], // Duplicate SKU at row 2, col 0
+      [{ v: 'R-S' }, { v: 'Red' }], // Duplicate SKU at row 1, col 0
     ])
     useSheetsStore.getState().setActiveSheet(sheetId)
 
@@ -1105,8 +1102,8 @@ describe('SpreadsheetContainer click-to-navigate (migration-click-navigate)', ()
     const selection = capturedSelected as { range: { start: { row: number; column: number } } }
     // Duplicate SKU errors are in column 0
     expect(selection.range.start.column).toBe(0)
-    // Row should be either 1 or 2 (both are duplicates)
-    expect([1, 2]).toContain(selection.range.start.row)
+    // Row should be either 0 or 1 (both are duplicates)
+    expect([0, 1]).toContain(selection.range.start.row)
   })
 
   it('clicking missing-value error selects the affected spec column cell', async () => {
@@ -1130,11 +1127,11 @@ describe('SpreadsheetContainer click-to-navigate (migration-click-navigate)', ()
       },
     ]
 
+    // Data rows only - no header row in data array
     createSheetWithSpecs(
       'Products',
       [
-        [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
-        [{ v: 'R' }, { v: 'Red' }, { v: 'Invalid' }], // Invalid value at row 1, col 2
+        [{ v: 'R' }, { v: 'Red' }, { v: 'Invalid' }], // Invalid value at row 0, col 2
       ],
       specs
     )
@@ -1152,10 +1149,10 @@ describe('SpreadsheetContainer click-to-navigate (migration-click-navigate)', ()
       await new Promise(resolve => setTimeout(resolve, 10))
     })
 
-    // Verify selection points to the correct cell (row 1, col 2)
+    // Verify selection points to the correct cell (row 0, col 2)
     expect(capturedSelected).not.toBeNull()
     const selection = capturedSelected as { range: { start: { row: number; column: number } } }
-    expect(selection.range.start.row).toBe(1)
+    expect(selection.range.start.row).toBe(0)
     expect(selection.range.start.column).toBe(2)
   })
 
@@ -2204,8 +2201,8 @@ describe('SpreadsheetContainer column context menu', () => {
       { id: 'col-0', type: 'sku', header: 'SKU' },
       { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
     ]
+    // Data rows only - no header row in data array
     const data: CellData[][] = [
-      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
       [{}, { v: 'Red', m: 'Red' }],
     ]
     createSheetWithColumns('Products', data, columns, [colorSpec])
@@ -2215,66 +2212,75 @@ describe('SpreadsheetContainer column context menu', () => {
     expect(screen.queryByTestId('column-context-menu')).not.toBeInTheDocument()
   })
 
-  it('shows context menu on right-click header row cell', () => {
+  it('shows column menu options when clicking dropdown on column header', async () => {
+    const user = userEvent.setup()
     const columns: ColumnDef[] = [
       { id: 'col-0', type: 'sku', header: 'SKU' },
       { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
     ]
+    // Data rows only - no header row in data array
     const data: CellData[][] = [
-      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
       [{}, { v: 'Red', m: 'Red' }],
     ]
     createSheetWithColumns('Products', data, columns, [colorSpec])
 
     render(<SpreadsheetContainer />)
 
-    // Right-click on the Color header cell (row 0, col 1)
-    const headerCell = screen.getByTestId('cell-0-1')
-    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
+    // Click on the Color column's menu trigger (column index 1)
+    const menuTrigger = screen.getByTestId('column-menu-trigger-1')
+    await user.click(menuTrigger)
 
-    expect(screen.getByTestId('column-context-menu')).toBeInTheDocument()
-    expect(screen.getByTestId('context-menu-insert-before')).toBeInTheDocument()
-    expect(screen.getByTestId('context-menu-insert-after')).toBeInTheDocument()
+    // Menu options should be visible
+    await waitFor(() => {
+      expect(screen.getByTestId('column-menu-insert-before-1')).toBeInTheDocument()
+      expect(screen.getByTestId('column-menu-insert-after-1')).toBeInTheDocument()
+    })
   })
 
-  it('shows delete option for spec columns', () => {
+  it('shows delete option for spec columns', async () => {
+    const user = userEvent.setup()
     const columns: ColumnDef[] = [
       { id: 'col-0', type: 'sku', header: 'SKU' },
       { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
     ]
+    // Data rows only - no header row in data array
     const data: CellData[][] = [
-      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
       [{}, { v: 'Red', m: 'Red' }],
     ]
     createSheetWithColumns('Products', data, columns, [colorSpec])
 
     render(<SpreadsheetContainer />)
 
-    // Right-click on the Color header cell (row 0, col 1)
-    const headerCell = screen.getByTestId('cell-0-1')
-    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
+    // Click on the Color column's menu trigger (column index 1)
+    const menuTrigger = screen.getByTestId('column-menu-trigger-1')
+    await user.click(menuTrigger)
 
-    expect(screen.getByTestId('context-menu-delete')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByTestId('column-menu-delete-1')).toBeInTheDocument()
+    })
   })
 
-  it('shows delete option for free columns', () => {
+  it('shows delete option for free columns', async () => {
+    const user = userEvent.setup()
     const columns: ColumnDef[] = [
       { id: 'col-0', type: 'sku', header: 'SKU' },
       { id: 'col-1', type: 'free', header: 'Notes' },
     ]
+    // Data rows only - no header row in data array
     const data: CellData[][] = [
-      [{ v: 'SKU', m: 'SKU' }, { v: 'Notes', m: 'Notes' }],
       [{}, { v: 'Some note', m: 'Some note' }],
     ]
     createSheetWithColumns('Products', data, columns, [])
 
     render(<SpreadsheetContainer />)
 
-    // Right-click on the Notes header cell (row 0, col 1)
-    const headerCell = screen.getByTestId('cell-0-1')
-    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
+    // Click on the Notes column's menu trigger (column index 1)
+    const menuTrigger = screen.getByTestId('column-menu-trigger-1')
+    await user.click(menuTrigger)
 
-    expect(screen.getByTestId('context-menu-delete')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByTestId('column-menu-delete-1')).toBeInTheDocument()
+    })
   })
 
   it('does NOT show delete option for SKU column', () => {
@@ -2282,172 +2288,206 @@ describe('SpreadsheetContainer column context menu', () => {
       { id: 'col-0', type: 'sku', header: 'SKU' },
       { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
     ]
+    // Data rows only - no header row in data array
     const data: CellData[][] = [
-      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
       [{}, { v: 'Red', m: 'Red' }],
     ]
     createSheetWithColumns('Products', data, columns, [colorSpec])
 
     render(<SpreadsheetContainer />)
 
-    // Right-click on the SKU header cell (row 0, col 0)
-    const headerCell = screen.getByTestId('cell-0-0')
-    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
+    // Click on the SKU column's menu trigger (column index 0)
+    const menuTrigger = screen.getByTestId('column-menu-trigger-0')
+    fireEvent.click(menuTrigger)
 
-    expect(screen.getByTestId('column-context-menu')).toBeInTheDocument()
-    expect(screen.queryByTestId('context-menu-delete')).not.toBeInTheDocument()
+    // Delete option should NOT be shown for SKU column
+    expect(screen.queryByTestId('column-menu-delete-0')).not.toBeInTheDocument()
   })
 
-  it('does not show context menu when right-clicking data rows', () => {
+  it('does not show column context menu when right-clicking data cells', () => {
     const columns: ColumnDef[] = [
       { id: 'col-0', type: 'sku', header: 'SKU' },
       { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
     ]
+    // Data rows only - no header row in data array
     const data: CellData[][] = [
-      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
       [{}, { v: 'Red', m: 'Red' }],
+      [{}, { v: 'Blue', m: 'Blue' }],
     ]
     createSheetWithColumns('Products', data, columns, [colorSpec])
 
     render(<SpreadsheetContainer />)
 
-    // Right-click on a data cell (row 1, col 1)
-    const dataCell = screen.getByTestId('cell-1-1')
+    // Right-click on a data cell (row 0, col 1)
+    const dataCell = screen.getByTestId('cell-0-1')
     fireEvent.contextMenu(dataCell, { clientX: 100, clientY: 100 })
 
     expect(screen.queryByTestId('column-context-menu')).not.toBeInTheDocument()
   })
 
-  it('opens AddColumnDialog when "Insert column before" clicked', () => {
+  it('opens AddColumnDialog when "Insert column before" clicked', async () => {
+    const user = userEvent.setup()
     const columns: ColumnDef[] = [
       { id: 'col-0', type: 'sku', header: 'SKU' },
       { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
     ]
+    // Data rows only - no header row in data array
     const data: CellData[][] = [
-      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
       [{}, { v: 'Red', m: 'Red' }],
     ]
     createSheetWithColumns('Products', data, columns, [colorSpec])
 
     render(<SpreadsheetContainer />)
 
-    // Right-click on the Color header cell
-    const headerCell = screen.getByTestId('cell-0-1')
-    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
+    // Click on the Color column's menu trigger
+    const menuTrigger = screen.getByTestId('column-menu-trigger-1')
+    await user.click(menuTrigger)
 
     // Click "Insert column before"
-    fireEvent.click(screen.getByTestId('context-menu-insert-before'))
+    await waitFor(() => {
+      expect(screen.getByTestId('column-menu-insert-before-1')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('column-menu-insert-before-1'))
 
     // AddColumnDialog should be open
-    expect(screen.getByTestId('add-column-dialog')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByTestId('add-column-dialog')).toBeInTheDocument()
+    })
   })
 
-  it('opens AddColumnDialog when "Insert column after" clicked', () => {
+  it('opens AddColumnDialog when "Insert column after" clicked', async () => {
+    const user = userEvent.setup()
     const columns: ColumnDef[] = [
       { id: 'col-0', type: 'sku', header: 'SKU' },
       { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
     ]
+    // Data rows only - no header row in data array
     const data: CellData[][] = [
-      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
       [{}, { v: 'Red', m: 'Red' }],
     ]
     createSheetWithColumns('Products', data, columns, [colorSpec])
 
     render(<SpreadsheetContainer />)
 
-    // Right-click on the Color header cell
-    const headerCell = screen.getByTestId('cell-0-1')
-    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
+    // Click on the Color column's menu trigger
+    const menuTrigger = screen.getByTestId('column-menu-trigger-1')
+    await user.click(menuTrigger)
 
     // Click "Insert column after"
-    fireEvent.click(screen.getByTestId('context-menu-insert-after'))
+    await waitFor(() => {
+      expect(screen.getByTestId('column-menu-insert-after-1')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('column-menu-insert-after-1'))
 
     // AddColumnDialog should be open
-    expect(screen.getByTestId('add-column-dialog')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByTestId('add-column-dialog')).toBeInTheDocument()
+    })
   })
 
-  it('opens delete confirmation dialog when "Delete column" clicked', () => {
+  it('opens delete confirmation dialog when "Delete column" clicked', async () => {
+    const user = userEvent.setup()
     const columns: ColumnDef[] = [
       { id: 'col-0', type: 'sku', header: 'SKU' },
       { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
     ]
+    // Data rows only - no header row in data array
     const data: CellData[][] = [
-      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
       [{}, { v: 'Red', m: 'Red' }],
     ]
     createSheetWithColumns('Products', data, columns, [colorSpec])
 
     render(<SpreadsheetContainer />)
 
-    // Right-click on the Color header cell
-    const headerCell = screen.getByTestId('cell-0-1')
-    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
+    // Click on the Color column's menu trigger
+    const menuTrigger = screen.getByTestId('column-menu-trigger-1')
+    await user.click(menuTrigger)
 
     // Click "Delete column"
-    fireEvent.click(screen.getByTestId('context-menu-delete'))
+    await waitFor(() => {
+      expect(screen.getByTestId('column-menu-delete-1')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('column-menu-delete-1'))
 
     // Delete confirmation dialog should be open
-    expect(screen.getByTestId('delete-column-dialog')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByTestId('delete-column-dialog')).toBeInTheDocument()
+    })
   })
 
-  it('deletes column when confirming deletion', () => {
+  it('deletes column when confirming deletion', async () => {
+    const user = userEvent.setup()
     const columns: ColumnDef[] = [
       { id: 'col-0', type: 'sku', header: 'SKU' },
       { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
       { id: 'col-2', type: 'spec', header: 'Size', specId: 'size-spec' },
     ]
+    // Data rows only - no header row in data array
     const data: CellData[][] = [
-      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }, { v: 'Size', m: 'Size' }],
       [{ v: 'SKU1', m: 'SKU1' }, { v: 'Red', m: 'Red' }, { v: 'Small', m: 'Small' }],
     ]
     createSheetWithColumns('Products', data, columns, [colorSpec, sizeSpec])
 
     render(<SpreadsheetContainer />)
 
-    // Right-click on the Color header cell (column index 1)
-    const headerCell = screen.getByTestId('cell-0-1')
-    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
+    // Click on the Color column's menu trigger (column index 1)
+    const menuTrigger = screen.getByTestId('column-menu-trigger-1')
+    await user.click(menuTrigger)
 
     // Click "Delete column"
-    fireEvent.click(screen.getByTestId('context-menu-delete'))
+    await waitFor(() => {
+      expect(screen.getByTestId('column-menu-delete-1')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('column-menu-delete-1'))
 
     // Confirm deletion
-    fireEvent.click(screen.getByTestId('delete-column-confirm'))
+    await waitFor(() => {
+      expect(screen.getByTestId('delete-column-confirm')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('delete-column-confirm'))
 
     // Verify column was deleted from store
-    const activeSheet = useSheetsStore.getState().getActiveSheet()
-    expect(activeSheet).toBeDefined()
-    expect(activeSheet!.columns.length).toBe(2) // SKU and Size remain
-    expect(activeSheet!.columns[0].header).toBe('SKU')
-    expect(activeSheet!.columns[1].header).toBe('Size')
+    await waitFor(() => {
+      const activeSheet = useSheetsStore.getState().getActiveSheet()
+      expect(activeSheet).toBeDefined()
+      expect(activeSheet!.columns.length).toBe(2) // SKU and Size remain
+      expect(activeSheet!.columns[0].header).toBe('SKU')
+      expect(activeSheet!.columns[1].header).toBe('Size')
 
-    // Verify data was updated
-    expect(activeSheet!.data[0].length).toBe(2) // SKU and Size columns
-    expect(activeSheet!.data[1].length).toBe(2)
+      // Verify data was updated (1 data row with 2 columns)
+      expect(activeSheet!.data[0].length).toBe(2) // SKU and Size columns
+    })
   })
 
-  it('cancels deletion when clicking cancel', () => {
+  it('cancels deletion when clicking cancel', async () => {
+    const user = userEvent.setup()
     const columns: ColumnDef[] = [
       { id: 'col-0', type: 'sku', header: 'SKU' },
       { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
     ]
+    // Data rows only - no header row in data array
     const data: CellData[][] = [
-      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
       [{}, { v: 'Red', m: 'Red' }],
     ]
     createSheetWithColumns('Products', data, columns, [colorSpec])
 
     render(<SpreadsheetContainer />)
 
-    // Right-click on the Color header cell
-    const headerCell = screen.getByTestId('cell-0-1')
-    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
+    // Click on the Color column's menu trigger
+    const menuTrigger = screen.getByTestId('column-menu-trigger-1')
+    await user.click(menuTrigger)
 
     // Click "Delete column"
-    fireEvent.click(screen.getByTestId('context-menu-delete'))
+    await waitFor(() => {
+      expect(screen.getByTestId('column-menu-delete-1')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('column-menu-delete-1'))
 
     // Cancel deletion
-    fireEvent.click(screen.getByTestId('delete-column-cancel'))
+    await waitFor(() => {
+      expect(screen.getByTestId('delete-column-cancel')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('delete-column-cancel'))
 
     // Verify column was NOT deleted
     const activeSheet = useSheetsStore.getState().getActiveSheet()
@@ -2456,74 +2496,95 @@ describe('SpreadsheetContainer column context menu', () => {
     expect(activeSheet!.columns[1].header).toBe('Color')
   })
 
-  it('deletes free column when confirming deletion', () => {
+  it('deletes free column when confirming deletion', async () => {
+    const user = userEvent.setup()
     const columns: ColumnDef[] = [
       { id: 'col-0', type: 'sku', header: 'SKU' },
       { id: 'col-1', type: 'free', header: 'Notes' },
       { id: 'col-2', type: 'spec', header: 'Color', specId: 'color-spec' },
     ]
+    // Data rows only - no header row in data array
     const data: CellData[][] = [
-      [{ v: 'SKU', m: 'SKU' }, { v: 'Notes', m: 'Notes' }, { v: 'Color', m: 'Color' }],
       [{ v: 'SKU1', m: 'SKU1' }, { v: 'A note', m: 'A note' }, { v: 'Red', m: 'Red' }],
     ]
     createSheetWithColumns('Products', data, columns, [colorSpec])
 
     render(<SpreadsheetContainer />)
 
-    // Right-click on the Notes header cell (column index 1 - free column)
-    const headerCell = screen.getByTestId('cell-0-1')
-    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
+    // Click on the Notes column's menu trigger (column index 1 - free column)
+    const menuTrigger = screen.getByTestId('column-menu-trigger-1')
+    await user.click(menuTrigger)
 
     // Click "Delete column"
-    fireEvent.click(screen.getByTestId('context-menu-delete'))
+    await waitFor(() => {
+      expect(screen.getByTestId('column-menu-delete-1')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('column-menu-delete-1'))
 
     // Confirm deletion
-    fireEvent.click(screen.getByTestId('delete-column-confirm'))
+    await waitFor(() => {
+      expect(screen.getByTestId('delete-column-confirm')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('delete-column-confirm'))
 
     // Verify free column was deleted from store
-    const activeSheet = useSheetsStore.getState().getActiveSheet()
-    expect(activeSheet).toBeDefined()
-    expect(activeSheet!.columns.length).toBe(2) // SKU and Color remain
-    expect(activeSheet!.columns[0].header).toBe('SKU')
-    expect(activeSheet!.columns[1].header).toBe('Color')
+    await waitFor(() => {
+      const activeSheet = useSheetsStore.getState().getActiveSheet()
+      expect(activeSheet).toBeDefined()
+      expect(activeSheet!.columns.length).toBe(2) // SKU and Color remain
+      expect(activeSheet!.columns[0].header).toBe('SKU')
+      expect(activeSheet!.columns[1].header).toBe('Color')
 
-    // Verify data was updated - Notes column data removed
-    expect(activeSheet!.data[0].length).toBe(2) // SKU and Color columns
-    expect(activeSheet!.data[1].length).toBe(2)
+      // Verify data was updated - Notes column data removed (1 data row with 2 columns)
+      expect(activeSheet!.data[0].length).toBe(2) // SKU and Color columns
+    })
   })
 
-  it('can undo free column deletion', () => {
+  it('can undo free column deletion', async () => {
+    const user = userEvent.setup()
     const columns: ColumnDef[] = [
       { id: 'col-0', type: 'sku', header: 'SKU' },
       { id: 'col-1', type: 'free', header: 'Notes' },
     ]
+    // Data rows only - no header row in data array
     const data: CellData[][] = [
-      [{ v: 'SKU', m: 'SKU' }, { v: 'Notes', m: 'Notes' }],
       [{}, { v: 'Some note', m: 'Some note' }],
     ]
     createSheetWithColumns('Products', data, columns, [])
 
     render(<SpreadsheetContainer />)
 
-    // Right-click on the Notes header cell and delete
-    const headerCell = screen.getByTestId('cell-0-1')
-    fireEvent.contextMenu(headerCell, { clientX: 100, clientY: 100 })
-    fireEvent.click(screen.getByTestId('context-menu-delete'))
-    fireEvent.click(screen.getByTestId('delete-column-confirm'))
+    // Click on the Notes column's menu trigger and delete
+    const menuTrigger = screen.getByTestId('column-menu-trigger-1')
+    await user.click(menuTrigger)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('column-menu-delete-1')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('column-menu-delete-1'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('delete-column-confirm')).toBeInTheDocument()
+    })
+    await user.click(screen.getByTestId('delete-column-confirm'))
 
     // Verify column was deleted
-    let activeSheet = useSheetsStore.getState().getActiveSheet()
-    expect(activeSheet!.columns.length).toBe(1) // Only SKU
+    await waitFor(() => {
+      const activeSheet = useSheetsStore.getState().getActiveSheet()
+      expect(activeSheet!.columns.length).toBe(1) // Only SKU
+    })
 
     // Click undo button
     const undoButton = screen.getByRole('button', { name: /undo/i })
-    fireEvent.click(undoButton)
+    await user.click(undoButton)
 
     // Verify column was restored
-    activeSheet = useSheetsStore.getState().getActiveSheet()
-    expect(activeSheet!.columns.length).toBe(2) // SKU and Notes restored
-    expect(activeSheet!.columns[1].header).toBe('Notes')
-    expect(activeSheet!.data[1][1]).toEqual({ v: 'Some note', m: 'Some note' })
+    await waitFor(() => {
+      const activeSheet = useSheetsStore.getState().getActiveSheet()
+      expect(activeSheet!.columns.length).toBe(2) // SKU and Notes restored
+      expect(activeSheet!.columns[1].header).toBe('Notes')
+      expect(activeSheet!.data[0][1]).toEqual({ v: 'Some note', m: 'Some note' })
+    })
   })
 })
 
@@ -2894,25 +2955,25 @@ describe('SpreadsheetContainer row deletion (row-deletion)', () => {
     expect(screen.getByTestId('context-menu-delete-row')).toBeInTheDocument()
   })
 
-  it('does NOT show row context menu on right-click header row indicator', () => {
+  it('shows row context menu on right-click first data row indicator (row 0)', () => {
     const columns: ColumnDef[] = [
       { id: 'col-0', type: 'sku', header: 'SKU' },
       { id: 'col-1', type: 'spec', header: 'Color', specId: 'color-spec' },
     ]
+    // No header row - all rows are data rows now
     const data: CellData[][] = [
-      [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }],
       [{ v: 'R', m: 'R' }, { v: 'Red', m: 'Red' }],
     ]
     createSheetWithColumns('Products', data, columns, [colorSpec])
 
     render(<SpreadsheetContainer />)
 
-    // Right-click on header row indicator (row 0)
-    const headerRowIndicator = screen.getByTestId('row-indicator-0')
-    fireEvent.contextMenu(headerRowIndicator, { clientX: 50, clientY: 50 })
+    // Right-click on first data row indicator (row 0)
+    const firstRowIndicator = screen.getByTestId('row-indicator-0')
+    fireEvent.contextMenu(firstRowIndicator, { clientX: 50, clientY: 50 })
 
-    // Row context menu should NOT appear for header row
-    expect(screen.queryByTestId('row-context-menu')).not.toBeInTheDocument()
+    // Row context menu should appear for data rows
+    expect(screen.getByTestId('row-context-menu')).toBeInTheDocument()
   })
 
   it('opens delete confirmation dialog when "Delete row" clicked', () => {
@@ -5881,11 +5942,11 @@ describe('Row header dropdown menu', () => {
     expect(screen.getByTestId('delete-row-dialog')).toBeInTheDocument()
   })
 
-  it('does not show delete option for header row', async () => {
+  it('shows delete option for first data row (row 0)', async () => {
     createSheetWithRows()
     render(<SpreadsheetContainer />)
 
-    // Click dropdown trigger for row 0 (header)
+    // Click dropdown trigger for row 0 (first data row)
     const trigger = screen.getByTestId('row-menu-trigger-0')
     await userEvent.click(trigger)
 
@@ -5893,8 +5954,8 @@ describe('Row header dropdown menu', () => {
       expect(screen.getByTestId('row-menu-insert-above-0')).toBeInTheDocument()
     })
 
-    // Delete option should not be present for header row
-    expect(screen.queryByTestId('row-menu-delete-0')).not.toBeInTheDocument()
+    // Delete option should be present for data rows (all rows are data rows now)
+    expect(screen.getByTestId('row-menu-delete-0')).toBeInTheDocument()
   })
 
   it('undo reverts insert row above', async () => {

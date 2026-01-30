@@ -1156,6 +1156,6 @@
       "npm run typecheck passes",
       "npm run test passes"
     ],
-    "passes": false
+    "passes": true
   }
 ]

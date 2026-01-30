@@ -54,58 +54,49 @@ describe('sample-data', () => {
   });
 
   describe('getSampleProductData', () => {
-    it('returns array with header row plus 5 products', () => {
+    it('returns array with 5 products (no header row)', () => {
       const data = getSampleProductData();
-      expect(data).toHaveLength(6); // 1 header + 5 products
-    });
-
-    it('has correct header row with SKU first', () => {
-      const data = getSampleProductData();
-      expect(data[0]).toHaveLength(4);
-      expect(data[0][0].v).toBe('SKU');
-      expect(data[0][1].v).toBe('Color');
-      expect(data[0][2].v).toBe('Size');
-      expect(data[0][3].v).toBe('Material');
+      expect(data).toHaveLength(5); // 5 products, no header row
     });
 
     it('product 1: Red, Small, Cotton -> R-S-COT', () => {
       const data = getSampleProductData();
-      expect(data[1][0].v).toBe('R-S-COT');
-      expect(data[1][1].v).toBe('Red');
-      expect(data[1][2].v).toBe('Small');
-      expect(data[1][3].v).toBe('Cotton');
+      expect(data[0][0].v).toBe('R-S-COT');
+      expect(data[0][1].v).toBe('Red');
+      expect(data[0][2].v).toBe('Small');
+      expect(data[0][3].v).toBe('Cotton');
     });
 
     it('product 2: Blue, Medium, Polyester -> B-M-POL', () => {
       const data = getSampleProductData();
-      expect(data[2][0].v).toBe('B-M-POL');
-      expect(data[2][1].v).toBe('Blue');
-      expect(data[2][2].v).toBe('Medium');
-      expect(data[2][3].v).toBe('Polyester');
+      expect(data[1][0].v).toBe('B-M-POL');
+      expect(data[1][1].v).toBe('Blue');
+      expect(data[1][2].v).toBe('Medium');
+      expect(data[1][3].v).toBe('Polyester');
     });
 
     it('product 3: Green, Large, Wool -> G-L-WOL', () => {
       const data = getSampleProductData();
-      expect(data[3][0].v).toBe('G-L-WOL');
-      expect(data[3][1].v).toBe('Green');
-      expect(data[3][2].v).toBe('Large');
-      expect(data[3][3].v).toBe('Wool');
+      expect(data[2][0].v).toBe('G-L-WOL');
+      expect(data[2][1].v).toBe('Green');
+      expect(data[2][2].v).toBe('Large');
+      expect(data[2][3].v).toBe('Wool');
     });
 
     it('product 4: Red, Large, Cotton -> R-L-COT', () => {
       const data = getSampleProductData();
-      expect(data[4][0].v).toBe('R-L-COT');
-      expect(data[4][1].v).toBe('Red');
-      expect(data[4][2].v).toBe('Large');
-      expect(data[4][3].v).toBe('Cotton');
+      expect(data[3][0].v).toBe('R-L-COT');
+      expect(data[3][1].v).toBe('Red');
+      expect(data[3][2].v).toBe('Large');
+      expect(data[3][3].v).toBe('Cotton');
     });
 
     it('product 5: Blue, Small, Polyester -> B-S-POL', () => {
       const data = getSampleProductData();
-      expect(data[5][0].v).toBe('B-S-POL');
-      expect(data[5][1].v).toBe('Blue');
-      expect(data[5][2].v).toBe('Small');
-      expect(data[5][3].v).toBe('Polyester');
+      expect(data[4][0].v).toBe('B-S-POL');
+      expect(data[4][1].v).toBe('Blue');
+      expect(data[4][2].v).toBe('Small');
+      expect(data[4][3].v).toBe('Polyester');
     });
   });
 
@@ -170,7 +161,7 @@ describe('sample-data', () => {
       expect(sheet.name).toBe('Sample Products');
       expect(sheet.type).toBe('data');
       expect(sheet.id).toBeDefined();
-      expect(sheet.data).toHaveLength(6);
+      expect(sheet.data).toHaveLength(5); // 5 products, no header row
     });
   });
 
@@ -194,7 +185,7 @@ describe('sample-data', () => {
       expect(productSheet.name).toBe('Sample Products');
       expect(productSheet.type).toBe('data');
       expect(productSheet.id).toBeDefined();
-      expect(productSheet.data).toHaveLength(6);
+      expect(productSheet.data).toHaveLength(5); // 5 products, no header row
     });
 
     it('sheets have unique IDs', () => {

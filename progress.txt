@@ -1,3 +1,55 @@
+## remove-redundant-header-row - COMPLETED
+Remove redundant header row (data[0]) from spreadsheet data structure
+
+### Key decisions
+- Header row removal migration already existed (isLikelyHeaderRow, removeHeaderRowFromSheet functions)
+- createEmptySheet already creates 50 data rows (no header row in data)
+- Sample data (getSampleProductData) already returns only data rows
+- All row index logic (validation, auto-sku, spreadsheet-adapter) already starts from index 0
+- Fixed bug: rowHeights not being cleared when only header row had custom height
+- Exported isLikelyHeaderRow and removeHeaderRowFromSheet for testing
+
+### Files changed
+- src/store/sheets.ts (+3 lines: export migration functions, fix rowHeights clearing bug)
+- src/store/sheets.test.ts (+186 lines: 15 new tests for header row removal migration)
+- src/components/SpreadsheetContainer.tsx (minor: removed unused setContextMenuColumnIndex from useState)
+
+### Tests added
+1. isLikelyHeaderRow function tests:
+   - Detects header row when data[0] matches column headers
+   - Returns false when data[0] doesn't match headers
+   - Returns false for empty data or columns
+   - Uses m field fallback
+   - Requires 50% match threshold
+
+2. removeHeaderRowFromSheet function tests:
+   - Removes header row when detected
+   - Doesn't modify if no header row
+   - Decrements pinnedRows by 1 when > 0
+   - Keeps pinnedRows as 0 if already 0
+   - Shifts rowHeights indices down by 1
+   - Drops rowHeights entirely when only header had custom height
+   - Doesn't modify config sheets
+   - Preserves other sheet properties
+
+3. Integration test: Row indices match data array indices
+
+### Notes
+- All 11 stepsToVerify criteria met:
+  1. Create new sheet - data array has 50 rows ✓ (tested at sheets.test.ts:191)
+  2. Row indices in UI match data array indices (row 1 in UI = data[0]) ✓
+  3. Existing sheets migrate correctly (header row removed) ✓
+  4. pinnedRows is decremented by 1 during migration if > 0 ✓
+  5. SKU generation works from row 0 ✓ (auto-sku starts from index 0)
+  6. Validation works from row 0 ✓ (validation starts from index 0)
+  7. Add row inserts at correct position ✓ (existing tests)
+  8. Delete row works for row 0 ✓ (existing tests)
+  9. Auto-populate generates rows starting at index 0 ✓ (existing tests)
+  10. npm run typecheck passes ✓
+  11. npm run test passes ✓ (1339 tests, +15 new)
+- Migration was already implemented, this task verified correctness and added tests
+- Fixed rowHeights bug where clearing wasn't working due to spread operator
+
 ## fix-pinned-row-background - COMPLETED
 Verify and document pinned row background styling with CSS variable for dark mode support
 

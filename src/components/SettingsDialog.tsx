@@ -66,14 +66,18 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
     // Process each data sheet
     sheets.forEach((sheet) => {
-      if (sheet.type !== "data" || sheet.data.length <= 1) return
+      if (sheet.type !== "data" || sheet.data.length === 0) return
+
+      // Extract headers from columns (skip SKU column at index 0)
+      const columns = sheet.columns ?? []
+      const headers = columns.slice(1).map(col => col.header ?? '')
 
       // Create a copy of the data to modify
       const newData = sheet.data.map((row) => [...row])
 
-      // Update SKU for each data row (skip header row 0)
-      for (let rowIndex = 1; rowIndex < newData.length; rowIndex++) {
-        updateRowSKU(newData, rowIndex, specifications, newSettings)
+      // Update SKU for each data row - all rows are data rows now (no header row)
+      for (let rowIndex = 0; rowIndex < newData.length; rowIndex++) {
+        updateRowSKU(newData, rowIndex, specifications, newSettings, headers)
       }
 
       // Update the sheet in the store

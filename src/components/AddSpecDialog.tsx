@@ -122,42 +122,23 @@ export function AddSpecDialog({ open, onOpenChange }: AddSpecDialogProps) {
 
     // Add column to active data sheet (if it's a data sheet)
     // SKU is always at column 0, spec columns are appended at the end
+    // All rows are data rows now - no header row in data array (headers in columns[].header)
     if (currentSheet.type === "data") {
-      const newDataSheetData = currentSheet.data.map((row, rowIndex) => {
+      const newDataSheetData = currentSheet.data.map((row) => {
         const newRow = [...row]
 
-        // Add header to first row
-        if (rowIndex === 0) {
-          if (newRow.length === 0) {
-            // Empty row: create SKU header at column 0, new spec at column 1
-            newRow.push({ v: "SKU", m: "SKU" })
-            newRow.push({ v: trimmedName, m: trimmedName })
-          } else {
-            // Existing row: append new spec header at the end
-            newRow.push({ v: trimmedName, m: trimmedName })
-          }
+        // All rows are data rows - just add an empty cell for the new column
+        if (newRow.length === 0) {
+          // Empty row: add two empty cells (SKU column + new spec column)
+          newRow.push({})
+          newRow.push({})
         } else {
-          // Add empty cell for data rows
-          if (newRow.length === 0) {
-            // Empty row: add two empty cells (SKU column + new spec column)
-            newRow.push({})
-            newRow.push({})
-          } else {
-            // Existing row: append empty cell at the end for new spec
-            newRow.push({})
-          }
+          // Existing row: append empty cell at the end for new spec
+          newRow.push({})
         }
 
         return newRow
       })
-
-      // If no rows exist, create header row with SKU at column 0
-      if (newDataSheetData.length === 0) {
-        newDataSheetData.push([
-          { v: "SKU", m: "SKU" },
-          { v: trimmedName, m: trimmedName },
-        ])
-      }
 
       setSheetData(currentSheet.id, newDataSheetData)
     }

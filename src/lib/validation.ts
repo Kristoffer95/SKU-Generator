@@ -1,5 +1,4 @@
 import type { CellData, Specification, ColumnDef } from '../types';
-import { extractColumnHeaders } from './sheet-sku';
 
 /**
  * Represents a validation error for a cell in a data sheet
@@ -36,7 +35,7 @@ export function validateDataSheetFromColumns(
 ): ValidationError[] {
   const errors: ValidationError[] = [];
 
-  if (!data || data.length <= 1) {
+  if (!data || data.length === 0) {
     return errors; // No data rows to validate
   }
 
@@ -49,8 +48,8 @@ export function validateDataSheetFromColumns(
     specNameMap.set(spec.id, spec.name);
   }
 
-  // Validate each data row (starting from row 1, skip header)
-  for (let rowIndex = 1; rowIndex < data.length; rowIndex++) {
+  // Validate each data row (all rows are data rows now)
+  for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
     const row = data[rowIndex];
     if (!row) continue;
 
@@ -95,16 +94,17 @@ export function validateDataSheetFromColumns(
  */
 export function validateDataSheet(
   data: CellData[][],
-  specifications: Specification[]
+  specifications: Specification[],
+  headers?: string[]
 ): ValidationError[] {
   const errors: ValidationError[] = [];
 
-  if (!data || data.length <= 1) {
+  if (!data || data.length === 0) {
     return errors; // No data rows to validate
   }
 
-  // Get headers from first row (excluding SKU column at index 0)
-  const headers = extractColumnHeaders(data[0]);
+  // Headers must be passed in (no longer in data[0])
+  const columnHeaders = headers ?? [];
 
   // Build a map of spec name -> Set of valid displayValues
   const specValueMap = new Map<string, Set<string>>();
@@ -113,15 +113,15 @@ export function validateDataSheet(
     specValueMap.set(spec.name, validValues);
   }
 
-  // Validate each data row (starting from row 1, skip header)
-  for (let rowIndex = 1; rowIndex < data.length; rowIndex++) {
+  // Validate each data row (all rows are data rows now)
+  for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
     const row = data[rowIndex];
     if (!row) continue;
 
     // Check each column (starting from column 1, skip SKU column at 0)
     for (let colIndex = 1; colIndex < row.length; colIndex++) {
       const headerIndex = colIndex - 1; // headers array is offset by 1 (no SKU column)
-      const headerName = headers[headerIndex];
+      const headerName = columnHeaders[headerIndex];
 
       if (!headerName) continue;
 
@@ -157,15 +157,15 @@ export function validateDataSheet(
 export function findDuplicateSKUs(data: CellData[][]): ValidationError[] {
   const errors: ValidationError[] = [];
 
-  if (!data || data.length <= 1) {
+  if (!data || data.length === 0) {
     return errors; // No data rows to check
   }
 
   // Build a map of SKU value -> list of row indices that have that SKU
   const skuToRows = new Map<string, number[]>();
 
-  // Start from row 1 (skip header row)
-  for (let rowIndex = 1; rowIndex < data.length; rowIndex++) {
+  // All rows are data rows now - start from 0
+  for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
     const row = data[rowIndex];
     if (!row) continue;
 

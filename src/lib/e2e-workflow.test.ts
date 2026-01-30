@@ -145,16 +145,16 @@ describe('PRD-012: End-to-End Verification', () => {
 
     it('updates SKU column in row data (first column)', () => {
       // updateRowSKU takes the full sheet data and a row index
-      // SKU is now at index 0
+      // Data now starts at index 0 (no header row in data array)
       const sheetData: CellData[][] = [
-        [{ v: 'SKU' }, { v: 'Temperature' }, { v: 'Color' }, { v: 'Type' }], // headers
         [{ v: '' }, { v: '29deg C' }, { v: 'Red' }, { v: 'Standard' }], // data row
       ];
+      const headers = ['Temperature', 'Color', 'Type'];
 
-      updateRowSKU(sheetData, 1, specifications, settings);
+      updateRowSKU(sheetData, 0, specifications, settings, headers);
 
-      expect(sheetData[1][0].v).toBe('29C-R-STD');
-      expect(sheetData[1][0].m).toBe('29C-R-STD');
+      expect(sheetData[0][0].v).toBe('29C-R-STD');
+      expect(sheetData[0][0].m).toBe('29C-R-STD');
     });
   });
 
@@ -174,21 +174,20 @@ describe('PRD-012: End-to-End Verification', () => {
     });
 
     it('processAutoSKU detects change and updates SKU', () => {
-      // SKU is now at index 0
+      // Data now starts at index 0 (no header row in data array)
       const oldData: CellData[][] = [
-        [{ v: 'SKU' }, { v: 'Temperature' }, { v: 'Color' }, { v: 'Type' }],
         [{ v: '29C-R-STD' }, { v: '29deg C' }, { v: 'Red' }, { v: 'Standard' }],
       ];
 
       const newData: CellData[][] = [
-        [{ v: 'SKU' }, { v: 'Temperature' }, { v: 'Color' }, { v: 'Type' }],
         [{ v: '29C-R-STD' }, { v: '29deg C' }, { v: 'Blue' }, { v: 'Standard' }], // Color changed, SKU not yet updated
       ];
 
-      processAutoSKU(oldData, newData, specifications, settings);
+      const headers = ['Temperature', 'Color', 'Type'];
+      processAutoSKU(oldData, newData, specifications, settings, headers);
 
       // SKU should now be updated at index 0
-      expect(newData[1][0].v).toBe('29C-B-STD');
+      expect(newData[0][0].v).toBe('29C-B-STD');
     });
   });
 
@@ -202,16 +201,20 @@ describe('PRD-012: End-to-End Verification', () => {
       specifications: [],
     };
 
-    // SKU is now at index 0 (Column A)
+    // SKU is now at index 0 (Column A), data rows only (no header in data array)
     const dataSheet: SheetConfig = {
       id: 'data-1',
       name: 'Sheet 1',
       type: 'data',
       data: [
-        [{ v: 'SKU' }, { v: 'Temperature' }, { v: 'Color' }, { v: 'Type' }],
         [{ v: '29C-R-STD' }, { v: '29deg C' }, { v: 'Red' }, { v: 'Standard' }],
       ],
-      columns: [],
+      columns: [
+        { id: 'col-0', type: 'sku', header: 'SKU' },
+        { id: 'col-1', type: 'spec', header: 'Temperature', specId: 'temp' },
+        { id: 'col-2', type: 'spec', header: 'Color', specId: 'color' },
+        { id: 'col-3', type: 'spec', header: 'Type', specId: 'type' },
+      ],
       specifications: [],
     };
 
@@ -223,6 +226,7 @@ describe('PRD-012: End-to-End Verification', () => {
 
     it('exports data sheet to CSV with correct content', () => {
       const csv = sheetToCSVString(dataSheet);
+      // CSV includes headers from columns[].header followed by data rows
       expect(csv).toContain('SKU,Temperature,Color,Type');
       expect(csv).toContain('29C-R-STD,29deg C,Red,Standard');
     });
@@ -259,6 +263,7 @@ describe('PRD-012: End-to-End Verification', () => {
       expect(importedData).toBeDefined();
 
       // Check data values preserved including SKU at index 0
+      // Import includes header row in data, so row 1 is data row
       const dataRows = importedData!.data;
       expect(dataRows[1][0]?.v).toBe('29C-R-STD');
     });

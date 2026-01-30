@@ -3,11 +3,12 @@ import type { SheetConfig, CellData } from '../types';
 
 /**
  * Convert SheetConfig data to XLSX worksheet
+ * For data sheets, includes header row from columns[].header
  */
 function sheetConfigToWorksheet(sheet: SheetConfig): XLSX.WorkSheet {
   // Convert CellData[][] to simple 2D array of values
   // Boolean values (checkboxes) are converted to strings "TRUE"/"FALSE" for Excel compatibility
-  const data: (string | number | null | undefined)[][] = sheet.data.map((row) =>
+  const dataRows: (string | number | null | undefined)[][] = sheet.data.map((row) =>
     row.map((cell) => {
       const value = cell?.v ?? null;
       if (typeof value === 'boolean') {
@@ -17,7 +18,15 @@ function sheetConfigToWorksheet(sheet: SheetConfig): XLSX.WorkSheet {
     })
   );
 
-  return XLSX.utils.aoa_to_sheet(data);
+  // For data sheets with columns, prepend header row from columns[].header
+  // Config sheets don't have column definitions, their data includes headers directly
+  const columns = sheet.columns ?? [];
+  if (sheet.type === 'data' && columns.length > 0) {
+    const headerRow = columns.map(col => col.header ?? '');
+    return XLSX.utils.aoa_to_sheet([headerRow, ...dataRows]);
+  }
+
+  return XLSX.utils.aoa_to_sheet(dataRows);
 }
 
 /**

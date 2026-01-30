@@ -18,14 +18,23 @@ const createSpec = (
   values,
 });
 
-// Helper to create sheet data with SKU in column 0
-const createSheetData = (rows: string[][]): CellData[][] => {
-  return rows.map((row) =>
-    row.map((val) => ({ v: val, m: val }))
-  );
+// Helper to create sheet data from rows, handling header row automatically
+// If first row looks like headers (first cell is 'SKU'), it will be used for columns but not data
+const createSheetData = (rows: string[][]): { data: CellData[][], headers: string[] } => {
+  // Check if first row is a header row
+  const isHeader = rows[0]?.[0] === 'SKU';
+  const headers = isHeader ? rows[0] : [];
+  const dataRows = isHeader ? rows.slice(1) : rows;
+
+  return {
+    data: dataRows.map((row) =>
+      row.map((val) => ({ v: val, m: val }))
+    ),
+    headers,
+  };
 };
 
-// Helper to create column definitions
+// Helper to create column definitions from header names
 const createColumns = (headers: string[], specifications: Specification[]): ColumnDef[] => {
   return headers.map((header, index) => {
     if (index === 0) {
@@ -43,16 +52,19 @@ const createColumns = (headers: string[], specifications: Specification[]): Colu
 const createSheet = (
   id: string,
   name: string,
-  data: CellData[][],
+  rawData: { data: CellData[][], headers: string[] },
   specifications: Specification[]
 ): SheetConfig => {
-  const headers = data[0]?.map(cell => String(cell?.v ?? '')) ?? [];
-  const columns = createColumns(headers, specifications);
+  // Use headers from data extraction or default to ['SKU'] + spec names
+  const columnHeaders = rawData.headers.length > 0
+    ? rawData.headers
+    : ['SKU', ...specifications.map(s => s.name)];
+  const columns = createColumns(columnHeaders, specifications);
   return {
     id,
     name,
     type: 'data',
-    data,
+    data: rawData.data,
     columns,
     specifications,
   };
@@ -132,7 +144,7 @@ describe('useSkuReactivity', () => {
     const updatedData = updatedSheets[0].data;
 
     // SKU should be regenerated with new fragment
-    expect(updatedData[1][0].v).toBe('RD');
+    expect(updatedData[0][0].v).toBe('RD');
   });
 
   it('should regenerate SKUs for multiple rows when skuFragment changes', () => {
@@ -172,9 +184,9 @@ describe('useSkuReactivity', () => {
     const updatedData = useSheetsStore.getState().sheets[0].data;
 
     // Row 1 (Red) should have updated SKU
-    expect(updatedData[1][0].v).toBe('RD-S');
+    expect(updatedData[0][0].v).toBe('RD-S');
     // Row 2 (Blue) should be unchanged
-    expect(updatedData[2][0].v).toBe('B-S');
+    expect(updatedData[1][0].v).toBe('B-S');
   });
 
   it('should only update the active sheet when skuFragment changes (not other sheets)', () => {
@@ -219,10 +231,10 @@ describe('useSkuReactivity', () => {
 
     const updatedSheets = useSheetsStore.getState().sheets;
 
-    // Active sheet (sheet-1) should have updated SKUs
-    expect(updatedSheets[0].data[1][0].v).toBe('RD');
+    // Active sheet (sheet-1) should have updated SKUs (data[0] is first data row)
+    expect(updatedSheets[0].data[0][0].v).toBe('RD');
     // Inactive sheet (sheet-2) should remain unchanged (has its own independent spec)
-    expect(updatedSheets[1].data[1][0].v).toBe('R');
+    expect(updatedSheets[1].data[0][0].v).toBe('R');
   });
 
   it('should not regenerate SKUs when only displayValue changes (but should update cell values)', () => {
@@ -256,10 +268,10 @@ describe('useSkuReactivity', () => {
     const updatedData = useSheetsStore.getState().sheets[0].data;
 
     // SKU should remain unchanged (still 'R', not regenerated)
-    expect(updatedData[1][0].v).toBe('R');
+    expect(updatedData[0][0].v).toBe('R');
     // Cell value should be updated to new displayValue
-    expect(updatedData[1][1].v).toBe('Crimson');
-    expect(updatedData[1][1].m).toBe('Crimson');
+    expect(updatedData[0][1].v).toBe('Crimson');
+    expect(updatedData[0][1].m).toBe('Crimson');
   });
 
   it('should only update cells matching the old displayValue', () => {
@@ -295,11 +307,11 @@ describe('useSkuReactivity', () => {
 
     const updatedData = useSheetsStore.getState().sheets[0].data;
 
-    // Red cells should be updated
-    expect(updatedData[1][1].v).toBe('Crimson');
-    expect(updatedData[3][1].v).toBe('Crimson');
-    // Blue cells should remain unchanged
-    expect(updatedData[2][1].v).toBe('Blue');
+    // Red cells should be updated (data[0] and data[2] were 'Red')
+    expect(updatedData[0][1].v).toBe('Crimson');
+    expect(updatedData[2][1].v).toBe('Crimson');
+    // Blue cells should remain unchanged (data[1] was 'Blue')
+    expect(updatedData[1][1].v).toBe('Blue');
   });
 
   it('should update cells only in columns matching the specification via specId', () => {
@@ -325,7 +337,7 @@ describe('useSkuReactivity', () => {
       id: 'sheet-1',
       name: 'Products',
       type: 'data',
-      data: sheetData,
+      data: sheetData.data,
       columns,
       specifications: [colorSpec],
     };
@@ -349,12 +361,12 @@ describe('useSkuReactivity', () => {
     const updatedData = useSheetsStore.getState().sheets[0].data;
 
     // Color column should be updated
-    expect(updatedData[1][1].v).toBe('Crimson');
+    expect(updatedData[0][1].v).toBe('Crimson');
     // Notes column should remain unchanged (even though it contains 'Red')
-    expect(updatedData[1][2].v).toBe('Red is a nice color');
+    expect(updatedData[0][2].v).toBe('Red is a nice color');
   });
 
-  it('should not update header row when displayValue changes', () => {
+  it('should update displayValue in data rows', () => {
     const colorSpec = createSpec('spec-color', 'Color', 0, [
       { id: 'v1', displayValue: 'Color', skuFragment: 'C' }, // displayValue matches header name
     ]);
@@ -383,11 +395,12 @@ describe('useSkuReactivity', () => {
     rerender();
 
     const updatedData = useSheetsStore.getState().sheets[0].data;
+    const updatedColumns = useSheetsStore.getState().sheets[0].columns;
 
-    // Header row should remain unchanged
-    expect(updatedData[0][1].v).toBe('Color');
-    // Data row should be updated
-    expect(updatedData[1][1].v).toBe('Hue');
+    // Column header should remain unchanged (in columns array, not data)
+    expect(updatedColumns[1].header).toBe('Color');
+    // Data row should be updated (row 0 is first data row)
+    expect(updatedData[0][1].v).toBe('Hue');
   });
 
   it('should respect settings when regenerating SKUs', () => {
@@ -430,10 +443,10 @@ describe('useSkuReactivity', () => {
     const updatedData = useSheetsStore.getState().sheets[0].data;
 
     // SKU should respect delimiter, prefix, and suffix
-    expect(updatedData[1][0].v).toBe('PRE-RD_S-SUF');
+    expect(updatedData[0][0].v).toBe('PRE-RD_S-SUF');
   });
 
-  it('should skip header row when regenerating SKUs', () => {
+  it('should regenerate SKUs for all data rows', () => {
     const colorSpec = createSpec('spec-color', 'Color', 0, [
       { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
     ]);
@@ -462,10 +475,13 @@ describe('useSkuReactivity', () => {
     rerender();
 
     const updatedData = useSheetsStore.getState().sheets[0].data;
+    const updatedColumns = useSheetsStore.getState().sheets[0].columns;
 
-    // Header row should remain unchanged
-    expect(updatedData[0][0].v).toBe('SKU');
-    expect(updatedData[0][1].v).toBe('Color');
+    // Column headers should be in columns array
+    expect(updatedColumns[0].header).toBe('SKU');
+    expect(updatedColumns[1].header).toBe('Color');
+    // SKU in data row 0 should be regenerated
+    expect(updatedData[0][0].v).toBe('RD');
   });
 
   it('should handle empty specifications array', () => {
@@ -484,7 +500,7 @@ describe('useSkuReactivity', () => {
       id: 'sheet-1',
       name: 'Products',
       type: 'data',
-      data: sheetData,
+      data: sheetData.data,
       columns,
       specifications: [],
     };
@@ -500,13 +516,14 @@ describe('useSkuReactivity', () => {
     }).not.toThrow();
   });
 
-  it('should handle sheets with only header row', () => {
+  it('should handle sheets with no data rows', () => {
     const colorSpec = createSpec('spec-color', 'Color', 0, [
       { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
     ]);
 
+    // Empty data rows (headers extracted into columns)
     const sheetData = createSheetData([
-      ['SKU', 'Color'], // Only header, no data rows
+      ['SKU', 'Color'], // This becomes headers, no data rows remain
     ]);
 
     const sheet = createSheet('sheet-1', 'Products', sheetData, [colorSpec]);
@@ -528,8 +545,10 @@ describe('useSkuReactivity', () => {
     expect(() => rerender()).not.toThrow();
 
     const updatedData = useSheetsStore.getState().sheets[0].data;
-    expect(updatedData).toHaveLength(1); // Still just header row
-    expect(updatedData[0][0].v).toBe('SKU');
+    expect(updatedData).toHaveLength(0); // No data rows
+    // Headers are in columns array
+    const updatedColumns = useSheetsStore.getState().sheets[0].columns;
+    expect(updatedColumns[0].header).toBe('SKU');
   });
 
   it('should not trigger SKU regeneration when switching sheets', () => {
@@ -606,7 +625,7 @@ describe('useSkuReactivity', () => {
     const updatedData = useSheetsStore.getState().sheets[0].data;
 
     // Both SKU and cell value should be updated
-    expect(updatedData[1][0].v).toBe('CR');
-    expect(updatedData[1][1].v).toBe('Crimson');
+    expect(updatedData[0][0].v).toBe('CR');
+    expect(updatedData[0][1].v).toBe('Crimson');
   });
 });

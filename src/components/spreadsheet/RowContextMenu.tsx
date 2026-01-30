@@ -10,7 +10,7 @@ export interface RowContextMenuPosition {
 export interface RowContextMenuProps {
   /** Position to render the menu at */
   position: RowContextMenuPosition | null
-  /** The row index (0-indexed from data array, row 0 is header) */
+  /** The row index (0-indexed from data array, all rows are data rows) */
   rowIndex: number
   /** Called when menu should close */
   onClose: () => void
@@ -62,8 +62,8 @@ export function RowContextMenu({
     onClose()
   }, [rowIndex, onDelete, onClose])
 
-  // Don't render if no position or if it's the header row (row 0)
-  if (!position || rowIndex === 0) return null
+  // Don't render if no position (all rows are data rows now, any row can be deleted)
+  if (!position) return null
 
   return (
     <div

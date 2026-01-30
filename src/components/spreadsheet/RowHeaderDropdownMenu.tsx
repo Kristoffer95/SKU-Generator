@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export interface RowHeaderDropdownMenuProps {
-  /** The row index (0-indexed, row 0 is header) */
+  /** The row index (0-indexed, all rows are data rows) */
   rowIndex: number
   /** Called when user selects "Insert row above" */
   onInsertAbove: (rowIndex: number) => void
@@ -31,7 +31,7 @@ export interface RowHeaderDropdownMenuProps {
  * Features:
  * - Show on hover (trigger icon appears on hover)
  * - Insert row above/below
- * - Delete row (hidden for header row)
+ * - Delete row (available for all rows since all rows are data rows now)
  * - Pin rows above
  */
 export function RowHeaderDropdownMenu({
@@ -44,9 +44,8 @@ export function RowHeaderDropdownMenu({
 }: RowHeaderDropdownMenuProps) {
   const [open, setOpen] = useState(false)
 
-  // Header row (row 0) cannot be deleted
-  const isHeaderRow = rowIndex === 0
-  const canDelete = !isHeaderRow
+  // All rows can be deleted now (no header row in data array)
+  const canDelete = true
 
   // Check if rows up to this row are currently pinned
   const isRowPinned = pinnedRows > rowIndex

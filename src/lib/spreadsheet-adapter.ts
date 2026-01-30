@@ -40,7 +40,7 @@ export function convertToSpreadsheetData(
 
   for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
     const row = data[rowIndex] || [];
-    const isHeaderRow = rowIndex === 0;
+    // All rows are data rows now - no header row in data array
     const resultRow: (SKUCell | null)[] = [];
 
     // Determine number of columns from columns array, but include existing data
@@ -60,20 +60,20 @@ export function convertToSpreadsheetData(
 
       // Handle empty/undefined cells
       if (!cell || (cell.v === undefined && cell.m === undefined)) {
-        if (isSKUColumn && !isHeaderRow) {
-          // Empty SKU cell (non-header) should still be read-only
+        if (isSKUColumn) {
+          // Empty SKU cell should still be read-only
           resultRow.push({
             value: null,
             readOnly: true,
           });
-        } else if (isSpecColumn && linkedSpec && !isHeaderRow) {
-          // Empty spec column cell (non-header) should have dropdown options
+        } else if (isSpecColumn && linkedSpec) {
+          // Empty spec column cell should have dropdown options
           resultRow.push({
             value: null,
             dropdownOptions: getDropdownOptionsForSpec(linkedSpec),
           });
         } else {
-          // Free columns or header row: just null
+          // Free columns: just null
           resultRow.push(null);
         }
         continue;
@@ -87,13 +87,13 @@ export function convertToSpreadsheetData(
         value: value === undefined ? null : value,
       };
 
-      // SKU column: read-only for all rows except header
-      if (isSKUColumn && !isHeaderRow) {
+      // SKU column: always read-only (all rows are data rows)
+      if (isSKUColumn) {
         skuCell.readOnly = true;
       }
 
-      // Spec columns: add dropdown options for non-header rows
-      if (isSpecColumn && linkedSpec && !isHeaderRow) {
+      // Spec columns: add dropdown options (all rows are data rows)
+      if (isSpecColumn && linkedSpec) {
         skuCell.dropdownOptions = getDropdownOptionsForSpec(linkedSpec);
       }
 

@@ -103,7 +103,7 @@ describe('SettingsDialog', () => {
 
   it('recalculates SKUs in data sheets when settings change', () => {
     // Setup: Specifications in store and a data sheet with values
-    // SKU is now at index 0 (Column A)
+    // SKU is now at index 0 (Column A), no header row in data array
     useSpecificationsStore.setState({
       specifications: [
         {
@@ -126,11 +126,15 @@ describe('SettingsDialog', () => {
           id: 'data-1',
           name: 'Sheet 1',
           type: 'data',
+          // Data rows only - no header row in data array
           data: [
-            [{ v: 'SKU' }, { v: 'Color' }, { v: 'Size' }],
             [{ v: 'R-S' }, { v: 'Red' }, { v: 'Small' }], // Old SKU with hyphen at index 0
           ],
-          columns: [],
+          columns: [
+            { id: 'col-0', type: 'sku', header: 'SKU' },
+            { id: 'col-1', type: 'spec', header: 'Color', specId: 'color' },
+            { id: 'col-2', type: 'spec', header: 'Size', specId: 'size' },
+          ],
           specifications: [],
         },
       ],
@@ -143,14 +147,14 @@ describe('SettingsDialog', () => {
     fireEvent.click(screen.getByText('Underscore (_)'))
     fireEvent.click(screen.getByText('Save changes'))
 
-    // Check that SKU was recalculated at index 0
+    // Check that SKU was recalculated at index 0 (first data row)
     const sheets = useSheetsStore.getState().sheets
     const dataSheet = sheets.find(s => s.id === 'data-1')
-    expect(dataSheet?.data[1][0].v).toBe('R_S')
+    expect(dataSheet?.data[0][0].v).toBe('R_S')
   })
 
   it('applies prefix and suffix to recalculated SKUs', () => {
-    // SKU is now at index 0 (Column A)
+    // SKU is now at index 0 (Column A), no header row in data array
     useSpecificationsStore.setState({
       specifications: [
         {
@@ -167,11 +171,14 @@ describe('SettingsDialog', () => {
           id: 'data-1',
           name: 'Sheet 1',
           type: 'data',
+          // Data rows only - no header row in data array
           data: [
-            [{ v: 'SKU' }, { v: 'Color' }],
             [{ v: 'R' }, { v: 'Red' }],
           ],
-          columns: [],
+          columns: [
+            { id: 'col-0', type: 'sku', header: 'SKU' },
+            { id: 'col-1', type: 'spec', header: 'Color', specId: 'color' },
+          ],
           specifications: [],
         },
       ],
@@ -187,6 +194,6 @@ describe('SettingsDialog', () => {
 
     const sheets = useSheetsStore.getState().sheets
     const dataSheet = sheets.find(s => s.id === 'data-1')
-    expect(dataSheet?.data[1][0].v).toBe('PRE-R-END')
+    expect(dataSheet?.data[0][0].v).toBe('PRE-R-END')
   })
 })

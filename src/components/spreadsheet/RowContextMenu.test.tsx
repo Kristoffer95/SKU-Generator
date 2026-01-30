@@ -32,8 +32,9 @@ describe('RowContextMenu', () => {
       expect(screen.queryByTestId('row-context-menu')).not.toBeInTheDocument()
     })
 
-    it('renders nothing when rowIndex is 0 (header row)', () => {
+    it('renders context menu when position provided and rowIndex >= 0', () => {
       const position: RowContextMenuPosition = { x: 100, y: 100 }
+      // Row 0 is now a valid data row (no header row)
       render(
         <RowContextMenu
           {...defaultProps}
@@ -41,10 +42,10 @@ describe('RowContextMenu', () => {
           rowIndex={0}
         />
       )
-      expect(screen.queryByTestId('row-context-menu')).not.toBeInTheDocument()
+      expect(screen.getByTestId('row-context-menu')).toBeInTheDocument()
     })
 
-    it('renders context menu when position provided and rowIndex > 0', () => {
+    it('renders context menu for any valid row index', () => {
       const position: RowContextMenuPosition = { x: 100, y: 100 }
       render(
         <RowContextMenu
