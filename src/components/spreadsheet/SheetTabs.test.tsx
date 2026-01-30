@@ -6,6 +6,7 @@ describe("SheetTabs", () => {
   const mockOnActivate = vi.fn();
   const mockOnRename = vi.fn();
   const mockOnDelete = vi.fn();
+  const mockOnDuplicate = vi.fn();
   const mockOnAdd = vi.fn();
 
   const defaultSheets: SheetTab[] = [
@@ -20,6 +21,7 @@ describe("SheetTabs", () => {
     onActivate: mockOnActivate,
     onRename: mockOnRename,
     onDelete: mockOnDelete,
+    onDuplicate: mockOnDuplicate,
     onAdd: mockOnAdd,
   };
 
@@ -254,6 +256,49 @@ describe("SheetTabs", () => {
 
       expect(activeTab).toHaveAttribute("data-active", "true");
       expect(inactiveTab).toHaveAttribute("data-active", "false");
+    });
+  });
+
+  describe("sheet duplication (Copy button)", () => {
+    it("shows duplicate button when onDuplicate is provided", () => {
+      render(<SheetTabs {...defaultProps} />);
+
+      expect(screen.getByTestId("sheet-tab-duplicate-sheet-1")).toBeInTheDocument();
+      expect(screen.getByTestId("sheet-tab-duplicate-sheet-2")).toBeInTheDocument();
+    });
+
+    it("hides duplicate button when onDuplicate is not provided", () => {
+      render(<SheetTabs {...defaultProps} onDuplicate={undefined} />);
+
+      expect(screen.queryByTestId("sheet-tab-duplicate-sheet-1")).not.toBeInTheDocument();
+    });
+
+    it("calls onDuplicate when clicking duplicate button", () => {
+      render(<SheetTabs {...defaultProps} />);
+
+      fireEvent.click(screen.getByTestId("sheet-tab-duplicate-sheet-2"));
+
+      expect(mockOnDuplicate).toHaveBeenCalledWith("sheet-2");
+    });
+
+    it("does not activate tab when clicking duplicate button", () => {
+      render(<SheetTabs {...defaultProps} />);
+
+      fireEvent.click(screen.getByTestId("sheet-tab-duplicate-sheet-2"));
+
+      expect(mockOnActivate).not.toHaveBeenCalled();
+    });
+
+    it("hides duplicate button during rename mode", () => {
+      render(<SheetTabs {...defaultProps} />);
+
+      // Enter rename mode
+      fireEvent.doubleClick(screen.getByTestId("sheet-tab-sheet-1"));
+
+      // Duplicate button should be hidden for the tab being edited
+      expect(screen.queryByTestId("sheet-tab-duplicate-sheet-1")).not.toBeInTheDocument();
+      // But visible for other tabs
+      expect(screen.getByTestId("sheet-tab-duplicate-sheet-2")).toBeInTheDocument();
     });
   });
 

@@ -426,6 +426,272 @@ describe('useSheetsStore', () => {
     });
   });
 
+  describe('duplicateSheet', () => {
+    const createSheetWithData = (): { sheetId: string } => {
+      const { addSheet, addSpecification, addSpecValue } = useSheetsStore.getState();
+      const sheetId = addSheet('Original Sheet');
+
+      // Add specifications with values
+      const colorId = addSpecification(sheetId, 'Color');
+      addSpecValue(sheetId, colorId!, 'Red', 'R');
+      addSpecValue(sheetId, colorId!, 'Blue', 'B');
+
+      const sizeId = addSpecification(sheetId, 'Size');
+      addSpecValue(sheetId, sizeId!, 'Small', 'S');
+      addSpecValue(sheetId, sizeId!, 'Large', 'L');
+
+      // Set up columns including spec columns and a free column
+      useSheetsStore.setState((state) => ({
+        sheets: state.sheets.map((s) => {
+          if (s.id !== sheetId) return s;
+          const colorSpec = s.specifications.find((sp) => sp.name === 'Color');
+          const sizeSpec = s.specifications.find((sp) => sp.name === 'Size');
+          return {
+            ...s,
+            columns: [
+              { id: 'col-sku', type: 'sku' as const, header: 'SKU', width: 100 },
+              { id: 'col-color', type: 'spec' as const, specId: colorSpec!.id, header: 'Color', width: 150 },
+              { id: 'col-size', type: 'spec' as const, specId: sizeSpec!.id, header: 'Size', width: 120 },
+              { id: 'col-notes', type: 'free' as const, header: 'Notes', width: 200 },
+            ],
+            data: [
+              [{ v: 'SKU', m: 'SKU' }, { v: 'Color', m: 'Color' }, { v: 'Size', m: 'Size' }, { v: 'Notes', m: 'Notes' }],
+              [{ v: 'R-S', m: 'R-S', bg: '#ff0000' }, { v: 'Red', m: 'Red' }, { v: 'Small', m: 'Small' }, { v: 'Note 1', m: 'Note 1' }],
+              [{ v: 'B-L', m: 'B-L', fc: '#0000ff', bold: true }, { v: 'Blue', m: 'Blue' }, { v: 'Large', m: 'Large' }, { v: 'Note 2', m: 'Note 2', italic: true }],
+            ],
+            rowHeights: { 1: 40, 2: 50 },
+          };
+        }),
+      }));
+
+      return { sheetId };
+    };
+
+    it('should duplicate a sheet with a new ID and "Copy of" name', () => {
+      const { sheetId } = createSheetWithData();
+      const { duplicateSheet } = useSheetsStore.getState();
+
+      const newSheetId = duplicateSheet(sheetId);
+
+      expect(newSheetId).toBeTruthy();
+      expect(newSheetId).not.toBe(sheetId);
+
+      const { sheets } = useSheetsStore.getState();
+      expect(sheets).toHaveLength(2);
+
+      const newSheet = sheets.find((s) => s.id === newSheetId);
+      expect(newSheet).toBeDefined();
+      expect(newSheet!.name).toBe('Copy of Original Sheet');
+    });
+
+    it('should make the new sheet active after duplication', () => {
+      const { sheetId } = createSheetWithData();
+      const { duplicateSheet } = useSheetsStore.getState();
+
+      const newSheetId = duplicateSheet(sheetId);
+
+      const { activeSheetId } = useSheetsStore.getState();
+      expect(activeSheetId).toBe(newSheetId);
+    });
+
+    it('should insert the duplicated sheet after the source sheet', () => {
+      const { addSheet, duplicateSheet } = useSheetsStore.getState();
+      addSheet('Sheet 1');
+      const sheet2Id = addSheet('Sheet 2');
+      addSheet('Sheet 3');
+
+      const newSheetId = duplicateSheet(sheet2Id);
+
+      const { sheets } = useSheetsStore.getState();
+      expect(sheets).toHaveLength(4);
+
+      // Find positions
+      const sheet2Index = sheets.findIndex((s) => s.id === sheet2Id);
+      const newSheetIndex = sheets.findIndex((s) => s.id === newSheetId);
+
+      expect(newSheetIndex).toBe(sheet2Index + 1);
+    });
+
+    it('should deep clone all cell data including formatting', () => {
+      const { sheetId } = createSheetWithData();
+      const { duplicateSheet } = useSheetsStore.getState();
+
+      const newSheetId = duplicateSheet(sheetId);
+
+      const { sheets } = useSheetsStore.getState();
+      const originalSheet = sheets.find((s) => s.id === sheetId)!;
+      const newSheet = sheets.find((s) => s.id === newSheetId)!;
+
+      // Data should be identical in content
+      expect(newSheet.data).toHaveLength(originalSheet.data.length);
+      expect(newSheet.data[1][0].v).toBe('R-S');
+      expect(newSheet.data[1][0].bg).toBe('#ff0000');
+      expect(newSheet.data[2][0].fc).toBe('#0000ff');
+      expect(newSheet.data[2][0].bold).toBe(true);
+      expect(newSheet.data[2][3].italic).toBe(true);
+
+      // But should be different object references (deep clone)
+      expect(newSheet.data).not.toBe(originalSheet.data);
+      expect(newSheet.data[0]).not.toBe(originalSheet.data[0]);
+      expect(newSheet.data[1][0]).not.toBe(originalSheet.data[1][0]);
+    });
+
+    it('should duplicate specifications with new IDs', () => {
+      const { sheetId } = createSheetWithData();
+      const { duplicateSheet } = useSheetsStore.getState();
+
+      const newSheetId = duplicateSheet(sheetId);
+
+      const { sheets } = useSheetsStore.getState();
+      const originalSheet = sheets.find((s) => s.id === sheetId)!;
+      const newSheet = sheets.find((s) => s.id === newSheetId)!;
+
+      // Same number of specs
+      expect(newSheet.specifications).toHaveLength(originalSheet.specifications.length);
+
+      // Same names and values
+      const originalColorSpec = originalSheet.specifications.find((s) => s.name === 'Color')!;
+      const newColorSpec = newSheet.specifications.find((s) => s.name === 'Color')!;
+
+      expect(newColorSpec.name).toBe(originalColorSpec.name);
+      expect(newColorSpec.order).toBe(originalColorSpec.order);
+      expect(newColorSpec.values).toHaveLength(originalColorSpec.values.length);
+      expect(newColorSpec.values[0].displayValue).toBe('Red');
+      expect(newColorSpec.values[0].skuFragment).toBe('R');
+
+      // But different IDs
+      expect(newColorSpec.id).not.toBe(originalColorSpec.id);
+      expect(newColorSpec.values[0].id).not.toBe(originalColorSpec.values[0].id);
+    });
+
+    it('should duplicate columns with new IDs and updated specId references', () => {
+      const { sheetId } = createSheetWithData();
+      const { duplicateSheet } = useSheetsStore.getState();
+
+      const newSheetId = duplicateSheet(sheetId);
+
+      const { sheets } = useSheetsStore.getState();
+      const originalSheet = sheets.find((s) => s.id === sheetId)!;
+      const newSheet = sheets.find((s) => s.id === newSheetId)!;
+
+      // Same number of columns
+      expect(newSheet.columns).toHaveLength(originalSheet.columns.length);
+
+      // Column properties preserved
+      expect(newSheet.columns[0].type).toBe('sku');
+      expect(newSheet.columns[0].header).toBe('SKU');
+      expect(newSheet.columns[0].width).toBe(100);
+
+      expect(newSheet.columns[1].type).toBe('spec');
+      expect(newSheet.columns[1].header).toBe('Color');
+      expect(newSheet.columns[1].width).toBe(150);
+
+      expect(newSheet.columns[3].type).toBe('free');
+      expect(newSheet.columns[3].header).toBe('Notes');
+
+      // Different column IDs
+      expect(newSheet.columns[0].id).not.toBe(originalSheet.columns[0].id);
+      expect(newSheet.columns[1].id).not.toBe(originalSheet.columns[1].id);
+
+      // specId should reference the new spec IDs
+      const newColorSpec = newSheet.specifications.find((s) => s.name === 'Color')!;
+      expect(newSheet.columns[1].specId).toBe(newColorSpec.id);
+
+      const newSizeSpec = newSheet.specifications.find((s) => s.name === 'Size')!;
+      expect(newSheet.columns[2].specId).toBe(newSizeSpec.id);
+    });
+
+    it('should duplicate rowHeights', () => {
+      const { sheetId } = createSheetWithData();
+      const { duplicateSheet } = useSheetsStore.getState();
+
+      const newSheetId = duplicateSheet(sheetId);
+
+      const { sheets } = useSheetsStore.getState();
+      const originalSheet = sheets.find((s) => s.id === sheetId)!;
+      const newSheet = sheets.find((s) => s.id === newSheetId)!;
+
+      expect(newSheet.rowHeights).toBeDefined();
+      expect(newSheet.rowHeights![1]).toBe(40);
+      expect(newSheet.rowHeights![2]).toBe(50);
+
+      // Should be a separate object
+      expect(newSheet.rowHeights).not.toBe(originalSheet.rowHeights);
+    });
+
+    it('should ensure spec independence - editing duplicated spec does not affect original', () => {
+      const { sheetId } = createSheetWithData();
+      const { duplicateSheet, updateSpecification, addSpecValue } = useSheetsStore.getState();
+
+      const newSheetId = duplicateSheet(sheetId);
+
+      const { sheets: sheetsAfterDuplicate } = useSheetsStore.getState();
+      const newSheet = sheetsAfterDuplicate.find((s) => s.id === newSheetId)!;
+      const newColorSpec = newSheet.specifications.find((s) => s.name === 'Color')!;
+
+      // Modify the duplicated sheet's spec
+      updateSpecification(newSheetId!, newColorSpec.id, { name: 'Colour' });
+      addSpecValue(newSheetId!, newColorSpec.id, 'Green', 'G');
+
+      // Verify original is unchanged
+      const { sheets: sheetsAfterEdit } = useSheetsStore.getState();
+      const originalSheet = sheetsAfterEdit.find((s) => s.id === sheetId)!;
+      const originalColorSpec = originalSheet.specifications.find((s) => s.name === 'Color');
+
+      expect(originalColorSpec).toBeDefined();
+      expect(originalColorSpec!.name).toBe('Color');
+      expect(originalColorSpec!.values).toHaveLength(2);
+    });
+
+    it('should return null if source sheet not found', () => {
+      const { duplicateSheet } = useSheetsStore.getState();
+
+      const result = duplicateSheet('non-existent-id');
+
+      expect(result).toBeNull();
+    });
+
+    it('should duplicate sheet without rowHeights if original has none', () => {
+      const { addSheet, duplicateSheet } = useSheetsStore.getState();
+      const sheetId = addSheet('Simple Sheet');
+
+      const newSheetId = duplicateSheet(sheetId);
+
+      const { sheets } = useSheetsStore.getState();
+      const newSheet = sheets.find((s) => s.id === newSheetId)!;
+
+      expect(newSheet.rowHeights).toBeUndefined();
+    });
+
+    it('should duplicate sheet type correctly', () => {
+      const { sheetId } = createSheetWithData();
+      const { duplicateSheet } = useSheetsStore.getState();
+
+      const newSheetId = duplicateSheet(sheetId);
+
+      const { sheets } = useSheetsStore.getState();
+      const originalSheet = sheets.find((s) => s.id === sheetId)!;
+      const newSheet = sheets.find((s) => s.id === newSheetId)!;
+
+      expect(newSheet.type).toBe(originalSheet.type);
+    });
+
+    it('should handle undo by restoring to before duplication', () => {
+      const { sheetId } = createSheetWithData();
+      const { duplicateSheet, removeSheet } = useSheetsStore.getState();
+
+      const newSheetId = duplicateSheet(sheetId);
+
+      // Simulating "undo" by removing the duplicated sheet
+      removeSheet(newSheetId!);
+
+      const { sheets, activeSheetId } = useSheetsStore.getState();
+      expect(sheets).toHaveLength(1);
+      expect(sheets[0].id).toBe(sheetId);
+      expect(activeSheetId).toBe(sheetId);
+    });
+  });
+
   describe('setActiveSheet', () => {
     it('should set active sheet', () => {
       const { addSheet, setActiveSheet } = useSheetsStore.getState();

@@ -951,7 +951,7 @@
       "Undo restores to before duplication",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "pin-columns",

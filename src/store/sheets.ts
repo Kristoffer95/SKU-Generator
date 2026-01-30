@@ -16,6 +16,13 @@ interface SheetsState {
   setActiveSheet: (id: string) => void;
   getActiveSheet: () => SheetConfig | undefined;
   /**
+   * Duplicate a sheet with all its data, columns, and specifications.
+   * All IDs are regenerated to ensure independence.
+   * @param sheetId - ID of the sheet to duplicate
+   * @returns ID of the new sheet, or null if source sheet not found
+   */
+  duplicateSheet: (sheetId: string) => string | null;
+  /**
    * @deprecated Config sheet approach is deprecated. Use useSpecificationsStore instead.
    * This method is kept only for migration-1 task to detect existing Config sheets.
    */
@@ -254,6 +261,77 @@ export const useSheetsStore = create<SheetsState>()(
           };
         });
         return true;
+      },
+
+      duplicateSheet: (sheetId: string) => {
+        const { sheets } = get();
+        const sourceSheet = sheets.find((s) => s.id === sheetId);
+
+        if (!sourceSheet) {
+          return null;
+        }
+
+        // Create ID mapping for specifications (old ID -> new ID)
+        const specIdMap = new Map<string, string>();
+        sourceSheet.specifications?.forEach((spec) => {
+          specIdMap.set(spec.id, generateId());
+        });
+
+        // Deep clone specifications with new IDs
+        const clonedSpecifications: Specification[] = (sourceSheet.specifications ?? []).map((spec) => ({
+          id: specIdMap.get(spec.id) ?? generateId(),
+          name: spec.name,
+          order: spec.order,
+          values: spec.values.map((val) => ({
+            id: generateId(),
+            displayValue: val.displayValue,
+            skuFragment: val.skuFragment,
+          })),
+        }));
+
+        // Deep clone columns with new IDs, updating specId references
+        const clonedColumns: ColumnDef[] = (sourceSheet.columns ?? []).map((col) => ({
+          id: generateColumnId(),
+          type: col.type,
+          header: col.header,
+          width: col.width,
+          // Map specId to the new specification ID
+          ...(col.specId && { specId: specIdMap.get(col.specId) }),
+        }));
+
+        // Deep clone cell data (preserves all formatting: bg, fc, bold, italic, align)
+        const clonedData: CellData[][] = sourceSheet.data.map((row) =>
+          row.map((cell) => ({ ...cell }))
+        );
+
+        // Deep clone rowHeights if present
+        const clonedRowHeights = sourceSheet.rowHeights
+          ? { ...sourceSheet.rowHeights }
+          : undefined;
+
+        // Create the duplicated sheet
+        const newSheetId = generateId();
+        const newSheet: SheetConfig = {
+          id: newSheetId,
+          name: `Copy of ${sourceSheet.name}`,
+          type: sourceSheet.type,
+          data: clonedData,
+          columns: clonedColumns,
+          specifications: clonedSpecifications,
+          ...(clonedRowHeights && { rowHeights: clonedRowHeights }),
+        };
+
+        // Find the index of the source sheet and insert after it
+        const sourceIndex = sheets.findIndex((s) => s.id === sheetId);
+        const newSheets = [...sheets];
+        newSheets.splice(sourceIndex + 1, 0, newSheet);
+
+        set({
+          sheets: newSheets,
+          activeSheetId: newSheetId,
+        });
+
+        return newSheetId;
       },
 
       setActiveSheet: (id: string) => {

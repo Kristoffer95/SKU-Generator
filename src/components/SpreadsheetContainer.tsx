@@ -155,7 +155,7 @@ function getSelectedCells(selection: Selection | undefined, rowCount: number = 0
 }
 
 export function SpreadsheetContainer() {
-  const { sheets, activeSheetId, setActiveSheet, setSheetData, addSheetWithId, removeSheet, updateSheet, reorderColumns, updateColumnWidth, updateRowHeight, updateFreeColumnHeader } = useSheetsStore()
+  const { sheets, activeSheetId, setActiveSheet, setSheetData, addSheetWithId, removeSheet, updateSheet, reorderColumns, updateColumnWidth, updateRowHeight, updateFreeColumnHeader, duplicateSheet } = useSheetsStore()
   // Get active sheet and use its local specifications and columns
   const activeSheet = sheets.find((s) => s.id === activeSheetId)
   const specifications = useMemo(
@@ -256,6 +256,14 @@ export function SpreadsheetContainer() {
     const newId = `sheet-${Date.now()}`
     addSheetWithId(newId, `Sheet ${sheets.length + 1}`)
   }, [addSheetWithId, sheets.length])
+
+  // Handle sheet duplication
+  const handleSheetDuplicate = useCallback((id: string) => {
+    duplicateSheet(id)
+    // Clear history for the new sheet (the duplicated sheet becomes active)
+    setHistory([])
+    setHistoryIndex(-1)
+  }, [duplicateSheet])
 
   // Handle spreadsheet data change
   const handleDataChange = useCallback((data: Matrix<CellBase<string | number | null>>) => {
@@ -1583,6 +1591,7 @@ export function SpreadsheetContainer() {
         onActivate={handleSheetActivate}
         onRename={handleSheetRename}
         onDelete={handleSheetDelete}
+        onDuplicate={handleSheetDuplicate}
         onAdd={handleSheetAdd}
       />
       <ValidationPanel

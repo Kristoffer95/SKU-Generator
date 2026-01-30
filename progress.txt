@@ -1,3 +1,37 @@
+## sheet-duplication - COMPLETED
+Add ability to duplicate a sheet including all its data, columns, and specifications
+
+### Key decisions
+- Added duplicateSheet method to useSheetsStore that deep clones sheet with regenerated IDs
+- Created ID mapping for specifications (old ID -> new ID) to maintain specId references in columns
+- Deep clone pattern: specifications -> columns (with updated specId references) -> data -> rowHeights
+- Added Copy button (lucide-react Copy icon) to SheetTabs component, appears on hover like delete button
+- Duplicated sheet named "Copy of {originalName}" and inserted immediately after source sheet
+- New sheet automatically becomes active after duplication
+- Handler in SpreadsheetContainer clears undo/redo history for new sheet
+
+### Files changed
+- src/store/sheets.ts (added duplicateSheet method, ~70 lines)
+- src/store/sheets.test.ts (+14 tests for duplicateSheet covering all acceptance criteria)
+- src/components/spreadsheet/SheetTabs.tsx (added onDuplicate prop, Copy button, handleDuplicateClick)
+- src/components/spreadsheet/SheetTabs.test.tsx (+5 tests for duplicate button)
+- src/components/SpreadsheetContainer.tsx (added handleSheetDuplicate handler, connected to SheetTabs)
+
+### Notes
+- All 9 stepsToVerify criteria met:
+  1. Sheet tab shows duplicate option (button) ✓
+  2. Clicking duplicate creates new sheet after source ✓
+  3. New sheet is named 'Copy of {originalName}' ✓
+  4. New sheet has identical data to source ✓
+  5. New sheet has identical columns to source ✓
+  6. New sheet has independent specifications (editing one doesn't affect other) ✓
+  7. New sheet becomes active after duplication ✓
+  8. Undo restores to before duplication ✓ (via removeSheet)
+  9. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build dirs)
+- npm run test passes (1128 tests, +19 new)
+
 ## row-header-dropdown-menu - COMPLETED
 Add visible dropdown menu to row headers/indicators (since right-click context menu is intercepted by browser)
 

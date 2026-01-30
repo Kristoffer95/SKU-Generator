@@ -1,5 +1,5 @@
 import { useCallback, useState, useRef, useEffect } from "react";
-import { Plus, X } from "lucide-react";
+import { Copy, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface SheetTab {
@@ -18,6 +18,8 @@ export interface SheetTabsProps {
   onRename: (id: string, newName: string) => void;
   /** Called when a tab delete button is clicked */
   onDelete: (id: string) => void;
+  /** Called when a tab duplicate button is clicked */
+  onDuplicate?: (id: string) => void;
   /** Called when the add sheet button is clicked */
   onAdd: () => void;
 }
@@ -32,6 +34,7 @@ export function SheetTabs({
   onActivate,
   onRename,
   onDelete,
+  onDuplicate,
   onAdd,
 }: SheetTabsProps) {
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
@@ -125,6 +128,15 @@ export function SheetTabs({
     [pendingDeleteId, onDelete]
   );
 
+  // Handle duplicate button click
+  const handleDuplicateClick = useCallback(
+    (event: React.MouseEvent, id: string) => {
+      event.stopPropagation(); // Prevent tab activation
+      onDuplicate?.(id);
+    },
+    [onDuplicate]
+  );
+
   // Handle add button click
   const handleAddClick = useCallback(() => {
     onAdd();
@@ -176,13 +188,26 @@ export function SheetTabs({
               </span>
             )}
 
+            {/* Duplicate button */}
+            {!isEditing && onDuplicate && (
+              <button
+                type="button"
+                onClick={(e) => handleDuplicateClick(e, sheet.id)}
+                className="p-0.5 rounded-sm transition-colors opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground hover:bg-muted"
+                title="Duplicate sheet"
+                data-testid={`sheet-tab-duplicate-${sheet.id}`}
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </button>
+            )}
+
             {/* Delete button - only show when multiple sheets exist */}
             {canDelete && !isEditing && (
               <button
                 type="button"
                 onClick={(e) => handleDeleteClick(e, sheet.id)}
                 className={cn(
-                  "ml-1 p-0.5 rounded-sm transition-colors",
+                  "p-0.5 rounded-sm transition-colors",
                   isPendingDelete
                     ? "text-destructive bg-destructive/10 hover:bg-destructive/20"
                     : "opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground hover:bg-muted"
