@@ -952,8 +952,11 @@ export function SpreadsheetContainer() {
       // Target all cells (th and td) in this column position
       // nth-child is 1-indexed, +2 for row indicator column
       // Add background-color with --spreadsheet-pinned-tint to prevent scrolled content showing through
+      const isLastPinned = i === pinnedColumns - 1
+      // Add 2px solid right border to the last pinned column to clearly separate from scrollable content
+      const borderStyle = isLastPinned ? ' border-right: 2px solid var(--spreadsheet-cell-border, #e2e8f0);' : ''
       stickyStyles.push(
-        `.sku-spreadsheet .Spreadsheet__table tr > *:nth-child(${i + 2}) { position: sticky; left: ${leftOffset}px; z-index: 2; background-color: var(--spreadsheet-pinned-tint, #f8fafc); }`
+        `.sku-spreadsheet .Spreadsheet__table tr > *:nth-child(${i + 2}) { position: sticky; left: ${leftOffset}px; z-index: 2; background-color: var(--spreadsheet-pinned-tint, #f8fafc);${borderStyle} }`
       )
       leftOffset += width
     }

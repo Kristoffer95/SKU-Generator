@@ -6105,6 +6105,61 @@ describe('Row header dropdown menu', () => {
     expect(styleContent).toContain('background-color: var(--spreadsheet-pinned-tint, #f8fafc)')
     expect(styleContent).toContain('position: sticky')
   })
+
+  it('generates 2px right border on the last pinned column', () => {
+    const sheetId = createSheetWithRows()
+
+    // Set pinnedColumns to 1 (just the SKU column)
+    useSheetsStore.getState().setPinnedColumns(sheetId, 1)
+
+    render(<SpreadsheetContainer />)
+
+    const styleElement = document.querySelector('[data-testid="column-width-styles"]')
+    expect(styleElement).toBeInTheDocument()
+
+    const styleContent = styleElement?.textContent ?? ''
+    // Last pinned column should have a 2px solid right border
+    expect(styleContent).toContain('border-right: 2px solid var(--spreadsheet-cell-border, #e2e8f0)')
+  })
+
+  it('generates 2px right border only on the last pinned column with multiple pinned columns', () => {
+    const sheetId = createSheetWithRows()
+
+    // Set pinnedColumns to 2 (SKU + first spec column)
+    useSheetsStore.getState().setPinnedColumns(sheetId, 2)
+
+    render(<SpreadsheetContainer />)
+
+    const styleElement = document.querySelector('[data-testid="column-width-styles"]')
+    expect(styleElement).toBeInTheDocument()
+
+    const styleContent = styleElement?.textContent ?? ''
+    // Count border-right declarations - should be exactly 1 (only on last pinned column)
+    const borderMatches = styleContent.match(/border-right: 2px solid var\(--spreadsheet-cell-border/g)
+    expect(borderMatches?.length).toBe(1)
+    // Border should be on the last pinned column (nth-child(3) for column index 1)
+    expect(styleContent).toContain('nth-child(3)')
+    // Verify the border is specifically on the last pinned column
+    expect(styleContent).toMatch(/nth-child\(3\).*border-right: 2px solid var\(--spreadsheet-cell-border/)
+  })
+
+  it('generates border on SKU column when minimum pinned columns (1) is used', () => {
+    const sheetId = createSheetWithRows()
+
+    // Try to set pinnedColumns to 0, but minimum is enforced to 1 (SKU always pinned)
+    useSheetsStore.getState().setPinnedColumns(sheetId, 0)
+
+    render(<SpreadsheetContainer />)
+
+    const styleElement = document.querySelector('[data-testid="column-width-styles"]')
+    expect(styleElement).toBeInTheDocument()
+
+    const styleContent = styleElement?.textContent ?? ''
+    // Even with 0 requested, SKU column (minimum 1) is pinned, so border should exist
+    // Border is applied to nth-child(2) which is the SKU column
+    expect(styleContent).toContain('border-right: 2px solid var(--spreadsheet-cell-border')
+    expect(styleContent).toMatch(/nth-child\(2\).*border-right: 2px solid var\(--spreadsheet-cell-border/)
+  })
 })
 
 describe('SpreadsheetContainer checkbox spacebar toggle', () => {

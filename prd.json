@@ -1122,7 +1122,7 @@
       "Border visible in both light and dark mode",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "fix-pinned-row-background",

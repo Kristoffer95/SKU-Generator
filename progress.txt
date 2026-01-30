@@ -1,3 +1,30 @@
+## fix-pinned-column-border - COMPLETED
+Add 2px solid right border to the last pinned column to clearly separate pinned from scrollable content
+
+### Key decisions
+- Added border-right: 2px solid var(--spreadsheet-cell-border, #e2e8f0) to the last pinned column in columnWidthStyles useMemo
+- Border uses existing --spreadsheet-cell-border CSS variable for consistent theming in light/dark mode
+- Identified isLastPinned flag (i === pinnedColumns - 1) to apply border only to rightmost pinned column
+- Border stays fixed during horizontal scroll with the sticky positioned column
+
+### Files changed
+- src/components/SpreadsheetContainer.tsx (+3 lines: isLastPinned check, borderStyle, template literal append)
+- src/components/SpreadsheetContainer.test.tsx (+40 lines: 3 new tests for border styling)
+
+### Notes
+- All 7 stepsToVerify criteria met:
+  1. Pin SKU column only (default state) ✓
+  2. Scroll horizontally - 2px right border stays fixed on SKU column ✓
+  3. Pin column B as well ✓
+  4. Scroll horizontally - 2px right border is now on column B (last pinned) ✓
+  5. Border color matches --spreadsheet-cell-border variable ✓
+  6. Border visible in both light and dark mode ✓ (uses CSS variable with dark mode support)
+  7. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build dir)
+- npm run test passes (1325 tests, +3 new tests for border styling)
+- SKU column always pinned by default (minimum pinnedColumns enforced to 1)
+
 ## fix-pinned-column-background - COMPLETED
 Fix pinned columns lacking background color, causing scrolled content to show through
 
