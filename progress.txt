@@ -1,3 +1,29 @@
+## redo-keyboard-shortcut - COMPLETED
+Add Shift+Cmd+Z (Mac) / Shift+Ctrl+Z (Windows/Linux) keyboard shortcut for redo
+
+### Key decisions
+- Extended existing handleKeyDown function in SpreadsheetContainer.tsx
+- Added check for event.code === 'KeyZ' with metaKey (Mac) or ctrlKey (Win/Linux) AND shiftKey
+- Excluded altKey to avoid conflict with other shortcuts
+- Calls existing handleRedo function, maintaining consistent behavior with toolbar button
+- Added handleRedo to the useCallback dependency array
+
+### Files changed
+- src/components/SpreadsheetContainer.tsx (handleKeyDown function: added redo shortcut)
+- src/components/SpreadsheetContainer.test.tsx (+5 tests for redo keyboard shortcut)
+
+### Notes
+- All 6 stepsToVerify criteria met:
+  1. Make an edit and then undo it ✓
+  2. Press Shift+Cmd+Z (Mac) or Shift+Ctrl+Z (Windows) - edit is redone ✓
+  3. Shortcut works when spreadsheet container is focused ✓
+  4. Shortcut is prevented when nothing to redo ✓
+  5. Works alongside existing Redo toolbar button ✓
+  6. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (1022 tests, +5 new)
+
 ## undo-keyboard-shortcut - COMPLETED
 Add Cmd+Z (Mac) / Ctrl+Z (Windows/Linux) keyboard shortcut for undo
 

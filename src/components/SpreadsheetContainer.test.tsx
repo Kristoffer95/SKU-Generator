@@ -5203,3 +5203,258 @@ describe('SpreadsheetContainer undo keyboard shortcut (undo-keyboard-shortcut)',
     expect(sheet.data[1][1]?.v).toBe('Red')
   })
 })
+
+/**
+ * Tests for redo-keyboard-shortcut PRD task
+ * Add Shift+Cmd+Z (Mac) / Shift+Ctrl+Z (Windows/Linux) keyboard shortcut for redo
+ */
+describe('SpreadsheetContainer redo keyboard shortcut (redo-keyboard-shortcut)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+    capturedOnChange = null
+    capturedOnSelect = null
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('Shift+Cmd+Z triggers redo on Mac', async () => {
+    // Setup sheet with data
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-color',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: 'Red' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Edit cell: change 'Red' to 'Blue'
+    await act(async () => {
+      capturedOnChange?.([
+        [{ value: 'SKU' }, { value: 'Color' }],
+        [{ value: 'R' }, { value: 'Blue' }],
+      ])
+    })
+
+    // Verify cell was changed
+    let sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Blue')
+
+    // Get the scroll container to trigger keydown
+    const container = screen.getByTestId('spreadsheet-container')
+    const scrollContainer = container.querySelector('.sku-spreadsheet')!
+
+    // Press Cmd+Z to undo
+    fireEvent.keyDown(scrollContainer, { code: 'KeyZ', metaKey: true })
+
+    // Verify value reverted to 'Red'
+    sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Red')
+
+    // Press Shift+Cmd+Z to redo (Mac)
+    fireEvent.keyDown(scrollContainer, { code: 'KeyZ', metaKey: true, shiftKey: true })
+
+    // Verify value is back to 'Blue' after redo
+    sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Blue')
+  })
+
+  it('Shift+Ctrl+Z triggers redo on Windows/Linux', async () => {
+    // Setup sheet with data
+    useSpecificationsStore.setState({
+      specifications: [
+        {
+          id: 'spec-color',
+          name: 'Color',
+          order: 0,
+          values: [
+            { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+            { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+          ],
+        },
+      ],
+    })
+
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: 'Red' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Edit cell: change 'Red' to 'Blue'
+    await act(async () => {
+      capturedOnChange?.([
+        [{ value: 'SKU' }, { value: 'Color' }],
+        [{ value: 'R' }, { value: 'Blue' }],
+      ])
+    })
+
+    // Verify cell was changed
+    let sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Blue')
+
+    // Get the scroll container to trigger keydown
+    const container = screen.getByTestId('spreadsheet-container')
+    const scrollContainer = container.querySelector('.sku-spreadsheet')!
+
+    // Press Ctrl+Z to undo (Windows/Linux)
+    fireEvent.keyDown(scrollContainer, { code: 'KeyZ', ctrlKey: true })
+
+    // Verify value reverted to 'Red'
+    sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Red')
+
+    // Press Shift+Ctrl+Z to redo (Windows/Linux)
+    fireEvent.keyDown(scrollContainer, { code: 'KeyZ', ctrlKey: true, shiftKey: true })
+
+    // Verify value is back to 'Blue' after redo
+    sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Blue')
+  })
+
+  it('does not trigger redo when Alt is also pressed', async () => {
+    // Setup sheet with data
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: 'Red' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Edit cell: change 'Red' to 'Blue'
+    await act(async () => {
+      capturedOnChange?.([
+        [{ value: 'SKU' }, { value: 'Color' }],
+        [{ value: 'R' }, { value: 'Blue' }],
+      ])
+    })
+
+    // Verify cell was changed
+    let sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Blue')
+
+    // Get the scroll container to trigger keydown
+    const container = screen.getByTestId('spreadsheet-container')
+    const scrollContainer = container.querySelector('.sku-spreadsheet')!
+
+    // Press Cmd+Z to undo
+    fireEvent.keyDown(scrollContainer, { code: 'KeyZ', metaKey: true })
+
+    // Verify value reverted to 'Red'
+    sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Red')
+
+    // Press Alt+Shift+Cmd+Z (should NOT trigger redo)
+    fireEvent.keyDown(scrollContainer, { code: 'KeyZ', metaKey: true, shiftKey: true, altKey: true })
+
+    // Value should remain 'Red' (redo was not triggered because Alt was pressed)
+    sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Red')
+  })
+
+  it('redo is prevented when nothing to redo', async () => {
+    // Setup sheet with data
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: 'Red' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Verify redo button is disabled
+    const redoButton = screen.getByTestId('spreadsheet-toolbar-redo')
+    expect(redoButton).toBeDisabled()
+
+    // Get the scroll container to trigger keydown
+    const container = screen.getByTestId('spreadsheet-container')
+    const scrollContainer = container.querySelector('.sku-spreadsheet')!
+
+    // Press Shift+Cmd+Z when there's nothing to redo
+    // Should not throw any errors
+    fireEvent.keyDown(scrollContainer, { code: 'KeyZ', metaKey: true, shiftKey: true })
+
+    // Verify data is unchanged (no error thrown)
+    const sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Red')
+  })
+
+  it('keyboard shortcut works alongside toolbar redo button', async () => {
+    // Setup sheet with data
+    const sheetId = useSheetsStore.getState().addSheet('Products')
+    useSheetsStore.getState().setSheetData(sheetId, [
+      [{ v: 'SKU' }, { v: 'Color' }],
+      [{ v: '' }, { v: 'Red' }],
+    ])
+
+    render(<SpreadsheetContainer />)
+
+    // Make two edits
+    await act(async () => {
+      capturedOnChange?.([
+        [{ value: 'SKU' }, { value: 'Color' }],
+        [{ value: 'R' }, { value: 'Blue' }],
+      ])
+    })
+
+    await act(async () => {
+      capturedOnChange?.([
+        [{ value: 'SKU' }, { value: 'Color' }],
+        [{ value: 'R' }, { value: 'Green' }],
+      ])
+    })
+
+    // Verify current value
+    let sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Green')
+
+    // Undo twice via toolbar button
+    const undoButton = screen.getByTestId('spreadsheet-toolbar-undo')
+    await act(async () => {
+      fireEvent.click(undoButton)
+    })
+    await act(async () => {
+      fireEvent.click(undoButton)
+    })
+
+    sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Red')
+
+    // Redo first via keyboard
+    const container = screen.getByTestId('spreadsheet-container')
+    const scrollContainer = container.querySelector('.sku-spreadsheet')!
+    fireEvent.keyDown(scrollContainer, { code: 'KeyZ', metaKey: true, shiftKey: true })
+
+    sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Blue')
+
+    // Redo second via toolbar button
+    const redoButton = screen.getByTestId('spreadsheet-toolbar-redo')
+    await act(async () => {
+      fireEvent.click(redoButton)
+    })
+
+    sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
+    expect(sheet.data[1][1]?.v).toBe('Green')
+  })
+})

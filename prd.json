@@ -755,7 +755,7 @@
       "Works alongside existing Redo toolbar button",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "select-all-keyboard-shortcut",

@@ -1313,7 +1313,14 @@ export function SpreadsheetContainer() {
       handleUndo()
       return
     }
-  }, [handleCopyStyles, handlePasteStyles, handleUndo])
+
+    // Check for Shift+Cmd+Z (Mac) or Shift+Ctrl+Z (Windows/Linux) - Redo
+    if (event.code === "KeyZ" && (event.metaKey || event.ctrlKey) && event.shiftKey && !event.altKey) {
+      event.preventDefault()
+      handleRedo()
+      return
+    }
+  }, [handleCopyStyles, handlePasteStyles, handleUndo, handleRedo])
 
   if (sheets.length === 0) {
     return (
