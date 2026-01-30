@@ -1,3 +1,38 @@
+## sheet-group-colors - COMPLETED
+Add ability to color-code sheet groups with predefined palette
+
+### Key decisions
+- SheetGroup interface already had 'color?: string' field from sheet-groups task
+- Added DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent to ui/dropdown-menu.tsx
+- Created GROUP_COLOR_PALETTE constant with 8 predefined colors (red, orange, yellow, green, teal, blue, purple, pink)
+- Color picker implemented as submenu in group context menu with 4x2 grid of color swatches
+- "Clear color" button appears only when group has a color set
+- Currently selected color highlighted with ring-2 ring-primary
+- Group header styling: borderLeftColor and backgroundColor (10% opacity tint)
+- Non-active tabs within colored group get subtle background tint (15% opacity in hex = ~6%)
+- Added onUpdateGroupColor prop to GroupedSheetTabs, wired through SpreadsheetContainer
+
+### Files changed
+- src/components/ui/dropdown-menu.tsx (+55 lines: DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent components)
+- src/components/spreadsheet/GroupedSheetTabs.tsx (+50 lines: GROUP_COLOR_PALETTE const, onUpdateGroupColor prop, color picker UI in context menu, tab tint styling)
+- src/components/spreadsheet/GroupedSheetTabs.test.tsx (+180 lines: 12 new tests for color picker functionality)
+- src/components/SpreadsheetContainer.tsx (+4 lines: handleUpdateGroupColor callback, prop passing)
+
+### Notes
+- All 8 stepsToVerify criteria met:
+  1. SheetGroup interface has 'color?: string' field ✓ (pre-existing from sheet-groups)
+  2. Group context menu has color picker option ✓
+  3. Color picker shows predefined palette (8 colors) ✓
+  4. Selected color shows on group header ✓ (border-left + background tint)
+  5. Sheet tabs in colored group have subtle tint ✓
+  6. Can clear color to remove group styling ✓
+  7. Group colors persist after page refresh ✓ (via Zustand persist)
+  8. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (1277 tests, +12 new in GroupedSheetTabs.test.tsx)
+- npm run build passes
+
 ## sheet-groups - COMPLETED
 Add ability to organize sheets into collapsible groups/folders
 

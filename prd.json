@@ -1059,7 +1059,7 @@
       "Group colors persist after page refresh",
       "npm run typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "checkbox-cells",

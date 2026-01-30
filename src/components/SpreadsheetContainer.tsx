@@ -296,6 +296,10 @@ export function SpreadsheetContainer() {
     moveSheetToGroup(sheetId, groupId)
   }, [moveSheetToGroup])
 
+  const handleUpdateGroupColor = useCallback((groupId: string, color: string | undefined) => {
+    updateGroup(groupId, { color })
+  }, [updateGroup])
+
   // Get ungrouped sheet IDs - sheets and groups in deps ensure reactivity when they change
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const ungroupedSheetIds = useMemo(() => getUngroupedSheetIds(), [getUngroupedSheetIds, sheets, groups])
@@ -1729,6 +1733,7 @@ export function SpreadsheetContainer() {
         onDeleteGroup={handleDeleteGroup}
         onToggleGroup={handleToggleGroup}
         onMoveSheetToGroup={handleMoveSheetToGroup}
+        onUpdateGroupColor={handleUpdateGroupColor}
         ungroupedSheetIds={ungroupedSheetIds}
       />
       <ValidationPanel

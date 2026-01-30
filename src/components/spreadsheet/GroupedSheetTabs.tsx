@@ -1,13 +1,28 @@
 import { useCallback, useState, useRef, useEffect } from "react";
-import { ChevronDown, ChevronRight, Copy, FolderPlus, MoreHorizontal, Pencil, Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Copy, FolderPlus, MoreHorizontal, Palette, Pencil, Plus, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+/** Predefined color palette for group colors */
+export const GROUP_COLOR_PALETTE = [
+  { name: "Red", value: "#ef4444" },
+  { name: "Orange", value: "#f97316" },
+  { name: "Yellow", value: "#eab308" },
+  { name: "Green", value: "#22c55e" },
+  { name: "Teal", value: "#14b8a6" },
+  { name: "Blue", value: "#3b82f6" },
+  { name: "Purple", value: "#a855f7" },
+  { name: "Pink", value: "#ec4899" },
+] as const;
 import type { SheetGroup } from "@/types";
 
 export interface SheetTab {
@@ -42,6 +57,8 @@ export interface GroupedSheetTabsProps {
   onToggleGroup: (groupId: string) => void;
   /** Called when a sheet is moved to a group */
   onMoveSheetToGroup: (sheetId: string, groupId: string | null) => void;
+  /** Called when a group color is changed */
+  onUpdateGroupColor?: (groupId: string, color: string | undefined) => void;
   /** IDs of sheets not in any group */
   ungroupedSheetIds: string[];
 }
@@ -64,6 +81,7 @@ export function GroupedSheetTabs({
   onDeleteGroup,
   onToggleGroup,
   onMoveSheetToGroup,
+  onUpdateGroupColor,
   ungroupedSheetIds,
 }: GroupedSheetTabsProps) {
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
@@ -306,11 +324,16 @@ export function GroupedSheetTabs({
   const canDelete = sheets.length > 1;
 
   // Render a sheet tab
-  const renderSheetTab = (sheet: SheetTab) => {
+  const renderSheetTab = (sheet: SheetTab, groupColor?: string) => {
     const isActive = sheet.id === activeSheetId;
     const isEditing = editingTabId === sheet.id;
     const isPendingDelete = pendingDeleteId === sheet.id;
     const isDragging = draggedSheetId === sheet.id;
+
+    // Apply subtle tint from group color to non-active tabs
+    const tabStyle = !isActive && groupColor ? {
+      backgroundColor: `${groupColor}15`, // Very subtle tint (15 = ~6% opacity in hex)
+    } : undefined;
 
     return (
       <div
@@ -322,6 +345,7 @@ export function GroupedSheetTabs({
             : "bg-muted/50 hover:bg-muted border border-transparent",
           isDragging && "opacity-50"
         )}
+        style={tabStyle}
         onClick={() => handleTabClick(sheet.id)}
         onDoubleClick={() => handleDoubleClick(sheet.id, sheet.name)}
         draggable={!isEditing}
@@ -467,6 +491,49 @@ export function GroupedSheetTabs({
                 <Pencil className="h-4 w-4 mr-2" />
                 Rename group
               </DropdownMenuItem>
+              {onUpdateGroupColor && (
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Palette className="h-4 w-4 mr-2" />
+                    Group color
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="p-2" data-testid={`group-color-menu-${group.id}`}>
+                    <div className="grid grid-cols-4 gap-1.5" role="group" aria-label="Color palette">
+                      {GROUP_COLOR_PALETTE.map((color) => (
+                        <button
+                          key={color.value}
+                          type="button"
+                          className={cn(
+                            "w-6 h-6 rounded-md border border-border hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1",
+                            group.color === color.value && "ring-2 ring-primary ring-offset-1"
+                          )}
+                          style={{ backgroundColor: color.value }}
+                          title={color.name}
+                          aria-label={color.name}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onUpdateGroupColor(group.id, color.value);
+                          }}
+                          data-testid={`group-color-${color.name.toLowerCase()}`}
+                        />
+                      ))}
+                    </div>
+                    {group.color && (
+                      <button
+                        type="button"
+                        className="w-full mt-2 px-2 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onUpdateGroupColor(group.id, undefined);
+                        }}
+                        data-testid="group-color-clear"
+                      >
+                        Clear color
+                      </button>
+                    )}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={(e) => {
@@ -494,7 +561,7 @@ export function GroupedSheetTabs({
         {/* Group sheets */}
         {!group.collapsed && (
           <div className="flex items-center gap-1 pl-4" data-testid={`sheet-group-sheets-${group.id}`}>
-            {groupSheets.map(renderSheetTab)}
+            {groupSheets.map((sheet) => renderSheetTab(sheet, group.color))}
           </div>
         )}
       </div>
@@ -527,7 +594,7 @@ export function GroupedSheetTabs({
         onDrop={handleDropOnUngrouped}
         data-testid="ungrouped-sheets-area"
       >
-        {ungroupedSheets.map(renderSheetTab)}
+        {ungroupedSheets.map((sheet) => renderSheetTab(sheet))}
 
         {/* Add sheet button */}
         <button

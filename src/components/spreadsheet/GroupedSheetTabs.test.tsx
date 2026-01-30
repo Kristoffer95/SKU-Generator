@@ -432,6 +432,323 @@ describe('GroupedSheetTabs', () => {
 
       expect(defaultProps.onDeleteGroup).toHaveBeenCalledWith('group-1', true);
     });
+
+    it('should show "Group color" submenu when onUpdateGroupColor is provided', async () => {
+      const user = userEvent.setup();
+      const onUpdateGroupColor = vi.fn();
+      const groups: SheetGroup[] = [
+        { id: 'group-1', name: 'Group 1', collapsed: false, sheetIds: [] },
+      ];
+
+      render(
+        <GroupedSheetTabs
+          {...defaultProps}
+          groups={groups}
+          onUpdateGroupColor={onUpdateGroupColor}
+          ungroupedSheetIds={['sheet-1', 'sheet-2', 'sheet-3']}
+        />
+      );
+
+      await user.hover(screen.getByTestId('sheet-group-header-group-1'));
+      await user.click(screen.getByTestId('sheet-group-menu-group-1'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Group color')).toBeInTheDocument();
+      });
+    });
+
+    it('should not show "Group color" submenu when onUpdateGroupColor is not provided', async () => {
+      const user = userEvent.setup();
+      const groups: SheetGroup[] = [
+        { id: 'group-1', name: 'Group 1', collapsed: false, sheetIds: [] },
+      ];
+
+      render(
+        <GroupedSheetTabs
+          {...defaultProps}
+          groups={groups}
+          ungroupedSheetIds={['sheet-1', 'sheet-2', 'sheet-3']}
+        />
+      );
+
+      await user.hover(screen.getByTestId('sheet-group-header-group-1'));
+      await user.click(screen.getByTestId('sheet-group-menu-group-1'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Rename group')).toBeInTheDocument();
+      });
+      expect(screen.queryByText('Group color')).not.toBeInTheDocument();
+    });
+
+    it('should show color palette when hovering over "Group color" submenu', async () => {
+      const user = userEvent.setup();
+      const onUpdateGroupColor = vi.fn();
+      const groups: SheetGroup[] = [
+        { id: 'group-1', name: 'Group 1', collapsed: false, sheetIds: [] },
+      ];
+
+      render(
+        <GroupedSheetTabs
+          {...defaultProps}
+          groups={groups}
+          onUpdateGroupColor={onUpdateGroupColor}
+          ungroupedSheetIds={['sheet-1', 'sheet-2', 'sheet-3']}
+        />
+      );
+
+      await user.hover(screen.getByTestId('sheet-group-header-group-1'));
+      await user.click(screen.getByTestId('sheet-group-menu-group-1'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Group color')).toBeInTheDocument();
+      });
+
+      await user.hover(screen.getByText('Group color'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('group-color-menu-group-1')).toBeInTheDocument();
+        expect(screen.getByTestId('group-color-red')).toBeInTheDocument();
+        expect(screen.getByTestId('group-color-blue')).toBeInTheDocument();
+      });
+    });
+
+    it('should call onUpdateGroupColor when clicking a color swatch', async () => {
+      const user = userEvent.setup();
+      const onUpdateGroupColor = vi.fn();
+      const groups: SheetGroup[] = [
+        { id: 'group-1', name: 'Group 1', collapsed: false, sheetIds: [] },
+      ];
+
+      render(
+        <GroupedSheetTabs
+          {...defaultProps}
+          groups={groups}
+          onUpdateGroupColor={onUpdateGroupColor}
+          ungroupedSheetIds={['sheet-1', 'sheet-2', 'sheet-3']}
+        />
+      );
+
+      await user.hover(screen.getByTestId('sheet-group-header-group-1'));
+      await user.click(screen.getByTestId('sheet-group-menu-group-1'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Group color')).toBeInTheDocument();
+      });
+
+      await user.hover(screen.getByText('Group color'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('group-color-blue')).toBeInTheDocument();
+      });
+
+      // Use fireEvent for the color swatch click to avoid timing issues with the submenu
+      fireEvent.click(screen.getByTestId('group-color-blue'));
+
+      expect(onUpdateGroupColor).toHaveBeenCalledWith('group-1', '#3b82f6');
+    });
+
+    it('should show "Clear color" button when group has a color', async () => {
+      const user = userEvent.setup();
+      const onUpdateGroupColor = vi.fn();
+      const groups: SheetGroup[] = [
+        { id: 'group-1', name: 'Group 1', collapsed: false, sheetIds: [], color: '#ef4444' },
+      ];
+
+      render(
+        <GroupedSheetTabs
+          {...defaultProps}
+          groups={groups}
+          onUpdateGroupColor={onUpdateGroupColor}
+          ungroupedSheetIds={['sheet-1', 'sheet-2', 'sheet-3']}
+        />
+      );
+
+      await user.hover(screen.getByTestId('sheet-group-header-group-1'));
+      await user.click(screen.getByTestId('sheet-group-menu-group-1'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Group color')).toBeInTheDocument();
+      });
+
+      await user.hover(screen.getByText('Group color'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('group-color-clear')).toBeInTheDocument();
+      });
+    });
+
+    it('should call onUpdateGroupColor with undefined when clicking "Clear color"', async () => {
+      const user = userEvent.setup();
+      const onUpdateGroupColor = vi.fn();
+      const groups: SheetGroup[] = [
+        { id: 'group-1', name: 'Group 1', collapsed: false, sheetIds: [], color: '#ef4444' },
+      ];
+
+      render(
+        <GroupedSheetTabs
+          {...defaultProps}
+          groups={groups}
+          onUpdateGroupColor={onUpdateGroupColor}
+          ungroupedSheetIds={['sheet-1', 'sheet-2', 'sheet-3']}
+        />
+      );
+
+      await user.hover(screen.getByTestId('sheet-group-header-group-1'));
+      await user.click(screen.getByTestId('sheet-group-menu-group-1'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Group color')).toBeInTheDocument();
+      });
+
+      await user.hover(screen.getByText('Group color'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('group-color-clear')).toBeInTheDocument();
+      });
+
+      // Use fireEvent for the clear button click to avoid timing issues with the submenu
+      fireEvent.click(screen.getByTestId('group-color-clear'));
+
+      expect(onUpdateGroupColor).toHaveBeenCalledWith('group-1', undefined);
+    });
+
+    it('should not show "Clear color" button when group has no color', async () => {
+      const user = userEvent.setup();
+      const onUpdateGroupColor = vi.fn();
+      const groups: SheetGroup[] = [
+        { id: 'group-1', name: 'Group 1', collapsed: false, sheetIds: [] },
+      ];
+
+      render(
+        <GroupedSheetTabs
+          {...defaultProps}
+          groups={groups}
+          onUpdateGroupColor={onUpdateGroupColor}
+          ungroupedSheetIds={['sheet-1', 'sheet-2', 'sheet-3']}
+        />
+      );
+
+      await user.hover(screen.getByTestId('sheet-group-header-group-1'));
+      await user.click(screen.getByTestId('sheet-group-menu-group-1'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Group color')).toBeInTheDocument();
+      });
+
+      await user.hover(screen.getByText('Group color'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('group-color-menu-group-1')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByTestId('group-color-clear')).not.toBeInTheDocument();
+    });
+
+    it('should highlight currently selected color in palette', async () => {
+      const user = userEvent.setup();
+      const onUpdateGroupColor = vi.fn();
+      const groups: SheetGroup[] = [
+        { id: 'group-1', name: 'Group 1', collapsed: false, sheetIds: [], color: '#3b82f6' },
+      ];
+
+      render(
+        <GroupedSheetTabs
+          {...defaultProps}
+          groups={groups}
+          onUpdateGroupColor={onUpdateGroupColor}
+          ungroupedSheetIds={['sheet-1', 'sheet-2', 'sheet-3']}
+        />
+      );
+
+      await user.hover(screen.getByTestId('sheet-group-header-group-1'));
+      await user.click(screen.getByTestId('sheet-group-menu-group-1'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Group color')).toBeInTheDocument();
+      });
+
+      await user.hover(screen.getByText('Group color'));
+
+      await waitFor(() => {
+        const blueButton = screen.getByTestId('group-color-blue');
+        expect(blueButton).toHaveClass('ring-2');
+        expect(blueButton).toHaveClass('ring-primary');
+      });
+    });
+  });
+
+  describe('group color styling', () => {
+    it('should apply border-left color to group header when group has color', () => {
+      const groups: SheetGroup[] = [
+        { id: 'group-1', name: 'Group 1', collapsed: false, sheetIds: [], color: '#ef4444' },
+      ];
+
+      render(
+        <GroupedSheetTabs
+          {...defaultProps}
+          groups={groups}
+          ungroupedSheetIds={['sheet-1', 'sheet-2', 'sheet-3']}
+        />
+      );
+
+      const header = screen.getByTestId('sheet-group-header-group-1');
+      expect(header).toHaveStyle({ borderLeftColor: '#ef4444' });
+    });
+
+    it('should apply subtle background tint to group header when group has color', () => {
+      const groups: SheetGroup[] = [
+        { id: 'group-1', name: 'Group 1', collapsed: false, sheetIds: [], color: '#ef4444' },
+      ];
+
+      render(
+        <GroupedSheetTabs
+          {...defaultProps}
+          groups={groups}
+          ungroupedSheetIds={['sheet-1', 'sheet-2', 'sheet-3']}
+        />
+      );
+
+      const header = screen.getByTestId('sheet-group-header-group-1');
+      expect(header).toHaveStyle({ backgroundColor: '#ef444410' });
+    });
+
+    it('should apply subtle tint to non-active tabs within colored group', () => {
+      const groups: SheetGroup[] = [
+        { id: 'group-1', name: 'Group 1', collapsed: false, sheetIds: ['sheet-2'], color: '#3b82f6' },
+      ];
+
+      render(
+        <GroupedSheetTabs
+          {...defaultProps}
+          activeSheetId="sheet-1"
+          groups={groups}
+          ungroupedSheetIds={['sheet-1', 'sheet-3']}
+        />
+      );
+
+      // sheet-2 is in the colored group and is not active
+      const tabInGroup = screen.getByTestId('sheet-tab-sheet-2');
+      expect(tabInGroup).toHaveStyle({ backgroundColor: '#3b82f615' });
+    });
+
+    it('should not apply tint to active tab within colored group', () => {
+      const groups: SheetGroup[] = [
+        { id: 'group-1', name: 'Group 1', collapsed: false, sheetIds: ['sheet-1'], color: '#3b82f6' },
+      ];
+
+      render(
+        <GroupedSheetTabs
+          {...defaultProps}
+          activeSheetId="sheet-1"
+          groups={groups}
+          ungroupedSheetIds={['sheet-2', 'sheet-3']}
+        />
+      );
+
+      // sheet-1 is active, so it should not have the group color tint
+      const activeTab = screen.getByTestId('sheet-tab-sheet-1');
+      expect(activeTab).not.toHaveStyle({ backgroundColor: '#3b82f615' });
+    });
   });
 
   describe('drag and drop', () => {
