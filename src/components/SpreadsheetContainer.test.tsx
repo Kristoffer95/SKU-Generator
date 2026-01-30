@@ -6047,6 +6047,64 @@ describe('Row header dropdown menu', () => {
     const styleContent = styleElement?.textContent ?? ''
     expect(styleContent).toContain('z-index: 4')
   })
+
+  it('generates background-color with --spreadsheet-pinned-tint for pinned columns', () => {
+    const sheetId = createSheetWithRows()
+
+    // Set pinnedColumns to 1 (just the SKU column)
+    useSheetsStore.getState().setPinnedColumns(sheetId, 1)
+
+    render(<SpreadsheetContainer />)
+
+    // Find the column width styles element
+    const styleElement = document.querySelector('[data-testid="column-width-styles"]')
+    expect(styleElement).toBeInTheDocument()
+
+    const styleContent = styleElement?.textContent ?? ''
+    // Pinned columns should have background-color set with the CSS variable
+    expect(styleContent).toContain('background-color: var(--spreadsheet-pinned-tint, #f8fafc)')
+    // Should also have sticky positioning
+    expect(styleContent).toContain('position: sticky')
+  })
+
+  it('generates background-color with --spreadsheet-pinned-tint for multiple pinned columns', () => {
+    const sheetId = createSheetWithRows()
+
+    // Set pinnedColumns to 2 (SKU + first spec column)
+    useSheetsStore.getState().setPinnedColumns(sheetId, 2)
+
+    render(<SpreadsheetContainer />)
+
+    const styleElement = document.querySelector('[data-testid="column-width-styles"]')
+    expect(styleElement).toBeInTheDocument()
+
+    const styleContent = styleElement?.textContent ?? ''
+    // Both pinned columns should have background-color with the CSS variable
+    // Column 0 (SKU) at nth-child(2) and Column 1 (Color) at nth-child(3)
+    expect(styleContent).toContain('nth-child(2)')
+    expect(styleContent).toContain('nth-child(3)')
+    // Count the number of pinned-tint background-color declarations for columns
+    const pinnedTintMatches = styleContent.match(/nth-child\(\d+\).*background-color: var\(--spreadsheet-pinned-tint/g)
+    expect(pinnedTintMatches?.length).toBe(2)
+  })
+
+  it('generates background-color with --spreadsheet-pinned-tint for pinned rows', () => {
+    const sheetId = createSheetWithRows()
+
+    // Set pinnedRows to 1 (header row only)
+    useSheetsStore.getState().setPinnedRows(sheetId, 1)
+
+    render(<SpreadsheetContainer />)
+
+    // Find the row height styles element
+    const styleElement = document.querySelector('[data-testid="row-height-styles"]')
+    expect(styleElement).toBeInTheDocument()
+
+    const styleContent = styleElement?.textContent ?? ''
+    // Pinned rows should have background-color set with the CSS variable
+    expect(styleContent).toContain('background-color: var(--spreadsheet-pinned-tint, #f8fafc)')
+    expect(styleContent).toContain('position: sticky')
+  })
 })
 
 describe('SpreadsheetContainer checkbox spacebar toggle', () => {

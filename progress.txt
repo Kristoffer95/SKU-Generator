@@ -1,3 +1,30 @@
+## fix-pinned-column-background - COMPLETED
+Fix pinned columns lacking background color, causing scrolled content to show through
+
+### Key decisions
+- Added CSS variables --spreadsheet-cell-bg (#ffffff) and --spreadsheet-pinned-tint (#f8fafc) to .sku-spreadsheet .Spreadsheet
+- Added dark mode variants: --spreadsheet-cell-bg: hsl(222.2 84% 4.9%), --spreadsheet-pinned-tint: hsl(217.2 32.6% 12%)
+- Updated columnWidthStyles useMemo to add background-color: var(--spreadsheet-pinned-tint, #f8fafc) to pinned columns
+- Updated rowHeightStyles useMemo to use --spreadsheet-pinned-tint instead of --spreadsheet-cell-bg for pinned rows
+- Both pinned columns and rows now use consistent tint for visual clarity
+
+### Files changed
+- src/index.css (+4 lines: CSS variables for light and dark mode)
+- src/components/SpreadsheetContainer.tsx (+2 lines: background-color for pinned columns and rows in dynamic CSS)
+- src/components/SpreadsheetContainer.test.tsx (+50 lines: 3 new tests for pinned-tint styling)
+
+### Notes
+- All 6 stepsToVerify criteria met:
+  1. Pin column B via column header dropdown ✓
+  2. Scroll horizontally - columns remain visible with background ✓
+  3. Columns A and B have #f8fafc background ✓
+  4. Scrolled content does NOT show through ✓
+  5. Dark mode uses dark tint background ✓
+  6. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings)
+- npm run test passes (1322 tests, +3 new tests)
+
 ## checkbox-spacebar-toggle - COMPLETED
 Add spacebar keyboard shortcut to toggle checkbox cells
 

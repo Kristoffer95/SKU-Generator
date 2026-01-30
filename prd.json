@@ -1094,5 +1094,68 @@
       "npm run typecheck passes"
     ],
     "passes": true
+  },
+  {
+    "id": "fix-pinned-column-background",
+    "category": "Bug Fix",
+    "description": "Pinned columns lack background color, causing scrolled content to show through behind them. Add background-color (subtle #f8fafc tint) to all pinned column cells via the dynamic CSS generation in SpreadsheetContainer. Also add CSS variables --spreadsheet-cell-bg and --spreadsheet-pinned-tint with dark mode support.",
+    "stepsToVerify": [
+      "Pin column B (second column) via column header dropdown",
+      "Scroll horizontally to the right",
+      "Columns A (SKU) and B remain visible with #f8fafc background",
+      "Scrolled content does NOT show through pinned columns",
+      "Toggle dark mode - pinned columns have dark tint background",
+      "npm run typecheck passes"
+    ],
+    "passes": true
+  },
+  {
+    "id": "fix-pinned-column-border",
+    "category": "Bug Fix",
+    "description": "The right border of the rightmost pinned column moves/disappears when scrolling horizontally. Add a 2px solid right border to the last pinned column to clearly separate pinned from scrollable content. Border should stay fixed during scroll.",
+    "stepsToVerify": [
+      "Pin SKU column only (default state)",
+      "Scroll horizontally - 2px right border stays fixed on SKU column",
+      "Pin column B as well",
+      "Scroll horizontally - 2px right border is now on column B (last pinned)",
+      "Border color matches --spreadsheet-cell-border variable",
+      "Border visible in both light and dark mode",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "fix-pinned-row-background",
+    "category": "Bug Fix",
+    "description": "Pinned rows may have incorrect background in dark mode due to using undefined CSS variable. Update pinned row CSS generation to use --spreadsheet-pinned-tint variable instead of --spreadsheet-cell-bg with hardcoded fallback. Ensures consistent subtle tint on pinned rows.",
+    "stepsToVerify": [
+      "Pin row 1 (first data row) via row header dropdown",
+      "Scroll vertically downward",
+      "Pinned row stays visible with #f8fafc background",
+      "Scrolled content does NOT show through pinned row",
+      "Toggle dark mode - pinned row has dark tint background",
+      "Intersection of pinned row and pinned column has consistent background",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "remove-redundant-header-row",
+    "category": "Data Architecture",
+    "description": "Remove the redundant header row (data[0]) from the spreadsheet data structure. Currently column headers are stored in both columns[].header AND data[0], with data[0] hidden via CSS. Headers should live only in columns[].header. Remove header row from data, update all row index logic (loops start from 0), and add migration for existing persisted data.",
+    "stepsToVerify": [
+      "Create new sheet - data array has 50 rows (not 51)",
+      "Row indices in UI match data array indices (row 1 in UI = data[0])",
+      "Existing sheets migrate correctly (header row removed, data preserved)",
+      "pinnedRows is decremented by 1 during migration if > 0",
+      "SKU generation works from row 0",
+      "Validation works from row 0",
+      "Add row inserts at correct position",
+      "Delete row works for row 0 (first data row)",
+      "Auto-populate generates rows starting at index 0",
+      "npm run typecheck passes",
+      "npm run test passes"
+    ],
+    "passes": false
   }
 ]

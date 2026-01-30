@@ -951,8 +951,9 @@ export function SpreadsheetContainer() {
       const width = columns[i]?.width ?? 120
       // Target all cells (th and td) in this column position
       // nth-child is 1-indexed, +2 for row indicator column
+      // Add background-color with --spreadsheet-pinned-tint to prevent scrolled content showing through
       stickyStyles.push(
-        `.sku-spreadsheet .Spreadsheet__table tr > *:nth-child(${i + 2}) { position: sticky; left: ${leftOffset}px; z-index: 2; }`
+        `.sku-spreadsheet .Spreadsheet__table tr > *:nth-child(${i + 2}) { position: sticky; left: ${leftOffset}px; z-index: 2; background-color: var(--spreadsheet-pinned-tint, #f8fafc); }`
       )
       leftOffset += width
     }
@@ -990,8 +991,9 @@ export function SpreadsheetContainer() {
       // Target all cells in this row (tbody tr:nth-child is 1-indexed)
       // For pinned rows: position: sticky, top based on cumulative height of rows above
       // z-index: 3 for pinned rows (above pinned columns which are z-index: 2)
+      // Add background-color with --spreadsheet-pinned-tint to prevent scrolled content showing through
       stickyRowStyles.push(
-        `.sku-spreadsheet tbody tr:nth-child(${i + 1}) > * { position: sticky; top: ${topOffset}px; z-index: 3; background-color: var(--spreadsheet-cell-bg, white); }`
+        `.sku-spreadsheet tbody tr:nth-child(${i + 1}) > * { position: sticky; top: ${topOffset}px; z-index: 3; background-color: var(--spreadsheet-pinned-tint, #f8fafc); }`
       )
       topOffset += height
     }

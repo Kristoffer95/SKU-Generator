@@ -164,6 +164,8 @@
   --spreadsheet-readonly-bg: #f1f5f9;
   --spreadsheet-duplicate-bg: #fef3c7;
   --spreadsheet-cell-border: #e2e8f0;
+  --spreadsheet-cell-bg: #ffffff;
+  --spreadsheet-pinned-tint: #f8fafc;
 }
 
 .sku-spreadsheet .Spreadsheet__table {
@@ -476,6 +478,8 @@
   --spreadsheet-readonly-bg: hsl(217.2 32.6% 20%);
   --spreadsheet-duplicate-bg: hsl(45 93% 30%);
   --spreadsheet-cell-border: hsl(217.2 32.6% 25%);
+  --spreadsheet-cell-bg: hsl(222.2 84% 4.9%);
+  --spreadsheet-pinned-tint: hsl(217.2 32.6% 12%);
 }
 
 .dark .sku-spreadsheet .Spreadsheet__data-editor select,
