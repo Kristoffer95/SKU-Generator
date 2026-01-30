@@ -74,6 +74,7 @@ export interface SheetConfig {
   specifications: Specification[]; // Specifications local to this sheet
   rowHeights?: Record<number, number>; // Row heights in pixels (row index -> height)
   pinnedColumns?: number;        // Number of pinned columns (0 to pinnedColumns-1 are pinned, default: 1 for SKU column)
+  pinnedRows?: number;           // Number of pinned rows (0 to pinnedRows-1 are pinned, default: 0)
 }
 
 /**

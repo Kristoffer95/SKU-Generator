@@ -5950,4 +5950,101 @@ describe('Row header dropdown menu', () => {
     sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)
     expect(sheet?.data.length).toBe(3)
   })
+
+  it('shows pin rows above option in row dropdown menu', async () => {
+    createSheetWithRows()
+    render(<SpreadsheetContainer />)
+
+    // Click dropdown trigger for row 1
+    const trigger = screen.getByTestId('row-menu-trigger-1')
+    await userEvent.click(trigger)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('row-menu-pin-1')).toBeInTheDocument()
+      expect(screen.getByText('Pin rows above')).toBeInTheDocument()
+    })
+  })
+
+  it('pins rows when pin rows above is clicked', async () => {
+    const sheetId = createSheetWithRows()
+    render(<SpreadsheetContainer />)
+
+    // Click dropdown trigger for row 1
+    const trigger = screen.getByTestId('row-menu-trigger-1')
+    await userEvent.click(trigger)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('row-menu-pin-1')).toBeInTheDocument()
+    })
+
+    // Click "Pin rows above"
+    await userEvent.click(screen.getByTestId('row-menu-pin-1'))
+
+    // Verify pinnedRows was set (pinning row 1 means pinnedRows = 2)
+    const sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)
+    expect(sheet?.pinnedRows).toBe(2)
+  })
+
+  it('unpins rows when clicked on already pinned row', async () => {
+    const sheetId = createSheetWithRows()
+
+    // Set pinnedRows to 2
+    useSheetsStore.getState().setPinnedRows(sheetId, 2)
+
+    render(<SpreadsheetContainer />)
+
+    // Click dropdown trigger for row 1 (which is pinned)
+    const trigger = screen.getByTestId('row-menu-trigger-1')
+    await userEvent.click(trigger)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('row-menu-pin-1')).toBeInTheDocument()
+      expect(screen.getByText('Unpin rows')).toBeInTheDocument()
+    })
+
+    // Click "Unpin rows"
+    await userEvent.click(screen.getByTestId('row-menu-pin-1'))
+
+    // Verify pinnedRows was cleared
+    const sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)
+    expect(sheet?.pinnedRows).toBe(0)
+  })
+
+  it('generates sticky CSS for pinned rows', () => {
+    const sheetId = createSheetWithRows()
+
+    // Set pinnedRows to 2 (pin header + first data row)
+    useSheetsStore.getState().setPinnedRows(sheetId, 2)
+
+    render(<SpreadsheetContainer />)
+
+    // Find the row height styles element
+    const styleElement = document.querySelector('[data-testid="row-height-styles"]')
+    expect(styleElement).toBeInTheDocument()
+
+    // Check that sticky positioning is in the styles
+    const styleContent = styleElement?.textContent ?? ''
+    expect(styleContent).toContain('position: sticky')
+    expect(styleContent).toContain('top:')
+    // First pinned row should have top: 0
+    expect(styleContent).toContain('top: 0px')
+  })
+
+  it('generates correct z-index for intersection of pinned rows and columns', () => {
+    const sheetId = createSheetWithRows()
+
+    // Set pinnedRows to 2 and pinnedColumns to 2
+    useSheetsStore.getState().setPinnedRows(sheetId, 2)
+    useSheetsStore.getState().setPinnedColumns(sheetId, 2)
+
+    render(<SpreadsheetContainer />)
+
+    // Find the row height styles element
+    const styleElement = document.querySelector('[data-testid="row-height-styles"]')
+    expect(styleElement).toBeInTheDocument()
+
+    // Check that z-index: 4 is applied for intersection cells
+    const styleContent = styleElement?.textContent ?? ''
+    expect(styleContent).toContain('z-index: 4')
+  })
 })

@@ -2236,4 +2236,180 @@ describe('useSheetsStore', () => {
       expect(newSheet.pinnedColumns).toBeUndefined();
     });
   });
+
+  describe('setPinnedRows', () => {
+    const createSheetWithData = (): { sheetId: string } => {
+      const { addSheet } = useSheetsStore.getState();
+      const sheetId = addSheet('Test Sheet');
+
+      // Set up data with multiple rows
+      useSheetsStore.setState((state) => ({
+        sheets: state.sheets.map((s) =>
+          s.id === sheetId
+            ? {
+                ...s,
+                data: [
+                  [{ v: 'Header' }],
+                  [{ v: 'Row 1' }],
+                  [{ v: 'Row 2' }],
+                  [{ v: 'Row 3' }],
+                  [{ v: 'Row 4' }],
+                ],
+              }
+            : s
+        ),
+      }));
+
+      return { sheetId };
+    };
+
+    it('should set pinned rows count', () => {
+      const { sheetId } = createSheetWithData();
+      const { setPinnedRows } = useSheetsStore.getState();
+
+      const result = setPinnedRows(sheetId, 2);
+      expect(result).toBe(true);
+
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.pinnedRows).toBe(2);
+    });
+
+    it('should allow zero pinned rows', () => {
+      const { sheetId } = createSheetWithData();
+      const { setPinnedRows } = useSheetsStore.getState();
+
+      // First set some pinned rows
+      setPinnedRows(sheetId, 2);
+
+      // Then unpin all
+      const result = setPinnedRows(sheetId, 0);
+      expect(result).toBe(true);
+
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.pinnedRows).toBe(0);
+    });
+
+    it('should enforce minimum of 0', () => {
+      const { sheetId } = createSheetWithData();
+      const { setPinnedRows } = useSheetsStore.getState();
+
+      const result = setPinnedRows(sheetId, -5);
+      expect(result).toBe(true);
+
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.pinnedRows).toBe(0);
+    });
+
+    it('should enforce maximum of row count', () => {
+      const { sheetId } = createSheetWithData();
+      const { setPinnedRows } = useSheetsStore.getState();
+
+      const result = setPinnedRows(sheetId, 100);
+      expect(result).toBe(true);
+
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.pinnedRows).toBe(5); // Only 5 rows of data
+    });
+
+    it('should return false for non-existent sheet', () => {
+      createSheetWithData();
+      const { setPinnedRows } = useSheetsStore.getState();
+
+      const result = setPinnedRows('non-existent', 2);
+      expect(result).toBe(false);
+    });
+
+    it('should persist pinnedRows after state changes', () => {
+      const { sheetId } = createSheetWithData();
+      const { setPinnedRows } = useSheetsStore.getState();
+
+      setPinnedRows(sheetId, 3);
+
+      // Verify persists after getting state again
+      const sheet = useSheetsStore.getState().sheets.find((s) => s.id === sheetId)!;
+      expect(sheet.pinnedRows).toBe(3);
+    });
+
+    it('should not affect other sheets', () => {
+      const { sheetId: sheetId1 } = createSheetWithData();
+      const { addSheet, setPinnedRows } = useSheetsStore.getState();
+      const sheetId2 = addSheet('Sheet 2');
+
+      // Set up data for sheet 2
+      useSheetsStore.setState((state) => ({
+        sheets: state.sheets.map((s) =>
+          s.id === sheetId2
+            ? {
+                ...s,
+                data: [
+                  [{ v: 'Header' }],
+                  [{ v: 'Data' }],
+                ],
+              }
+            : s
+        ),
+      }));
+
+      setPinnedRows(sheetId1, 3);
+
+      const sheet1 = useSheetsStore.getState().sheets.find((s) => s.id === sheetId1)!;
+      const sheet2 = useSheetsStore.getState().sheets.find((s) => s.id === sheetId2)!;
+
+      expect(sheet1.pinnedRows).toBe(3);
+      expect(sheet2.pinnedRows).toBeUndefined();
+    });
+  });
+
+  describe('duplicateSheet with pinnedRows', () => {
+    it('should copy pinnedRows to duplicated sheet', () => {
+      const { addSheet, setPinnedRows, duplicateSheet } = useSheetsStore.getState();
+      const sheetId = addSheet('Source Sheet');
+
+      // Set up data and pinnedRows
+      useSheetsStore.setState((state) => ({
+        sheets: state.sheets.map((s) =>
+          s.id === sheetId
+            ? {
+                ...s,
+                data: [
+                  [{ v: 'Header' }],
+                  [{ v: 'Row 1' }],
+                  [{ v: 'Row 2' }],
+                ],
+              }
+            : s
+        ),
+      }));
+
+      setPinnedRows(sheetId, 2);
+
+      const newSheetId = duplicateSheet(sheetId);
+
+      const newSheet = useSheetsStore.getState().sheets.find((s) => s.id === newSheetId)!;
+      expect(newSheet.pinnedRows).toBe(2);
+    });
+
+    it('should not copy pinnedRows if source sheet has none', () => {
+      const { addSheet, duplicateSheet } = useSheetsStore.getState();
+      const sheetId = addSheet('Source Sheet');
+
+      useSheetsStore.setState((state) => ({
+        sheets: state.sheets.map((s) =>
+          s.id === sheetId
+            ? {
+                ...s,
+                data: [
+                  [{ v: 'Header' }],
+                ],
+              }
+            : s
+        ),
+      }));
+
+      const newSheetId = duplicateSheet(sheetId);
+
+      const newSheet = useSheetsStore.getState().sheets.find((s) => s.id === newSheetId)!;
+      expect(newSheet.pinnedRows).toBeUndefined();
+    });
+  });
 });

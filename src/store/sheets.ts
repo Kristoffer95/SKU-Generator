@@ -88,6 +88,15 @@ interface SheetsState {
    * @param pinnedColumns - Number of columns to pin (min: 1 for SKU column)
    */
   setPinnedColumns: (sheetId: string, pinnedColumns: number) => boolean;
+
+  /**
+   * Set the number of pinned rows for a sheet.
+   * Rows 0 through (pinnedRows - 1) will be pinned.
+   * Pinned rows stay visible while scrolling vertically.
+   * @param sheetId - The ID of the sheet
+   * @param pinnedRows - Number of rows to pin (min: 0)
+   */
+  setPinnedRows: (sheetId: string, pinnedRows: number) => boolean;
 }
 
 const generateId = () => crypto.randomUUID();
@@ -329,6 +338,7 @@ export const useSheetsStore = create<SheetsState>()(
           specifications: clonedSpecifications,
           ...(clonedRowHeights && { rowHeights: clonedRowHeights }),
           ...(sourceSheet.pinnedColumns !== undefined && { pinnedColumns: sourceSheet.pinnedColumns }),
+          ...(sourceSheet.pinnedRows !== undefined && { pinnedRows: sourceSheet.pinnedRows }),
         };
 
         // Find the index of the source sheet and insert after it
@@ -752,6 +762,27 @@ export const useSheetsStore = create<SheetsState>()(
           sheets: state.sheets.map((s) =>
             s.id === sheetId
               ? { ...s, pinnedColumns: clampedPinnedColumns }
+              : s
+          ),
+        }));
+
+        return true;
+      },
+
+      setPinnedRows: (sheetId: string, pinnedRows: number) => {
+        const { sheets } = get();
+        const sheet = sheets.find((s) => s.id === sheetId);
+        if (!sheet) return false;
+
+        // Enforce minimum of 0 (no rows pinned by default)
+        // Enforce maximum of row count
+        const rowCount = sheet.data.length;
+        const clampedPinnedRows = Math.max(0, Math.min(pinnedRows, rowCount));
+
+        set((state) => ({
+          sheets: state.sheets.map((s) =>
+            s.id === sheetId
+              ? { ...s, pinnedRows: clampedPinnedRows }
               : s
           ),
         }));

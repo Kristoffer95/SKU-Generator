@@ -1,3 +1,40 @@
+## pin-rows - COMPLETED
+Add ability to pin/freeze rows so they stay visible while scrolling vertically
+
+### Key decisions
+- Added `pinnedRows?: number` field to SheetConfig interface for persistence
+- Added `setPinnedRows` method to sheets store with min=0 (no rows pinned by default) and max=row count
+- Sticky positioning via CSS position: sticky with calculated top offsets based on row heights
+- Extended rowHeightStyles memoized value to include sticky row styles
+- Z-index hierarchy: pinned columns = 2, pinned rows = 3, intersection cells = 4
+- Row indicator cells in pinned rows also get z-index: 4 for proper layering
+- "Pin rows above" option in row header dropdown menu toggles pin state
+- Clicking on pinned row shows "Unpin rows" option, otherwise "Pin rows above"
+- Pin state persists via Zustand persist middleware (localStorage)
+- duplicateSheet copies pinnedRows to the new sheet
+
+### Files changed
+- src/types/index.ts (+1 line: pinnedRows field in SheetConfig)
+- src/store/sheets.ts (+25 lines: setPinnedRows method, duplicateSheet copies pinnedRows)
+- src/store/sheets.test.ts (+90 lines: tests for setPinnedRows and duplicateSheet with pinnedRows)
+- src/components/SpreadsheetContainer.tsx (+50 lines: pinnedRows state, handlePinRowsAbove, sticky CSS for rows)
+- src/components/SpreadsheetContainer.test.tsx (+75 lines: tests for pin rows functionality)
+
+### Notes
+- All 9 stepsToVerify criteria met:
+  1. SheetConfig has 'pinnedRows?: number' field ✓
+  2. Row header menu has 'Pin rows above' option ✓ (from row-header-dropdown-menu task)
+  3. Pinning at row N pins all rows 0 through N ✓
+  4. Pinned rows stay visible when scrolling vertically ✓
+  5. Pinned row cells have sticky positioning ✓
+  6. Intersection of pinned rows and columns has highest z-index ✓ (z-index: 4)
+  7. Unpinning removes sticky positioning ✓
+  8. Pin state persists after page refresh ✓ (via Zustand persist)
+  9. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in build/out dirs)
+- npm run test passes (1156 tests, +14 new)
+
 ## pin-columns - COMPLETED
 Add ability to pin/freeze columns so they stay visible while scrolling horizontally
 

@@ -155,7 +155,7 @@ function getSelectedCells(selection: Selection | undefined, rowCount: number = 0
 }
 
 export function SpreadsheetContainer() {
-  const { sheets, activeSheetId, setActiveSheet, setSheetData, addSheetWithId, removeSheet, updateSheet, reorderColumns, updateColumnWidth, updateRowHeight, updateFreeColumnHeader, duplicateSheet, setPinnedColumns } = useSheetsStore()
+  const { sheets, activeSheetId, setActiveSheet, setSheetData, addSheetWithId, removeSheet, updateSheet, reorderColumns, updateColumnWidth, updateRowHeight, updateFreeColumnHeader, duplicateSheet, setPinnedColumns, setPinnedRows } = useSheetsStore()
   // Get active sheet and use its local specifications and columns
   const activeSheet = sheets.find((s) => s.id === activeSheetId)
   const specifications = useMemo(
@@ -174,6 +174,11 @@ export function SpreadsheetContainer() {
   const pinnedColumns = useMemo(
     () => activeSheet?.pinnedColumns ?? 1,
     [activeSheet?.pinnedColumns]
+  )
+  // Default pinnedRows to 0 (no rows pinned by default)
+  const pinnedRows = useMemo(
+    () => activeSheet?.pinnedRows ?? 0,
+    [activeSheet?.pinnedRows]
   )
   const delimiter = useSettingsStore((state) => state.delimiter)
   const prefix = useSettingsStore((state) => state.prefix)
@@ -758,6 +763,23 @@ export function SpreadsheetContainer() {
     }
   }, [activeSheetId, setPinnedColumns])
 
+  // Handle row pin/unpin toggle via "Pin rows above" menu option
+  // When clicking "Pin rows above" on row N:
+  // - If rows 0 through N are already pinned, unpin all rows (pinnedRows = 0)
+  // - Otherwise, pin rows 0 through N (pinnedRows = N + 1)
+  const handlePinRowsAbove = useCallback((rowIndex: number) => {
+    if (!activeSheetId) return
+    // If rows up to this row are already pinned (pinnedRows > rowIndex), unpin all
+    // Otherwise, pin rows 0 through rowIndex
+    if (pinnedRows > rowIndex) {
+      // Unpin all rows
+      setPinnedRows(activeSheetId, 0)
+    } else {
+      // Pin rows 0 through rowIndex (inclusive)
+      setPinnedRows(activeSheetId, rowIndex + 1)
+    }
+  }, [activeSheetId, pinnedRows, setPinnedRows])
+
   // State for programmatically triggering column rename (from context menu)
   const [editingColumnIndex, setEditingColumnIndex] = useState<number | null>(null)
 
@@ -910,7 +932,7 @@ export function SpreadsheetContainer() {
     return <style data-testid="column-width-styles">{combinedStyles}</style>
   }, [columns, pinnedColumns])
 
-  // Generate dynamic row height styles
+  // Generate dynamic row height styles and sticky row positioning for pinned rows
   const rowHeightStyles = useMemo(() => {
     const rowCount = activeSheet?.data.length ?? 0
     if (rowCount === 0) return null
@@ -928,8 +950,43 @@ export function SpreadsheetContainer() {
       return `.sku-spreadsheet tbody tr:nth-child(${index + 1}) td, .sku-spreadsheet tbody tr:nth-child(${index + 1}) th { height: ${height}px; min-height: ${height}px; }`
     }).join("\n")
 
-    return <style data-testid="row-height-styles">{styles}\n{cellStyles}</style>
-  }, [activeSheet?.data.length, rowHeights])
+    // Generate sticky positioning for pinned rows
+    // Calculate cumulative top offset based on previous row heights
+    const stickyRowStyles: string[] = []
+
+    let topOffset = 0
+    for (let i = 0; i < pinnedRows; i++) {
+      const height = rowHeights[i] ?? DEFAULT_ROW_HEIGHT
+      // Target all cells in this row (tbody tr:nth-child is 1-indexed)
+      // For pinned rows: position: sticky, top based on cumulative height of rows above
+      // z-index: 3 for pinned rows (above pinned columns which are z-index: 2)
+      stickyRowStyles.push(
+        `.sku-spreadsheet tbody tr:nth-child(${i + 1}) > * { position: sticky; top: ${topOffset}px; z-index: 3; background-color: var(--spreadsheet-cell-bg, white); }`
+      )
+      topOffset += height
+    }
+
+    // Handle intersection of pinned rows and pinned columns
+    // The intersection cells need highest z-index (4) so they stay on top of both
+    // This is handled by updating z-index for cells that are both in pinned rows and pinned columns
+    // Pinned columns are cells at positions 1 through pinnedColumns (0 is row indicator)
+    // Generate styles for cells at intersection of pinned rows and pinned columns
+    for (let rowIndex = 0; rowIndex < pinnedRows; rowIndex++) {
+      // Row indicator (th:first-child) in pinned rows needs highest z-index
+      stickyRowStyles.push(
+        `.sku-spreadsheet tbody tr:nth-child(${rowIndex + 1}) > th:first-child { z-index: 4; }`
+      )
+      // Pinned columns (nth-child 2 through pinnedColumns+1) in pinned rows need z-index: 4
+      for (let colIndex = 0; colIndex < pinnedColumns; colIndex++) {
+        stickyRowStyles.push(
+          `.sku-spreadsheet tbody tr:nth-child(${rowIndex + 1}) > *:nth-child(${colIndex + 2}) { z-index: 4; }`
+        )
+      }
+    }
+
+    const combinedStyles = `${styles}\n${cellStyles}\n${stickyRowStyles.join("\n")}`
+    return <style data-testid="row-height-styles">{combinedStyles}</style>
+  }, [activeSheet?.data.length, rowHeights, pinnedRows, pinnedColumns])
 
   // Handle selection changes from user interaction
   const handleSelectionChange = useCallback((newSelection: Selection) => {
@@ -1622,6 +1679,8 @@ export function SpreadsheetContainer() {
           onInsertRowAbove={handleInsertRowAbove}
           onInsertRowBelow={handleInsertRowBelow}
           onDeleteRow={handleDeleteRowRequest}
+          onPinRowsAbove={handlePinRowsAbove}
+          pinnedRows={pinnedRows}
         />
         <Spreadsheet
           data={spreadsheetData as Matrix<CellBase<string | number | null>>}
