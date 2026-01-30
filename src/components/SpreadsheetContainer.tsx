@@ -1462,6 +1462,9 @@ export function SpreadsheetContainer() {
         spreadsheetRef={spreadsheetContainerRef}
         editingColumnIndex={editingColumnIndex}
         onEditingColumnIndexChange={setEditingColumnIndex}
+        onInsertBefore={handleInsertColumnBefore}
+        onInsertAfter={handleInsertColumnAfter}
+        onDeleteColumn={handleDeleteColumnRequest}
       />
       <div
         ref={spreadsheetContainerRef}

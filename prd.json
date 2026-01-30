@@ -900,5 +900,199 @@
       "npm run typecheck passes"
     ],
     "passes": true
+  },
+  {
+    "id": "column-header-dropdown-menu",
+    "category": "Spreadsheet Features",
+    "description": "Add visible dropdown menu to column headers (since right-click context menu is intercepted by browser). Show a dropdown trigger icon (⋮ or ▼) on column header hover. Menu options: Delete column, Pin/Unpin column, Insert column before, Insert column after. SKU column hides delete option and is always pinned. Use shadcn DropdownMenu component.",
+    "stepsToVerify": [
+      "Hover on column header shows dropdown trigger icon",
+      "Clicking trigger opens dropdown menu",
+      "Menu shows 'Delete column' option (hidden for SKU column)",
+      "Menu shows 'Pin column' / 'Unpin column' toggle",
+      "Menu shows 'Insert column before' and 'Insert column after' options",
+      "Delete opens confirmation dialog for spec columns",
+      "Insert options open AddColumnDialog with position pre-set",
+      "npm run typecheck passes"
+    ],
+    "passes": true
+  },
+  {
+    "id": "row-header-dropdown-menu",
+    "category": "Spreadsheet Features",
+    "description": "Add visible dropdown menu to row headers/indicators (since right-click context menu is intercepted by browser). Show a dropdown trigger icon (⋮) on row number hover. Menu options: Insert row above, Insert row below, Delete row, Pin rows above. Header row (row 0) does not show delete option.",
+    "stepsToVerify": [
+      "Hover on row number shows dropdown trigger icon",
+      "Clicking trigger opens dropdown menu",
+      "Menu shows 'Insert row above' option",
+      "Menu shows 'Insert row below' option",
+      "Menu shows 'Delete row' option (hidden for header row)",
+      "Menu shows 'Pin rows above' option",
+      "Insert row above adds empty row before current row",
+      "Insert row below adds empty row after current row",
+      "Delete row removes row and shifts data",
+      "Undo/redo works for all row operations",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "sheet-duplication",
+    "category": "Sheet Management",
+    "description": "Add ability to duplicate a sheet including all its data, columns, and specifications. Add duplicate button or context menu option on sheet tabs. Duplicated sheet is named 'Copy of {originalName}' and inserted after the source sheet. All specification IDs and column specId references are regenerated to ensure independence.",
+    "stepsToVerify": [
+      "Sheet tab shows duplicate option (button or context menu)",
+      "Clicking duplicate creates new sheet after source",
+      "New sheet is named 'Copy of {originalName}'",
+      "New sheet has identical data to source",
+      "New sheet has identical columns to source",
+      "New sheet has independent specifications (editing one doesn't affect other)",
+      "New sheet becomes active after duplication",
+      "Undo restores to before duplication",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "pin-columns",
+    "category": "Spreadsheet Features",
+    "description": "Add ability to pin/freeze columns so they stay visible while scrolling horizontally. Use CSS position: sticky with calculated left offsets. SKU column (index 0) is pinned by default. Pinned columns cannot be reordered via drag-and-drop. Store pinnedColumns count in SheetConfig.",
+    "stepsToVerify": [
+      "SheetConfig has 'pinnedColumns?: number' field",
+      "SKU column is pinned by default (position: sticky, left: 0)",
+      "Column header menu has 'Pin column' / 'Unpin column' option",
+      "Pinning column N pins all columns 0 through N",
+      "Pinned columns stay visible when scrolling horizontally",
+      "Pinned columns cannot be dragged/reordered",
+      "Pinned column headers also stay fixed",
+      "Unpinning removes sticky positioning",
+      "Pin state persists after page refresh",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "pin-rows",
+    "category": "Spreadsheet Features",
+    "description": "Add ability to pin/freeze rows so they stay visible while scrolling vertically. Use CSS position: sticky with calculated top offsets. Row header (row 0) is separate from data rows. Store pinnedRows count in SheetConfig. Handle z-index correctly when both rows and columns are pinned.",
+    "stepsToVerify": [
+      "SheetConfig has 'pinnedRows?: number' field",
+      "Row header menu has 'Pin rows above' option",
+      "Pinning at row N pins all rows 0 through N",
+      "Pinned rows stay visible when scrolling vertically",
+      "Pinned row cells have sticky positioning",
+      "Intersection of pinned rows and columns has highest z-index",
+      "Unpinning removes sticky positioning",
+      "Pin state persists after page refresh",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "export-pdf",
+    "category": "Export Features",
+    "description": "Add ability to export spreadsheet data as PDF. Install jspdf and jspdf-autotable libraries. Create pdf-export.ts module with exportToPDF and exportAllSheetsToPDF functions. Preserve cell formatting: colors (hex to RGB conversion), bold, italic, alignment. Multi-sheet export creates one page per sheet with sheet name as header.",
+    "stepsToVerify": [
+      "package.json contains jspdf and jspdf-autotable dependencies",
+      "src/lib/pdf-export.ts exports exportToPDF function",
+      "Export dropdown has 'Export to PDF' option",
+      "Clicking export generates PDF file download",
+      "PDF includes all visible data from sheet",
+      "PDF preserves cell background colors",
+      "PDF preserves text colors",
+      "PDF preserves bold and italic formatting",
+      "PDF preserves text alignment",
+      "Multi-sheet export creates multiple pages",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "export-preview",
+    "category": "Export Features",
+    "description": "Add export preview dialog that shows what the export will look like before downloading. Create ExportPreviewDialog component using shadcn Dialog. Show formatted table preview with cell styling (colors, bold, italic). Support tab navigation for multi-sheet preview. Format selector (PDF/Excel/CSV). Truncate preview for large datasets with indicator.",
+    "stepsToVerify": [
+      "Export dropdown has 'Export with Preview...' option",
+      "Clicking opens ExportPreviewDialog modal",
+      "Preview shows formatted table with cell styling",
+      "Background colors render in preview",
+      "Text colors, bold, italic render in preview",
+      "Multi-sheet data shows tabs for sheet navigation",
+      "Format selector allows choosing PDF/Excel/CSV",
+      "Large datasets show truncation indicator",
+      "Export button triggers download in selected format",
+      "Cancel button closes dialog without export",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "sheet-groups",
+    "category": "Sheet Management",
+    "description": "Add ability to organize sheets into collapsible groups/folders. Create SheetGroup interface with id, name, collapsed, sheetIds fields. Store groups array in SheetsState. Groups appear as collapsible sections in sheet tabs area. Drag-and-drop sheets into/out of groups. Context menu for group rename/delete.",
+    "stepsToVerify": [
+      "SheetGroup interface defined in types/index.ts",
+      "SheetsState has 'groups: SheetGroup[]' field",
+      "Can create new group via context menu or button",
+      "Groups appear as collapsible sections with chevron",
+      "Clicking group header expands/collapses the group",
+      "Can drag sheet into a group",
+      "Can drag sheet out of group to ungrouped area",
+      "Right-click group header shows rename/delete options",
+      "Deleting group can optionally delete sheets or move to ungrouped",
+      "Groups persist after page refresh",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "sheet-group-colors",
+    "category": "Sheet Management",
+    "description": "Add ability to color-code sheet groups. Extend SheetGroup interface with 'color?: string' field. Group header shows colored indicator (left border or background tint). Tabs within group inherit subtle tint from group color. Color picker in group context menu with predefined palette.",
+    "stepsToVerify": [
+      "SheetGroup interface has 'color?: string' field",
+      "Group context menu has color picker option",
+      "Color picker shows predefined palette (blue, green, yellow, etc.)",
+      "Selected color shows on group header",
+      "Sheet tabs in colored group have subtle tint",
+      "Can clear color to remove group styling",
+      "Group colors persist after page refresh",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "checkbox-cells",
+    "category": "Spreadsheet Features",
+    "description": "Add ability to insert checkboxes into cells. Extend CellData with 'checkbox?: boolean' flag and allow boolean values. Create CheckboxCell viewer component. Add toolbar button to convert selected cells to checkbox type. Checkbox renders as checked/unchecked based on boolean value. Clicking checkbox toggles value.",
+    "stepsToVerify": [
+      "CellData interface has 'checkbox?: boolean' field",
+      "CellData.v type includes boolean",
+      "Toolbar has 'Insert checkbox' button",
+      "Clicking button converts selected cell(s) to checkbox",
+      "Checkbox cells render checkmark when value is true",
+      "Checkbox cells render empty box when value is false",
+      "Clicking checkbox toggles the boolean value",
+      "Checkbox state persists after page refresh",
+      "Checkbox cells work in free columns",
+      "npm run typecheck passes"
+    ],
+    "passes": false
+  },
+  {
+    "id": "checkbox-spacebar-toggle",
+    "category": "Spreadsheet Features",
+    "description": "Add spacebar keyboard shortcut to toggle checkbox cells. When a single checkbox cell is selected/focused, pressing spacebar toggles its checked state. Prevent default spacebar behavior (page scroll) when checkbox is focused.",
+    "stepsToVerify": [
+      "Select a checkbox cell in the spreadsheet",
+      "Press spacebar - checkbox toggles from unchecked to checked",
+      "Press spacebar again - checkbox toggles from checked to unchecked",
+      "Page does not scroll when pressing spacebar on checkbox cell",
+      "Spacebar has no effect on non-checkbox cells",
+      "Works when cell is selected (not in edit mode)",
+      "Toggle is tracked in undo/redo history",
+      "npm run typecheck passes"
+    ],
+    "passes": false
   }
 ]

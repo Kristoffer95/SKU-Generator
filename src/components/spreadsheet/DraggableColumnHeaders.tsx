@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react"
 import { GripVertical } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ColumnHeaderDropdownMenu } from "./ColumnHeaderDropdownMenu"
 import type { ColumnDef } from "@/types"
 
 /** Default width for columns without explicit width */
@@ -27,6 +28,16 @@ export interface DraggableColumnHeadersProps {
   editingColumnIndex?: number | null
   /** Callback when editing state changes (for context menu integration) */
   onEditingColumnIndexChange?: (index: number | null) => void
+  /** Called when user selects "Insert column before" from dropdown */
+  onInsertBefore?: (columnIndex: number) => void
+  /** Called when user selects "Insert column after" from dropdown */
+  onInsertAfter?: (columnIndex: number) => void
+  /** Called when user selects "Delete column" from dropdown */
+  onDeleteColumn?: (columnIndex: number, column: ColumnDef) => void
+  /** Called when user selects "Pin column" or "Unpin column" from dropdown */
+  onPinChange?: (columnIndex: number, pinned: boolean) => void
+  /** Number of pinned columns (columns 0 through pinnedColumns-1 are pinned) */
+  pinnedColumns?: number
 }
 
 /**
@@ -45,6 +56,11 @@ export function DraggableColumnHeaders({
   spreadsheetRef,
   editingColumnIndex: controlledEditingIndex,
   onEditingColumnIndexChange,
+  onInsertBefore,
+  onInsertAfter,
+  onDeleteColumn,
+  onPinChange,
+  pinnedColumns = 1, // Default: SKU column (index 0) is pinned
 }: DraggableColumnHeadersProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)
@@ -314,9 +330,10 @@ export function DraggableColumnHeaders({
   }, [handleSaveRename, handleCancelRename])
 
   const handleHeaderDoubleClick = useCallback((e: React.MouseEvent, index: number) => {
-    // Don't trigger rename if clicking on resize handle area
+    // Don't trigger rename if clicking on resize handle area or dropdown trigger
     const target = e.target as HTMLElement
     if (target.closest("[data-testid^='resize-handle']")) return
+    if (target.closest("[data-testid^='column-menu-trigger']")) return
 
     if (canRenameColumn(index)) {
       e.preventDefault()
@@ -324,6 +341,18 @@ export function DraggableColumnHeaders({
       handleStartRename(index)
     }
   }, [canRenameColumn, handleStartRename])
+
+  // Handle rename from dropdown menu
+  const handleDropdownRename = useCallback((columnIndex: number) => {
+    if (canRenameColumn(columnIndex)) {
+      handleStartRename(columnIndex)
+    }
+  }, [canRenameColumn, handleStartRename])
+
+  // Check if a column is pinned (all columns 0 through pinnedColumns-1 are pinned)
+  const isColumnPinned = useCallback((index: number) => {
+    return index < pinnedColumns
+  }, [pinnedColumns])
 
   return (
     <div
@@ -363,7 +392,7 @@ export function DraggableColumnHeaders({
             onDrop={(e) => handleDrop(e, index)}
             onDoubleClick={(e) => handleHeaderDoubleClick(e, index)}
             className={cn(
-              "relative flex items-center gap-1 px-2 py-1.5 font-semibold text-sm border-r border-[var(--spreadsheet-cell-border,#e2e8f0)]",
+              "group relative flex items-center gap-1 px-2 py-1.5 font-semibold text-sm border-r border-[var(--spreadsheet-cell-border,#e2e8f0)]",
               "transition-colors flex-shrink-0 flex-grow-0",
               isDraggable && !isResizing && !isEditing && "cursor-grab active:cursor-grabbing",
               !isDraggable && !isResizing && !isEditing && "cursor-default",
@@ -437,6 +466,20 @@ export function DraggableColumnHeaders({
               >
                 free
               </span>
+            )}
+
+            {/* Column header dropdown menu - only show when not editing */}
+            {!isEditing && (onInsertBefore || onInsertAfter || onDeleteColumn) && (
+              <ColumnHeaderDropdownMenu
+                column={column}
+                columnIndex={index}
+                onInsertBefore={onInsertBefore ?? (() => {})}
+                onInsertAfter={onInsertAfter ?? (() => {})}
+                onDelete={onDeleteColumn ?? (() => {})}
+                onRename={canRenameColumn(index) ? handleDropdownRename : undefined}
+                onPinChange={onPinChange}
+                isPinned={isColumnPinned(index)}
+              />
             )}
 
             {/* Resize handle at right edge */}

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, fireEvent } from "@testing-library/react"
+import { render, screen, fireEvent, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { DraggableColumnHeaders } from "./DraggableColumnHeaders"
 import type { ColumnDef } from "@/types"
 
@@ -716,6 +717,289 @@ describe("DraggableColumnHeaders", () => {
       expect(header).toHaveStyle({ width: "150px" })
       expect(header).toHaveStyle({ minWidth: "80px" }) // MIN_COLUMN_WIDTH constant
       expect(header).toHaveStyle({ maxWidth: "150px" })
+    })
+  })
+
+  describe("column header dropdown menu", () => {
+    let mockOnInsertBefore: ReturnType<typeof vi.fn>
+    let mockOnInsertAfter: ReturnType<typeof vi.fn>
+    let mockOnDeleteColumn: ReturnType<typeof vi.fn>
+    let mockOnRenameColumn: ReturnType<typeof vi.fn>
+    let mockOnPinChange: ReturnType<typeof vi.fn>
+
+    beforeEach(() => {
+      mockOnInsertBefore = vi.fn()
+      mockOnInsertAfter = vi.fn()
+      mockOnDeleteColumn = vi.fn()
+      mockOnRenameColumn = vi.fn()
+      mockOnPinChange = vi.fn()
+    })
+
+    it("renders dropdown menu trigger for each column when action handlers are provided", () => {
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onInsertBefore={mockOnInsertBefore}
+          onInsertAfter={mockOnInsertAfter}
+          onDeleteColumn={mockOnDeleteColumn}
+        />
+      )
+
+      // Each column should have a dropdown menu trigger
+      expect(screen.getByTestId("column-menu-trigger-0")).toBeInTheDocument()
+      expect(screen.getByTestId("column-menu-trigger-1")).toBeInTheDocument()
+      expect(screen.getByTestId("column-menu-trigger-2")).toBeInTheDocument()
+      expect(screen.getByTestId("column-menu-trigger-3")).toBeInTheDocument()
+    })
+
+    it("does not render dropdown menu when no action handlers are provided", () => {
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+        />
+      )
+
+      // No dropdown menu triggers should be present
+      expect(screen.queryByTestId("column-menu-trigger-0")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("column-menu-trigger-1")).not.toBeInTheDocument()
+    })
+
+    it("opens dropdown menu on click", async () => {
+      const user = userEvent.setup()
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onInsertBefore={mockOnInsertBefore}
+          onInsertAfter={mockOnInsertAfter}
+          onDeleteColumn={mockOnDeleteColumn}
+        />
+      )
+
+      await user.click(screen.getByTestId("column-menu-trigger-1"))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("column-menu-insert-before-1")).toBeInTheDocument()
+        expect(screen.getByTestId("column-menu-insert-after-1")).toBeInTheDocument()
+        expect(screen.getByTestId("column-menu-delete-1")).toBeInTheDocument()
+      })
+    })
+
+    it("calls onInsertBefore when menu option is clicked", async () => {
+      const user = userEvent.setup()
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onInsertBefore={mockOnInsertBefore}
+          onInsertAfter={mockOnInsertAfter}
+          onDeleteColumn={mockOnDeleteColumn}
+        />
+      )
+
+      await user.click(screen.getByTestId("column-menu-trigger-2"))
+      await waitFor(() => {
+        expect(screen.getByTestId("column-menu-insert-before-2")).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId("column-menu-insert-before-2"))
+
+      expect(mockOnInsertBefore).toHaveBeenCalledWith(2)
+    })
+
+    it("calls onInsertAfter when menu option is clicked", async () => {
+      const user = userEvent.setup()
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onInsertBefore={mockOnInsertBefore}
+          onInsertAfter={mockOnInsertAfter}
+          onDeleteColumn={mockOnDeleteColumn}
+        />
+      )
+
+      await user.click(screen.getByTestId("column-menu-trigger-2"))
+      await waitFor(() => {
+        expect(screen.getByTestId("column-menu-insert-after-2")).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId("column-menu-insert-after-2"))
+
+      expect(mockOnInsertAfter).toHaveBeenCalledWith(2)
+    })
+
+    it("calls onDeleteColumn when delete option is clicked", async () => {
+      const user = userEvent.setup()
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onInsertBefore={mockOnInsertBefore}
+          onInsertAfter={mockOnInsertAfter}
+          onDeleteColumn={mockOnDeleteColumn}
+        />
+      )
+
+      await user.click(screen.getByTestId("column-menu-trigger-1"))
+      await waitFor(() => {
+        expect(screen.getByTestId("column-menu-delete-1")).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId("column-menu-delete-1"))
+
+      expect(mockOnDeleteColumn).toHaveBeenCalledWith(1, columns[1])
+    })
+
+    it("does not show delete option for SKU column", async () => {
+      const user = userEvent.setup()
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onInsertBefore={mockOnInsertBefore}
+          onInsertAfter={mockOnInsertAfter}
+          onDeleteColumn={mockOnDeleteColumn}
+        />
+      )
+
+      await user.click(screen.getByTestId("column-menu-trigger-0"))
+      await waitFor(() => {
+        expect(screen.getByTestId("column-menu-insert-before-0")).toBeInTheDocument()
+      })
+
+      // Delete should NOT be present for SKU column
+      expect(screen.queryByTestId("column-menu-delete-0")).not.toBeInTheDocument()
+    })
+
+    it("triggers rename from dropdown for free columns", async () => {
+      const user = userEvent.setup()
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onRenameColumn={mockOnRenameColumn}
+          onInsertBefore={mockOnInsertBefore}
+          onInsertAfter={mockOnInsertAfter}
+          onDeleteColumn={mockOnDeleteColumn}
+        />
+      )
+
+      // Open dropdown for free column (index 3)
+      await user.click(screen.getByTestId("column-menu-trigger-3"))
+      await waitFor(() => {
+        expect(screen.getByTestId("column-menu-rename-3")).toBeInTheDocument()
+      })
+
+      // Click rename
+      await user.click(screen.getByTestId("column-menu-rename-3"))
+
+      // Should show inline edit input
+      await waitFor(() => {
+        expect(screen.getByTestId("column-header-input-3")).toBeInTheDocument()
+      })
+    })
+
+    it("does not show rename option for spec columns", async () => {
+      const user = userEvent.setup()
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onRenameColumn={mockOnRenameColumn}
+          onInsertBefore={mockOnInsertBefore}
+          onInsertAfter={mockOnInsertAfter}
+          onDeleteColumn={mockOnDeleteColumn}
+        />
+      )
+
+      // Open dropdown for spec column (index 1)
+      await user.click(screen.getByTestId("column-menu-trigger-1"))
+      await waitFor(() => {
+        expect(screen.getByTestId("column-menu-insert-before-1")).toBeInTheDocument()
+      })
+
+      // Rename should NOT be present for spec columns
+      expect(screen.queryByTestId("column-menu-rename-1")).not.toBeInTheDocument()
+    })
+
+    it("shows pin/unpin options when onPinChange is provided", async () => {
+      const user = userEvent.setup()
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onInsertBefore={mockOnInsertBefore}
+          onInsertAfter={mockOnInsertAfter}
+          onDeleteColumn={mockOnDeleteColumn}
+          onPinChange={mockOnPinChange}
+          pinnedColumns={1}
+        />
+      )
+
+      // Open dropdown for column 1 (not pinned)
+      await user.click(screen.getByTestId("column-menu-trigger-1"))
+      await waitFor(() => {
+        expect(screen.getByTestId("column-menu-pin-1")).toBeInTheDocument()
+      })
+
+      expect(screen.getByText("Pin column")).toBeInTheDocument()
+    })
+
+    it("does not show pin option for SKU column", async () => {
+      const user = userEvent.setup()
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onInsertBefore={mockOnInsertBefore}
+          onInsertAfter={mockOnInsertAfter}
+          onDeleteColumn={mockOnDeleteColumn}
+          onPinChange={mockOnPinChange}
+          pinnedColumns={1}
+        />
+      )
+
+      // Open dropdown for SKU column (index 0)
+      await user.click(screen.getByTestId("column-menu-trigger-0"))
+      await waitFor(() => {
+        expect(screen.getByTestId("column-menu-insert-before-0")).toBeInTheDocument()
+      })
+
+      // Pin should NOT be present for SKU column
+      expect(screen.queryByTestId("column-menu-pin-0")).not.toBeInTheDocument()
+    })
+
+    it("column headers have group class for hover effects", () => {
+      const columns = createColumns()
+      render(
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={mockOnReorder}
+          onInsertBefore={mockOnInsertBefore}
+          onInsertAfter={mockOnInsertAfter}
+          onDeleteColumn={mockOnDeleteColumn}
+        />
+      )
+
+      // Each column header should have the "group" class for hover effects
+      expect(screen.getByTestId("column-header-0")).toHaveClass("group")
+      expect(screen.getByTestId("column-header-1")).toHaveClass("group")
+      expect(screen.getByTestId("column-header-2")).toHaveClass("group")
+      expect(screen.getByTestId("column-header-3")).toHaveClass("group")
     })
   })
 })

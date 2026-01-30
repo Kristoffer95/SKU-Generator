@@ -1,3 +1,37 @@
+## column-header-dropdown-menu - COMPLETED
+Add visible dropdown menu to column headers (since right-click context menu is intercepted by browser)
+
+### Key decisions
+- Created ColumnHeaderDropdownMenu component using shadcn DropdownMenu (Radix UI)
+- Trigger icon (⋮) appears on hover using Tailwind's group-hover pattern
+- Menu options: Insert column before, Insert column after, Delete column, Rename (free columns only), Pin/Unpin column
+- SKU column (type='sku') hides delete and pin options since it's always first and pinned
+- Free columns show Rename option, spec columns do not (spec columns get their name from specification)
+- Pin/Unpin option ready for future pin-columns feature (onPinChange prop)
+- Integrated into DraggableColumnHeaders with new props: onInsertBefore, onInsertAfter, onDeleteColumn, onPinChange, pinnedColumns
+- Connected to existing SpreadsheetContainer handlers for insert/delete actions
+
+### Files changed
+- src/components/spreadsheet/ColumnHeaderDropdownMenu.tsx (new, ~160 lines)
+- src/components/spreadsheet/ColumnHeaderDropdownMenu.test.tsx (new, 17 tests)
+- src/components/spreadsheet/DraggableColumnHeaders.tsx (added dropdown integration, new props, group class for hover)
+- src/components/spreadsheet/DraggableColumnHeaders.test.tsx (+17 tests for dropdown menu integration)
+- src/components/SpreadsheetContainer.tsx (connected new props to DraggableColumnHeaders)
+
+### Notes
+- All 8 stepsToVerify criteria met:
+  1. Hover on column header shows dropdown trigger icon ✓
+  2. Clicking trigger opens dropdown menu ✓
+  3. Menu shows 'Delete column' option (hidden for SKU column) ✓
+  4. Menu shows 'Pin column' / 'Unpin column' toggle ✓
+  5. Menu shows 'Insert column before' and 'Insert column after' options ✓
+  6. Delete opens confirmation dialog for spec columns ✓
+  7. Insert options open AddColumnDialog with position pre-set ✓
+  8. npm run typecheck passes ✓
+- npm run typecheck passes
+- npm run lint passes (only pre-existing warnings in component files)
+- npm run test passes (1084 tests, +29 new)
+
 ## auto-populate-combinations - COMPLETED
 Add Auto Populate button to toolbar that generates all possible combinations of specification values
 
