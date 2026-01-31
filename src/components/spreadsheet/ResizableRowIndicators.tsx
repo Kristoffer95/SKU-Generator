@@ -111,7 +111,9 @@ export function ResizableRowIndicators({
     if (!tbody) return
 
     const rows = tbody.querySelectorAll("tr")
-    const targetRow = rows[rowIndex] as HTMLElement | null
+    // +1 accounts for the hidden column header row in react-spreadsheet tbody
+    // react-spreadsheet renders a header row with column letters (A, B, C...) as the first tr in tbody
+    const targetRow = rows[rowIndex + 1] as HTMLElement | null
     if (!targetRow) return
 
     let maxHeight = MIN_ROW_HEIGHT

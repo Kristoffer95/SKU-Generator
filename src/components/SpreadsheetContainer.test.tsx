@@ -6198,8 +6198,9 @@ describe('Row header dropdown menu', () => {
     expect(styleContent).toContain('var(--spreadsheet-pinned-tint, #f8fafc)')
 
     // All pinned rows should have the background-color set
-    expect(styleContent).toContain('tr:nth-child(1) > * { position: sticky; top: 0px; z-index: 3; background-color: var(--spreadsheet-pinned-tint, #f8fafc)')
-    expect(styleContent).toContain('tr:nth-child(2) > * { position: sticky')
+    // nth-child offset: +2 accounts for 1-indexing and hidden column header row in tbody
+    expect(styleContent).toContain('tr:nth-child(2) > * { position: sticky; top: 0px; z-index: 3; background-color: var(--spreadsheet-pinned-tint, #f8fafc)')
+    expect(styleContent).toContain('tr:nth-child(3) > * { position: sticky')
   })
 
   it('intersection of pinned rows and pinned columns has elevated z-index', () => {
@@ -6218,13 +6219,14 @@ describe('Row header dropdown menu', () => {
 
     // Intersection cells (pinned rows AND pinned columns) should have z-index: 4
     // This ensures they stay on top of both horizontal and vertical scrolling
-    // Row 1, Column 1 (row indicator)
-    expect(styleContent).toContain('tr:nth-child(1) > th:first-child { z-index: 4')
-    // Row 1, Column 2 (first data column, pinned)
-    expect(styleContent).toContain('tr:nth-child(1) > *:nth-child(2) { z-index: 4')
-    // Row 2 intersection cells
+    // nth-child offset: +2 accounts for 1-indexing and hidden column header row in tbody
+    // Data row 0, Column 1 (row indicator)
     expect(styleContent).toContain('tr:nth-child(2) > th:first-child { z-index: 4')
+    // Data row 0, Column 2 (first data column, pinned)
     expect(styleContent).toContain('tr:nth-child(2) > *:nth-child(2) { z-index: 4')
+    // Data row 1 intersection cells
+    expect(styleContent).toContain('tr:nth-child(3) > th:first-child { z-index: 4')
+    expect(styleContent).toContain('tr:nth-child(3) > *:nth-child(2) { z-index: 4')
   })
 
   it('pinned row cells inherit background from the row-level style', () => {
@@ -6244,12 +6246,13 @@ describe('Row header dropdown menu', () => {
     // The pinned row style applies to ALL cells in the row (> *)
     // This includes both pinned and non-pinned columns
     // The intersection z-index rules DON'T override background, they only add z-index
-    expect(styleContent).toContain('tr:nth-child(1) > * { position: sticky; top: 0px; z-index: 3; background-color: var(--spreadsheet-pinned-tint')
+    // nth-child offset: +2 accounts for 1-indexing and hidden column header row in tbody
+    expect(styleContent).toContain('tr:nth-child(2) > * { position: sticky; top: 0px; z-index: 3; background-color: var(--spreadsheet-pinned-tint')
 
     // The z-index override rules are separate and don't include background-color
     // (they inherit background from the row-level rule)
-    expect(styleContent).toContain('tr:nth-child(1) > th:first-child { z-index: 4; }')
-    expect(styleContent).toContain('tr:nth-child(1) > *:nth-child(2) { z-index: 4; }')
+    expect(styleContent).toContain('tr:nth-child(2) > th:first-child { z-index: 4; }')
+    expect(styleContent).toContain('tr:nth-child(2) > *:nth-child(2) { z-index: 4; }')
   })
 
   it('generates 2px right border on the last pinned column', () => {
@@ -6305,6 +6308,83 @@ describe('Row header dropdown menu', () => {
     // Border is applied to nth-child(2) which is the SKU column
     expect(styleContent).toContain('border-right: 2px solid var(--spreadsheet-cell-border')
     expect(styleContent).toMatch(/nth-child\(2\).*border-right: 2px solid var\(--spreadsheet-cell-border/)
+  })
+
+  it('uses nth-child offset +2 to account for hidden column header row in tbody', () => {
+    // This test verifies the fix for the "Pin rows above" off-by-one bug.
+    // react-spreadsheet renders a hidden column header row (with A, B, C...) as the first tr in tbody.
+    // Without the +2 offset, pinning row 5 would miss row 5 in the display (1,2,3,4,6,7...).
+    // With the +2 offset:
+    // - Data row 0 targets nth-child(2) (not 1)
+    // - Data row 1 targets nth-child(3) (not 2)
+    // - etc.
+    const sheetId = createSheetWithRows()
+
+    // Pin first 3 rows (data rows 0, 1, 2)
+    useSheetsStore.getState().setPinnedRows(sheetId, 3)
+
+    render(<SpreadsheetContainer />)
+
+    const styleElement = document.querySelector('[data-testid="row-height-styles"]')
+    expect(styleElement).toBeInTheDocument()
+
+    const styleContent = styleElement?.textContent ?? ''
+
+    // Verify row styles use correct offset:
+    // - Data row 0 should be nth-child(2)
+    // - Data row 1 should be nth-child(3)
+    // - Data row 2 should be nth-child(4)
+    // The hidden column header row is nth-child(1), so we should NOT see any row styling for nth-child(1)
+
+    // These patterns should exist (with +2 offset)
+    expect(styleContent).toContain('tbody tr:nth-child(2) { height:')
+    expect(styleContent).toContain('tbody tr:nth-child(3) { height:')
+    expect(styleContent).toContain('tbody tr:nth-child(4) { height:')
+
+    // Pinned row styling should also use +2 offset
+    expect(styleContent).toContain('tr:nth-child(2) > * { position: sticky; top: 0px')
+    expect(styleContent).toContain('tr:nth-child(3) > * { position: sticky')
+    expect(styleContent).toContain('tr:nth-child(4) > * { position: sticky')
+
+    // The z-index 4 for pinned row/column intersections should also use +2 offset
+    expect(styleContent).toContain('tr:nth-child(2) > th:first-child { z-index: 4')
+    expect(styleContent).toContain('tr:nth-child(3) > th:first-child { z-index: 4')
+    expect(styleContent).toContain('tr:nth-child(4) > th:first-child { z-index: 4')
+
+    // IMPORTANT: No row styling should target nth-child(1) which is the hidden column header row
+    expect(styleContent).not.toContain('tbody tr:nth-child(1) { height:')
+    expect(styleContent).not.toContain('tr:nth-child(1) > * { position: sticky')
+    expect(styleContent).not.toContain('tr:nth-child(1) > th:first-child { z-index: 4')
+  })
+
+  it('generates sequential row numbers without gaps when pinning rows', () => {
+    // This test specifically verifies the fix for the bug where pinning row 5
+    // would show rows 1,2,3,4,6,7... (missing row 5).
+    // With the correct +2 offset, all rows should be styled and visible.
+    const sheetId = createSheetWithRows()
+
+    // Pin all 3 rows (the sheet has 3 data rows)
+    useSheetsStore.getState().setPinnedRows(sheetId, 3)
+
+    render(<SpreadsheetContainer />)
+
+    const styleElement = document.querySelector('[data-testid="row-height-styles"]')
+    expect(styleElement).toBeInTheDocument()
+
+    const styleContent = styleElement?.textContent ?? ''
+
+    // All 3 pinned rows should have sticky positioning
+    // Data rows 0-2 should map to nth-child(2-4)
+    for (let dataRowIndex = 0; dataRowIndex < 3; dataRowIndex++) {
+      const nthChild = dataRowIndex + 2 // +2 for offset
+      expect(styleContent).toContain(`tr:nth-child(${nthChild}) > * { position: sticky`)
+    }
+
+    // Verify correct top offsets (cumulative)
+    // Default row height is 32px
+    expect(styleContent).toContain('tr:nth-child(2) > * { position: sticky; top: 0px')
+    expect(styleContent).toContain('tr:nth-child(3) > * { position: sticky; top: 32px')
+    expect(styleContent).toContain('tr:nth-child(4) > * { position: sticky; top: 64px')
   })
 })
 

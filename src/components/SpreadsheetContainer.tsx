@@ -1055,14 +1055,15 @@ export function SpreadsheetContainer() {
     // Generate styles for all rows, using custom height or default
     const styles = Array.from({ length: rowCount }).map((_, index) => {
       const height = rowHeights[index] ?? DEFAULT_ROW_HEIGHT
-      // Target rows in tbody (nth-child is 1-indexed)
-      return `.sku-spreadsheet tbody tr:nth-child(${index + 1}) { height: ${height}px; min-height: ${height}px; }`
+      // Target rows in tbody (nth-child is 1-indexed, +2 accounts for 1-indexing and hidden column header row)
+      // react-spreadsheet renders a header row with column letters (A, B, C...) as the first tr in tbody
+      return `.sku-spreadsheet tbody tr:nth-child(${index + 2}) { height: ${height}px; min-height: ${height}px; }`
     }).join("\n")
 
     // Also ensure cells respect row height
     const cellStyles = Array.from({ length: rowCount }).map((_, index) => {
       const height = rowHeights[index] ?? DEFAULT_ROW_HEIGHT
-      return `.sku-spreadsheet tbody tr:nth-child(${index + 1}) td, .sku-spreadsheet tbody tr:nth-child(${index + 1}) th { height: ${height}px; min-height: ${height}px; }`
+      return `.sku-spreadsheet tbody tr:nth-child(${index + 2}) td, .sku-spreadsheet tbody tr:nth-child(${index + 2}) th { height: ${height}px; min-height: ${height}px; }`
     }).join("\n")
 
     // Generate sticky positioning for pinned rows
@@ -1072,12 +1073,13 @@ export function SpreadsheetContainer() {
     let topOffset = 0
     for (let i = 0; i < pinnedRows; i++) {
       const height = rowHeights[i] ?? DEFAULT_ROW_HEIGHT
-      // Target all cells in this row (tbody tr:nth-child is 1-indexed)
+      // Target all cells in this row (tbody tr:nth-child is 1-indexed, +2 accounts for 1-indexing and hidden column header row)
+      // react-spreadsheet renders a header row with column letters (A, B, C...) as the first tr in tbody
       // For pinned rows: position: sticky, top based on cumulative height of rows above
       // z-index: 3 for pinned rows (above pinned columns which are z-index: 2)
       // Add background-color with --spreadsheet-pinned-tint to prevent scrolled content showing through
       stickyRowStyles.push(
-        `.sku-spreadsheet tbody tr:nth-child(${i + 1}) > * { position: sticky; top: ${topOffset}px; z-index: 3; background-color: var(--spreadsheet-pinned-tint, #f8fafc); }`
+        `.sku-spreadsheet tbody tr:nth-child(${i + 2}) > * { position: sticky; top: ${topOffset}px; z-index: 3; background-color: var(--spreadsheet-pinned-tint, #f8fafc); }`
       )
       topOffset += height
     }
@@ -1089,13 +1091,14 @@ export function SpreadsheetContainer() {
     // Generate styles for cells at intersection of pinned rows and pinned columns
     for (let rowIndex = 0; rowIndex < pinnedRows; rowIndex++) {
       // Row indicator (th:first-child) in pinned rows needs highest z-index
+      // +2 accounts for 1-indexing and hidden column header row in react-spreadsheet tbody
       stickyRowStyles.push(
-        `.sku-spreadsheet tbody tr:nth-child(${rowIndex + 1}) > th:first-child { z-index: 4; }`
+        `.sku-spreadsheet tbody tr:nth-child(${rowIndex + 2}) > th:first-child { z-index: 4; }`
       )
       // Pinned columns (nth-child 2 through pinnedColumns+1) in pinned rows need z-index: 4
       for (let colIndex = 0; colIndex < pinnedColumns; colIndex++) {
         stickyRowStyles.push(
-          `.sku-spreadsheet tbody tr:nth-child(${rowIndex + 1}) > *:nth-child(${colIndex + 2}) { z-index: 4; }`
+          `.sku-spreadsheet tbody tr:nth-child(${rowIndex + 2}) > *:nth-child(${colIndex + 2}) { z-index: 4; }`
         )
       }
     }
