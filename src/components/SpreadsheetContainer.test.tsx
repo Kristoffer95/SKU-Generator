@@ -139,6 +139,17 @@ vi.mock('react-spreadsheet', () => {
         return column >= this.start && column <= this.end
       }
     },
+    EntireRowsSelection: class MockEntireRowsSelection {
+      start: number
+      end: number
+      constructor(start: number, end: number) {
+        this.start = start
+        this.end = end
+      }
+      hasEntireRow(row: number) {
+        return row >= this.start && row <= this.end
+      }
+    },
     Selection: class {},
   }
 })
@@ -6567,6 +6578,245 @@ describe('SpreadsheetContainer checkbox spacebar toggle', () => {
     const sheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)!
     expect(sheet.data[2][1]?.v).toBe('Text value')
     expect(sheet.data[1][1]?.v).toBe(false) // Checkbox also unchanged
+  })
+})
+
+describe('SpreadsheetContainer Shift+Space row selection', () => {
+  const colorSpec: Specification = {
+    id: 'color-spec',
+    name: 'Color',
+    order: 0,
+    values: [
+      { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+      { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+    ],
+  }
+
+  const sizeSpec: Specification = {
+    id: 'size-spec',
+    name: 'Size',
+    order: 1,
+    values: [
+      { id: 'v1', displayValue: 'Small', skuFragment: 'S' },
+      { id: 'v2', displayValue: 'Large', skuFragment: 'L' },
+    ],
+  }
+
+  beforeEach(() => {
+    localStorage.clear()
+    useSheetsStore.setState({ sheets: [], activeSheetId: null })
+    useSpecificationsStore.setState({ specifications: [] })
+    capturedOnChange = null
+    capturedOnSelect = null
+    capturedData = []
+    capturedSelected = null
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('selects entire row when Shift+Space is pressed with a cell selected', async () => {
+    // Create a sheet with 3 rows and 3 columns (SKU, Color, Size)
+    createSheetWithSpecs(
+      'Products',
+      [
+        [{ v: 'R-S', m: 'R-S' }, { v: 'Red', m: 'Red' }, { v: 'Small', m: 'Small' }],
+        [{ v: 'B-L', m: 'B-L' }, { v: 'Blue', m: 'Blue' }, { v: 'Large', m: 'Large' }],
+        [{ v: 'R-L', m: 'R-L' }, { v: 'Red', m: 'Red' }, { v: 'Large', m: 'Large' }],
+      ],
+      [colorSpec, sizeSpec]
+    )
+    render(<SpreadsheetContainer />)
+
+    // Create a single-cell selection at row 1, column 1 (Blue cell)
+    const singleCellSelection = {
+      range: { start: { row: 1, column: 1 }, end: { row: 1, column: 1 } }
+    }
+    act(() => {
+      capturedOnSelect?.(singleCellSelection)
+    })
+
+    // Get the correct target element - .sku-spreadsheet is where keyboard events are handled
+    const container = screen.getByTestId('spreadsheet-container')
+    const scrollContainer = container.querySelector('.sku-spreadsheet')!
+
+    // Press Shift+Space using fireEvent.keyDown, wrapped in act for state updates
+    await act(async () => {
+      fireEvent.keyDown(scrollContainer, { code: 'Space', shiftKey: true })
+    })
+
+    // Verify that onSelect was called (the selection changed)
+    // The last captured selection should be an EntireRowsSelection for row 1
+    expect(capturedSelected).toBeDefined()
+    // The selection should be an EntireRowsSelection (has start and end row indices, plus hasEntireRow method)
+    expect(capturedSelected).toHaveProperty('start', 1)
+    expect(capturedSelected).toHaveProperty('end', 1)
+    expect(capturedSelected).toHaveProperty('hasEntireRow')
+  })
+
+  it('prevents default behavior when Shift+Space is pressed', async () => {
+    createSheetWithSpecs(
+      'Products',
+      [
+        [{ v: 'R-S', m: 'R-S' }, { v: 'Red', m: 'Red' }],
+      ],
+      [colorSpec]
+    )
+    render(<SpreadsheetContainer />)
+
+    // Create a single-cell selection
+    const singleCellSelection = {
+      range: { start: { row: 0, column: 1 }, end: { row: 0, column: 1 } }
+    }
+    act(() => {
+      capturedOnSelect?.(singleCellSelection)
+    })
+
+    // Get the correct target element
+    const container = screen.getByTestId('spreadsheet-container')
+    const scrollContainer = container.querySelector('.sku-spreadsheet')!
+
+    // Fire keydown event - fireEvent returns false if preventDefault was called
+    let preventedDefault = false
+    await act(async () => {
+      preventedDefault = !fireEvent.keyDown(scrollContainer, { code: 'Space', shiftKey: true })
+    })
+
+    // Verify that preventDefault was called
+    expect(preventedDefault).toBe(true)
+  })
+
+  it('does nothing when Shift+Space is pressed with no selection', async () => {
+    createSheetWithSpecs(
+      'Products',
+      [
+        [{ v: 'R-S', m: 'R-S' }, { v: 'Red', m: 'Red' }],
+      ],
+      [colorSpec]
+    )
+    render(<SpreadsheetContainer />)
+
+    // Don't set any selection - selectedCells will be empty
+    // Initial render may set a selection via the mock, so record it
+    const initialSelection = capturedSelected
+
+    // Get the correct target element
+    const container = screen.getByTestId('spreadsheet-container')
+    const scrollContainer = container.querySelector('.sku-spreadsheet')!
+
+    // Press Shift+Space
+    await act(async () => {
+      fireEvent.keyDown(scrollContainer, { code: 'Space', shiftKey: true })
+    })
+
+    // Verify that selection is unchanged from the initial state
+    expect(capturedSelected).toEqual(initialSelection)
+  })
+
+  it('regular spacebar still toggles checkboxes (no regression)', async () => {
+    // Create sheet with a checkbox cell
+    const sheetId = createSheetWithSpecs(
+      'Products',
+      [
+        [{ v: '', m: '' }, { v: false, checkbox: true }],
+      ],
+      [colorSpec]
+    )
+    render(<SpreadsheetContainer />)
+
+    // Select the checkbox cell
+    const checkboxSelection = {
+      range: { start: { row: 0, column: 1 }, end: { row: 0, column: 1 } }
+    }
+    act(() => {
+      capturedOnSelect?.(checkboxSelection)
+    })
+
+    // Get the correct target element
+    const container = screen.getByTestId('spreadsheet-container')
+    const scrollContainer = container.querySelector('.sku-spreadsheet')!
+
+    // Press regular spacebar (no shift) using fireEvent
+    await act(async () => {
+      fireEvent.keyDown(scrollContainer, { code: 'Space' })
+    })
+
+    // Verify checkbox was toggled
+    const updatedSheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)
+    expect(updatedSheet?.data[0][1]?.v).toBe(true) // Toggled from false to true
+  })
+
+  it('selects the row of the first selected cell when multiple cells are selected', async () => {
+    createSheetWithSpecs(
+      'Products',
+      [
+        [{ v: 'R-S', m: 'R-S' }, { v: 'Red', m: 'Red' }, { v: 'Small', m: 'Small' }],
+        [{ v: 'B-L', m: 'B-L' }, { v: 'Blue', m: 'Blue' }, { v: 'Large', m: 'Large' }],
+      ],
+      [colorSpec, sizeSpec]
+    )
+    render(<SpreadsheetContainer />)
+
+    // Create a multi-cell selection spanning rows 0 and 1
+    const multiCellSelection = {
+      range: { start: { row: 0, column: 0 }, end: { row: 1, column: 2 } }
+    }
+    act(() => {
+      capturedOnSelect?.(multiCellSelection)
+    })
+
+    // Get the correct target element
+    const container = screen.getByTestId('spreadsheet-container')
+    const scrollContainer = container.querySelector('.sku-spreadsheet')!
+
+    // Press Shift+Space
+    await act(async () => {
+      fireEvent.keyDown(scrollContainer, { code: 'Space', shiftKey: true })
+    })
+
+    // The selection should select the first row (row 0) only
+    expect(capturedSelected).toBeDefined()
+    expect(capturedSelected).toHaveProperty('start', 0)
+    expect(capturedSelected).toHaveProperty('end', 0)
+    expect(capturedSelected).toHaveProperty('hasEntireRow')
+  })
+
+  it('can apply formatting to the entire selected row', async () => {
+    const sheetId = createSheetWithSpecs(
+      'Products',
+      [
+        [{ v: 'R-S', m: 'R-S' }, { v: 'Red', m: 'Red' }, { v: 'Small', m: 'Small' }],
+        [{ v: 'B-L', m: 'B-L' }, { v: 'Blue', m: 'Blue' }, { v: 'Large', m: 'Large' }],
+      ],
+      [colorSpec, sizeSpec]
+    )
+    render(<SpreadsheetContainer />)
+
+    // Simulate an EntireRowsSelection (row 0 selected)
+    // This would be created by Shift+Space, but we simulate it directly for testing formatting
+    const entireRowSelection = {
+      start: 0,
+      end: 0,
+      hasEntireRow: (row: number) => row === 0,
+    }
+    act(() => {
+      capturedOnSelect?.(entireRowSelection)
+    })
+
+    // Click the bold button to apply formatting to the entire row
+    const boldButton = screen.getByRole('button', { name: /bold/i })
+    fireEvent.click(boldButton)
+
+    // Verify all cells in row 0 have bold formatting
+    const updatedSheet = useSheetsStore.getState().sheets.find(s => s.id === sheetId)
+    expect(updatedSheet?.data[0][0]?.bold).toBe(true) // SKU cell
+    expect(updatedSheet?.data[0][1]?.bold).toBe(true) // Color cell
+    expect(updatedSheet?.data[0][2]?.bold).toBe(true) // Size cell
+    // Row 1 should not have bold
+    expect(updatedSheet?.data[1][0]?.bold).toBeUndefined()
+    expect(updatedSheet?.data[1][1]?.bold).toBeUndefined()
+    expect(updatedSheet?.data[1][2]?.bold).toBeUndefined()
   })
 })
 

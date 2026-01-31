@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useRef, useEffect, useState } from "react"
-import Spreadsheet, { Matrix, CellBase, Selection, RangeSelection, PointRange, EntireColumnsSelection } from "react-spreadsheet"
+import Spreadsheet, { Matrix, CellBase, Selection, RangeSelection, PointRange, EntireColumnsSelection, EntireRowsSelection } from "react-spreadsheet"
 import { useSheetsStore } from "@/store/sheets"
 import { useSettingsStore } from "@/store/settings"
 import { processAutoSKUFromColumns, processAutoSKUForAllRowsFromColumns } from "@/lib/auto-sku"
@@ -93,8 +93,9 @@ const EMPTY_COLUMNS: ColumnDef[] = []
  * Returns array of {row, column} objects for all selected cells
  * @param selection - The selection object from react-spreadsheet
  * @param rowCount - Number of rows in the data (needed for EntireColumnsSelection)
+ * @param columnCount - Number of columns in the data (needed for EntireRowsSelection)
  */
-function getSelectedCells(selection: Selection | undefined, rowCount: number = 0): { row: number; column: number }[] {
+function getSelectedCells(selection: Selection | undefined, rowCount: number = 0, columnCount: number = 0): { row: number; column: number }[] {
   if (!selection) return []
 
   // Check for RangeSelection - either instanceof or duck-typing for mocked objects
@@ -146,6 +147,22 @@ function getSelectedCells(selection: Selection | undefined, rowCount: number = 0
 
     for (let row = 0; row < rowCount; row++) {
       for (let col = minCol; col <= maxCol; col++) {
+        cells.push({ row, column: col })
+      }
+    }
+    return cells
+  }
+
+  // Handle EntireRowsSelection - has start and end row indices
+  // Duck-type check: has start, end properties and hasEntireRow method
+  if (sel && typeof sel === "object" && "start" in sel && "end" in sel && "hasEntireRow" in sel) {
+    const rowSelection = sel as { start: number; end: number }
+    const cells: { row: number; column: number }[] = []
+    const minRow = Math.min(rowSelection.start, rowSelection.end)
+    const maxRow = Math.max(rowSelection.start, rowSelection.end)
+
+    for (let row = minRow; row <= maxRow; row++) {
+      for (let col = 0; col < columnCount; col++) {
         cells.push({ row, column: col })
       }
     }
@@ -1163,8 +1180,8 @@ export function SpreadsheetContainer() {
 
   // Compute selected cells from selection state
   const selectedCells = useMemo(
-    () => getSelectedCells(selected, activeSheet?.data.length ?? 0),
-    [selected, activeSheet?.data.length]
+    () => getSelectedCells(selected, activeSheet?.data.length ?? 0, columns.length),
+    [selected, activeSheet?.data.length, columns.length]
   )
 
   // Check if there are any selected cells
@@ -1277,7 +1294,7 @@ export function SpreadsheetContainer() {
     // Use preserved selection if current selection is empty (dropdown stole focus)
     const cellsToApply = selectedCells.length > 0
       ? selectedCells
-      : getSelectedCells(preservedSelectionRef.current, activeSheet.data.length)
+      : getSelectedCells(preservedSelectionRef.current, activeSheet.data.length, columns.length)
 
     if (cellsToApply.length === 0) return
 
@@ -1326,7 +1343,7 @@ export function SpreadsheetContainer() {
     })
     setHistoryIndex(-1)
     historyIndexRef.current = -1
-  }, [activeSheet, selectedCells, setSheetData])
+  }, [activeSheet, selectedCells, setSheetData, columns.length])
 
   // Handle color picker open state changes - preserve selection before dropdown steals focus
   const handleColorPickerOpenChange = useCallback((open: boolean) => {
@@ -1343,7 +1360,7 @@ export function SpreadsheetContainer() {
     // Use preserved selection if current selection is empty (dropdown stole focus)
     const cellsToApply = selectedCells.length > 0
       ? selectedCells
-      : getSelectedCells(preservedSelectionRef.current, activeSheet.data.length)
+      : getSelectedCells(preservedSelectionRef.current, activeSheet.data.length, columns.length)
 
     if (cellsToApply.length === 0) return
 
@@ -1392,7 +1409,7 @@ export function SpreadsheetContainer() {
     })
     setHistoryIndex(-1)
     historyIndexRef.current = -1
-  }, [activeSheet, selectedCells, setSheetData])
+  }, [activeSheet, selectedCells, setSheetData, columns.length])
 
   // Handle bold formatting change
   const handleBoldChange = useCallback((bold: boolean) => {
@@ -1401,7 +1418,7 @@ export function SpreadsheetContainer() {
     // Use preserved selection if current selection is empty
     const cellsToApply = selectedCells.length > 0
       ? selectedCells
-      : getSelectedCells(preservedSelectionRef.current, activeSheet.data.length)
+      : getSelectedCells(preservedSelectionRef.current, activeSheet.data.length, columns.length)
 
     if (cellsToApply.length === 0) return
 
@@ -1446,7 +1463,7 @@ export function SpreadsheetContainer() {
     })
     setHistoryIndex(-1)
     historyIndexRef.current = -1
-  }, [activeSheet, selectedCells, setSheetData])
+  }, [activeSheet, selectedCells, setSheetData, columns.length])
 
   // Handle italic formatting change
   const handleItalicChange = useCallback((italic: boolean) => {
@@ -1455,7 +1472,7 @@ export function SpreadsheetContainer() {
     // Use preserved selection if current selection is empty
     const cellsToApply = selectedCells.length > 0
       ? selectedCells
-      : getSelectedCells(preservedSelectionRef.current, activeSheet.data.length)
+      : getSelectedCells(preservedSelectionRef.current, activeSheet.data.length, columns.length)
 
     if (cellsToApply.length === 0) return
 
@@ -1500,7 +1517,7 @@ export function SpreadsheetContainer() {
     })
     setHistoryIndex(-1)
     historyIndexRef.current = -1
-  }, [activeSheet, selectedCells, setSheetData])
+  }, [activeSheet, selectedCells, setSheetData, columns.length])
 
   // Handle text alignment change
   const handleAlignChange = useCallback((align: CellTextAlign) => {
@@ -1509,7 +1526,7 @@ export function SpreadsheetContainer() {
     // Use preserved selection if current selection is empty
     const cellsToApply = selectedCells.length > 0
       ? selectedCells
-      : getSelectedCells(preservedSelectionRef.current, activeSheet.data.length)
+      : getSelectedCells(preservedSelectionRef.current, activeSheet.data.length, columns.length)
 
     if (cellsToApply.length === 0) return
 
@@ -1548,7 +1565,7 @@ export function SpreadsheetContainer() {
     })
     setHistoryIndex(-1)
     historyIndexRef.current = -1
-  }, [activeSheet, selectedCells, setSheetData])
+  }, [activeSheet, selectedCells, setSheetData, columns.length])
 
   // Handle copying cell styles (Option+Cmd+C / Alt+Ctrl+C)
   const handleCopyStyles = useCallback(() => {
@@ -1669,7 +1686,7 @@ export function SpreadsheetContainer() {
     // Use preserved selection if current selection is empty
     const cellsToApply = selectedCells.length > 0
       ? selectedCells
-      : getSelectedCells(preservedSelectionRef.current, activeSheet.data.length)
+      : getSelectedCells(preservedSelectionRef.current, activeSheet.data.length, columns.length)
 
     if (cellsToApply.length === 0) return
 
@@ -1713,7 +1730,7 @@ export function SpreadsheetContainer() {
     })
     setHistoryIndex(-1)
     historyIndexRef.current = -1
-  }, [activeSheet, selectedCells, setSheetData])
+  }, [activeSheet, selectedCells, setSheetData, columns.length])
 
   // Handle checkbox toggle when clicking on a checkbox cell
   const handleCheckboxToggle = useCallback((row: number, column: number, currentValue: boolean) => {
@@ -1795,6 +1812,19 @@ export function SpreadsheetContainer() {
       }
     }
 
+    // Check for Shift+Space - select entire row (like Google Sheets)
+    // Only trigger when Shift is the only modifier
+    if (event.code === "Space" && event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      event.preventDefault() // Prevent default behavior that clears cell content
+      // If we have at least one cell selected, select the entire row
+      if (selectedCells.length > 0) {
+        const rowIndex = selectedCells[0].row
+        const rowSelection = new EntireRowsSelection(rowIndex, rowIndex)
+        setSelected(rowSelection)
+      }
+      return
+    }
+
     // Check for Option+Cmd+C (Mac) or Alt+Ctrl+C (Windows/Linux) - Copy styles
     if (event.code === "KeyC" && event.altKey && (event.metaKey || event.ctrlKey)) {
       event.preventDefault()
@@ -1831,7 +1861,7 @@ export function SpreadsheetContainer() {
       handleSelectAll()
       return
     }
-  }, [handleCopyStyles, handlePasteStyles, handleUndo, handleRedo, handleSelectAll, activeSheet, selectedCells, handleSpacebarToggle])
+  }, [handleCopyStyles, handlePasteStyles, handleUndo, handleRedo, handleSelectAll, activeSheet, selectedCells, handleSpacebarToggle, setSelected])
 
   if (sheets.length === 0) {
     return (

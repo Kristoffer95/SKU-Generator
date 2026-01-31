@@ -1,3 +1,39 @@
+## shift-space-row-selection - COMPLETED
+Implement Shift+Space keyboard shortcut to select entire row (like Google Sheets)
+
+### Key decisions
+- Added EntireRowsSelection import from react-spreadsheet
+- Updated getSelectedCells function to handle EntireRowsSelection for formatting - added columnCount param and duck-typing check for hasEntireRow method
+- Added Shift+Space handler in handleKeyDown after the regular spacebar checkbox toggle handler
+- Shift+Space creates EntireRowsSelection for the row of the first selected cell
+- preventDefault called to stop default behavior that clears cell content
+
+### Files changed
+- src/components/SpreadsheetContainer.tsx (+30 lines: EntireRowsSelection import, getSelectedCells columnCount support, Shift+Space handler)
+- src/components/SpreadsheetContainer.test.tsx (+150 lines: MockEntireRowsSelection class in mock, 6 new tests for Shift+Space)
+
+### Tests added
+1. "selects entire row when Shift+Space is pressed with a cell selected" - verifies EntireRowsSelection created for row
+2. "prevents default behavior when Shift+Space is pressed" - verifies preventDefault called
+3. "does nothing when Shift+Space is pressed with no selection" - verifies no-op when no cells selected
+4. "regular spacebar still toggles checkboxes (no regression)" - verifies checkbox toggle still works
+5. "selects the row of the first selected cell when multiple cells are selected" - verifies multi-cell selection behavior
+6. "can apply formatting to the entire selected row" - verifies formatting works with EntireRowsSelection
+
+### Notes
+- All 9 stepsToVerify criteria met:
+  1. Select any cell in the spreadsheet ✓
+  2. Press Shift+Space - entire row becomes selected ✓ (EntireRowsSelection created)
+  3. Selection includes all cells from column A to last column ✓ (getSelectedCells handles EntireRowsSelection)
+  4. Can apply formatting (bold, colors) to all cells in selected row ✓ (tested)
+  5. Works with any row ✓ (tested with rows 0, 1)
+  6. Shift+Space on empty sheet does nothing ✓ (selectedCells.length check)
+  7. Regular spacebar still toggles checkboxes ✓ (tested for no regression)
+  8. npm run typecheck passes ✓
+  9. npm run test passes ✓ (1351 tests, +6 new)
+- Build successful
+- Updated all getSelectedCells call sites to pass columns.length param
+
 ## scrollable-column-headers - COMPLETED
 Make column headers (ColumnLetterHeaders and DraggableColumnHeaders) scroll horizontally in sync with spreadsheet content
 

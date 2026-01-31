@@ -1177,5 +1177,41 @@
       "npm run test passes"
     ],
     "passes": true
+  },
+  {
+    "id": "shift-space-row-selection",
+    "category": "Spreadsheet Features",
+    "description": "Implement Shift+Space keyboard shortcut to select entire row (like Google Sheets). When pressing Shift+Space while a cell is selected, select the entire row containing that cell using react-spreadsheet's EntireRowsSelection class. Update getSelectedCells function to handle EntireRowsSelection for formatting operations. Prevent default behavior that currently clears cell content.",
+    "stepsToVerify": [
+      "Select any cell in the spreadsheet",
+      "Press Shift+Space - entire row becomes selected/highlighted",
+      "Selection includes all cells from column A to last column",
+      "Can apply formatting (bold, colors) to all cells in selected row",
+      "Works with any row (first row, middle rows, last row)",
+      "Shift+Space on empty sheet does nothing (no error)",
+      "Regular spacebar still toggles checkboxes (no regression)",
+      "npm run typecheck passes",
+      "npm run test passes"
+    ],
+    "passes": true
+  },
+  {
+    "id": "fix-pin-rows-above-offset",
+    "category": "Bug Fix",
+    "description": "Fix off-by-one error in 'Pin rows above' feature. When pinning row N, the pinned rows should be 0 through N (all visible), but currently the display shows rows 1,2,3,4,6,7... (missing row 5 when pinning row 5). Root cause: CSS nth-child selectors use index+1 but should use index+2 to account for the hidden column indicator row in react-spreadsheet's tbody. Fix all nth-child offsets in rowHeightStyles useMemo and ResizableRowIndicators.",
+    "stepsToVerify": [
+      "Create sheet with at least 10 rows of data",
+      "Hover over row 5's row number, click the 3-dot menu",
+      "Click 'Pin rows above'",
+      "Verify rows 1-5 are all visible and pinned at top",
+      "Scroll down - rows 6,7,8... scroll behind the pinned rows",
+      "All row numbers are sequential (1,2,3,4,5,6,7... - no gaps)",
+      "Pin rows 2 - verify rows 1-2 pinned correctly",
+      "Unpin all rows - verify scrolling works normally",
+      "Row resize auto-fit still works after fix",
+      "npm run typecheck passes",
+      "npm run test passes"
+    ],
+    "passes": false
   }
 ]
