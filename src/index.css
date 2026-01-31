@@ -624,3 +624,17 @@
   background-color: hsl(var(--primary) / 0.2);
   color: hsl(var(--primary));
 }
+
+/* ========================================
+   Utility classes for scrollbar hiding
+   ======================================== */
+
+/* Hide scrollbar while maintaining scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, and Opera */
+}

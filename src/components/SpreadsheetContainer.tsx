@@ -200,6 +200,11 @@ export function SpreadsheetContainer() {
   const preservedSelectionRef = useRef<Selection | undefined>(undefined)
   // Ref for the spreadsheet scroll container
   const spreadsheetContainerRef = useRef<HTMLDivElement>(null)
+  // Refs for synchronized scrolling between headers and spreadsheet
+  const columnLetterHeadersRef = useRef<HTMLDivElement>(null)
+  const draggableColumnHeadersRef = useRef<HTMLDivElement>(null)
+  // Ref to prevent scroll event loop (flag to track which element triggered the scroll)
+  const isScrollingSyncRef = useRef(false)
   // Ref to store copied cell styles for paste operation
   const copiedStylesRef = useRef<CellStyles | null>(null)
 
@@ -243,6 +248,75 @@ export function SpreadsheetContainer() {
     })
     previousDataRef.current = map
   }, [sheets])
+
+  // Synchronize horizontal scroll between column headers and spreadsheet content
+  useEffect(() => {
+    const spreadsheetContainer = spreadsheetContainerRef.current
+    const columnLetterHeaders = columnLetterHeadersRef.current
+    const draggableColumnHeaders = draggableColumnHeadersRef.current
+
+    if (!spreadsheetContainer) return
+
+    // Handler for spreadsheet scroll - sync headers
+    const handleSpreadsheetScroll = () => {
+      if (isScrollingSyncRef.current) return
+      isScrollingSyncRef.current = true
+
+      const scrollLeft = spreadsheetContainer.scrollLeft
+      if (columnLetterHeaders) {
+        columnLetterHeaders.scrollLeft = scrollLeft
+      }
+      if (draggableColumnHeaders) {
+        draggableColumnHeaders.scrollLeft = scrollLeft
+      }
+
+      // Reset flag after a short delay to prevent potential issues
+      requestAnimationFrame(() => {
+        isScrollingSyncRef.current = false
+      })
+    }
+
+    // Handler for header scroll - sync spreadsheet (for trackpad/wheel on headers)
+    const handleHeaderScroll = (event: Event) => {
+      if (isScrollingSyncRef.current) return
+      isScrollingSyncRef.current = true
+
+      const target = event.target as HTMLDivElement
+      const scrollLeft = target.scrollLeft
+
+      spreadsheetContainer.scrollLeft = scrollLeft
+      if (columnLetterHeaders && target !== columnLetterHeaders) {
+        columnLetterHeaders.scrollLeft = scrollLeft
+      }
+      if (draggableColumnHeaders && target !== draggableColumnHeaders) {
+        draggableColumnHeaders.scrollLeft = scrollLeft
+      }
+
+      requestAnimationFrame(() => {
+        isScrollingSyncRef.current = false
+      })
+    }
+
+    // Add event listeners
+    spreadsheetContainer.addEventListener("scroll", handleSpreadsheetScroll)
+    if (columnLetterHeaders) {
+      columnLetterHeaders.addEventListener("scroll", handleHeaderScroll)
+    }
+    if (draggableColumnHeaders) {
+      draggableColumnHeaders.addEventListener("scroll", handleHeaderScroll)
+    }
+
+    // Cleanup
+    return () => {
+      spreadsheetContainer.removeEventListener("scroll", handleSpreadsheetScroll)
+      if (columnLetterHeaders) {
+        columnLetterHeaders.removeEventListener("scroll", handleHeaderScroll)
+      }
+      if (draggableColumnHeaders) {
+        draggableColumnHeaders.removeEventListener("scroll", handleHeaderScroll)
+      }
+    }
+  }, [])
 
   // Handle sheet tab switching
   const handleSheetActivate = useCallback((sheetId: string) => {
@@ -1795,28 +1869,42 @@ export function SpreadsheetContainer() {
         onAlignChange={handleAlignChange}
         onInsertCheckbox={handleInsertCheckbox}
       />
-      <ColumnLetterHeaders
-        columns={columns}
-        rowCount={activeSheet?.data.length ?? 0}
-        onColumnSelect={handleColumnSelect}
-        onColumnRangeSelect={handleColumnRangeSelect}
-        selectedColumns={selectedColumnsSet}
-        pinnedColumns={pinnedColumns}
-      />
-      <DraggableColumnHeaders
-        columns={columns}
-        onReorder={handleColumnReorder}
-        onColumnResize={handleColumnResize}
-        onRenameColumn={handleRenameColumn}
-        spreadsheetRef={spreadsheetContainerRef}
-        editingColumnIndex={editingColumnIndex}
-        onEditingColumnIndexChange={setEditingColumnIndex}
-        onInsertBefore={handleInsertColumnBefore}
-        onInsertAfter={handleInsertColumnAfter}
-        onDeleteColumn={handleDeleteColumnRequest}
-        onPinChange={handlePinChange}
-        pinnedColumns={pinnedColumns}
-      />
+      {/* Scrollable container for column letter headers - synced with spreadsheet horizontal scroll */}
+      <div
+        ref={columnLetterHeadersRef}
+        className="overflow-x-auto scrollbar-hide"
+        data-testid="column-letter-headers-scroll-container"
+      >
+        <ColumnLetterHeaders
+          columns={columns}
+          rowCount={activeSheet?.data.length ?? 0}
+          onColumnSelect={handleColumnSelect}
+          onColumnRangeSelect={handleColumnRangeSelect}
+          selectedColumns={selectedColumnsSet}
+          pinnedColumns={pinnedColumns}
+        />
+      </div>
+      {/* Scrollable container for draggable column headers - synced with spreadsheet horizontal scroll */}
+      <div
+        ref={draggableColumnHeadersRef}
+        className="overflow-x-auto scrollbar-hide"
+        data-testid="draggable-column-headers-scroll-container"
+      >
+        <DraggableColumnHeaders
+          columns={columns}
+          onReorder={handleColumnReorder}
+          onColumnResize={handleColumnResize}
+          onRenameColumn={handleRenameColumn}
+          spreadsheetRef={spreadsheetContainerRef}
+          editingColumnIndex={editingColumnIndex}
+          onEditingColumnIndexChange={setEditingColumnIndex}
+          onInsertBefore={handleInsertColumnBefore}
+          onInsertAfter={handleInsertColumnAfter}
+          onDeleteColumn={handleDeleteColumnRequest}
+          onPinChange={handlePinChange}
+          pinnedColumns={pinnedColumns}
+        />
+      </div>
       <div
         ref={spreadsheetContainerRef}
         className="flex-1 min-h-0 overflow-auto sku-spreadsheet with-draggable-headers relative"

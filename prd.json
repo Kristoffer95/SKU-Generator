@@ -1157,5 +1157,25 @@
       "npm run test passes"
     ],
     "passes": true
+  },
+  {
+    "id": "scrollable-column-headers",
+    "category": "Spreadsheet Features",
+    "description": "Make column headers (ColumnLetterHeaders and DraggableColumnHeaders) scroll horizontally in sync with spreadsheet content. Currently headers are outside the scroll container and remain static. Wrap headers in a scrollable container with hidden scrollbar and synchronize scroll position bidirectionally with the spreadsheet container using scroll event listeners.",
+    "stepsToVerify": [
+      "Scroll spreadsheet horizontally - column headers scroll in sync",
+      "Use trackpad/wheel on header area - spreadsheet scrolls in sync",
+      "Pinned columns remain fixed during horizontal scroll",
+      "Column letter selection still works after scrolling",
+      "Column drag-and-drop still works after scrolling",
+      "Column resize still works after scrolling",
+      "Error navigation (scrollIntoView) syncs headers correctly",
+      "No visual jitter during rapid scroll",
+      "Header scrollbar is hidden (users scroll via spreadsheet)",
+      "Works with 20+ columns to verify horizontal scroll appears",
+      "npm run typecheck passes",
+      "npm run test passes"
+    ],
+    "passes": true
   }
 ]
