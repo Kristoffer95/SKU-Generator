@@ -3,12 +3,18 @@ import { Plus, ChevronDown, GripVertical, Check, X, Trash2, Pencil } from "lucid
 import { AnimatePresence, motion, Reorder } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useSheetsStore } from "@/store/sheets"
 import { useSettingsStore } from "@/store/settings"
 import { AddSpecDialog } from "@/components/AddSpecDialog"
 import { DeleteSpecConfirmDialog } from "@/components/DeleteSpecConfirmDialog"
 import { registerTourDialogOpeners, unregisterTourDialogOpeners } from "@/lib/guided-tour"
 import { updateRowSKU, updateRowSKUFromColumns } from "@/lib/auto-sku"
+import { COLOR_PALETTE } from "@/lib/color-utils"
 import type { Specification, SpecValue, ColumnDef } from "@/types"
 
 interface SpecValueItemProps {
@@ -21,6 +27,7 @@ function SpecValueItem({ sheetId, specId, value }: SpecValueItemProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editDisplayValue, setEditDisplayValue] = useState(value.displayValue)
   const [editSkuFragment, setEditSkuFragment] = useState(value.skuFragment)
+  const [editColor, setEditColor] = useState(value.color || "")
   const [error, setError] = useState<string | null>(null)
   const displayInputRef = useRef<HTMLInputElement>(null)
 
@@ -32,24 +39,27 @@ function SpecValueItem({ sheetId, specId, value }: SpecValueItemProps) {
     if (!isEditing) {
       setEditDisplayValue(value.displayValue)
       setEditSkuFragment(value.skuFragment)
+      setEditColor(value.color || "")
     }
-  }, [value.displayValue, value.skuFragment, isEditing])
+  }, [value.displayValue, value.skuFragment, value.color, isEditing])
 
   const handleStartEdit = useCallback(() => {
     setIsEditing(true)
     setEditDisplayValue(value.displayValue)
     setEditSkuFragment(value.skuFragment)
+    setEditColor(value.color || "")
     setError(null)
     // Focus input after render
     setTimeout(() => displayInputRef.current?.focus(), 0)
-  }, [value.displayValue, value.skuFragment])
+  }, [value.displayValue, value.skuFragment, value.color])
 
   const handleCancel = useCallback(() => {
     setIsEditing(false)
     setEditDisplayValue(value.displayValue)
     setEditSkuFragment(value.skuFragment)
+    setEditColor(value.color || "")
     setError(null)
-  }, [value.displayValue, value.skuFragment])
+  }, [value.displayValue, value.skuFragment, value.color])
 
   const handleSave = useCallback(() => {
     // Validate skuFragment uniqueness within spec
@@ -64,11 +74,13 @@ function SpecValueItem({ sheetId, specId, value }: SpecValueItemProps) {
     // Check if anything changed
     const displayValueChanged = editDisplayValue !== value.displayValue
     const skuFragmentChanged = editSkuFragment !== value.skuFragment
+    const colorChanged = editColor !== (value.color || "")
 
-    if (displayValueChanged || skuFragmentChanged) {
-      const updates: Partial<Pick<SpecValue, 'displayValue' | 'skuFragment'>> = {}
+    if (displayValueChanged || skuFragmentChanged || colorChanged) {
+      const updates: Partial<Pick<SpecValue, 'displayValue' | 'skuFragment' | 'color'>> = {}
       if (displayValueChanged) updates.displayValue = editDisplayValue
       if (skuFragmentChanged) updates.skuFragment = editSkuFragment
+      if (colorChanged) updates.color = editColor || undefined
 
       const success = updateSpecValue(sheetId, specId, value.id, updates)
       if (!success) {
@@ -79,7 +91,7 @@ function SpecValueItem({ sheetId, specId, value }: SpecValueItemProps) {
 
     setIsEditing(false)
     setError(null)
-  }, [sheetId, specId, value.id, value.displayValue, value.skuFragment, editDisplayValue, editSkuFragment, updateSpecValue, validateSkuFragment])
+  }, [sheetId, specId, value.id, value.displayValue, value.skuFragment, value.color, editDisplayValue, editSkuFragment, editColor, updateSpecValue, validateSkuFragment])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
@@ -90,10 +102,66 @@ function SpecValueItem({ sheetId, specId, value }: SpecValueItemProps) {
     }
   }, [handleSave, handleCancel])
 
+  const handleColorSelect = useCallback((color: string) => {
+    setEditColor(color)
+  }, [])
+
+  const handleClearColor = useCallback(() => {
+    setEditColor("")
+  }, [])
+
   if (isEditing) {
     return (
       <div className="py-1 px-2 space-y-2" data-testid="value-edit-form">
         <div className="flex items-center gap-2">
+          {/* Color picker */}
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="h-7 w-7 rounded border border-border shrink-0 flex items-center justify-center"
+                style={{ backgroundColor: editColor || "transparent" }}
+                title="Select color"
+                data-testid="edit-color-trigger"
+              >
+                {!editColor && (
+                  <span className="text-xs text-muted-foreground">?</span>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="p-2 w-auto">
+              {/* Clear color option */}
+              <button
+                type="button"
+                onClick={handleClearColor}
+                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground mb-2"
+                data-testid="edit-color-clear"
+              >
+                <X className="h-4 w-4" />
+                <span>Clear color</span>
+              </button>
+              {/* Color grid */}
+              <div className="grid grid-cols-6 gap-1">
+                {COLOR_PALETTE.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => handleColorSelect(color)}
+                    className="h-6 w-6 rounded-sm border border-border hover:ring-2 hover:ring-ring hover:ring-offset-1"
+                    style={{ backgroundColor: color }}
+                    title={color}
+                    data-testid={`edit-color-${color.replace("#", "")}`}
+                  >
+                    {editColor === color && (
+                      <span className="flex h-full w-full items-center justify-center text-xs font-bold text-gray-800">
+                        ✓
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Input
             ref={displayInputRef}
             value={editDisplayValue}
@@ -149,6 +217,14 @@ function SpecValueItem({ sheetId, specId, value }: SpecValueItemProps) {
       onClick={handleStartEdit}
       data-testid="value-item"
     >
+      {/* Color indicator dot */}
+      {value.color && (
+        <span
+          className="h-3 w-3 rounded-full border border-border shrink-0"
+          style={{ backgroundColor: value.color }}
+          data-testid="value-color-indicator"
+        />
+      )}
       <span className="text-sm flex-1 truncate">
         {value.displayValue}
       </span>

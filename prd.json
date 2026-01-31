@@ -1213,5 +1213,27 @@
       "npm run test passes"
     ],
     "passes": true
+  },
+  {
+    "id": "dropdown-value-colors",
+    "category": "Spreadsheet Features",
+    "description": "Add background color support to dropdown values so each option has a distinct color, displayed in both the dropdown menu and spreadsheet cells. Colors are auto-assigned from the existing 18-color palette on value creation, but users can manually override via a color picker in the sidebar. Replace native <select> with custom shadcn/ui DropdownMenu component since native selects cannot style individual option backgrounds.",
+    "stepsToVerify": [
+      "SpecValue interface has 'color?: string' field in src/types/index.ts",
+      "SKUCell interface has 'dropdownColors?: Record<string, string>' field",
+      "New spec values are auto-assigned colors from COLOR_PALETTE (round-robin)",
+      "Create src/lib/color-utils.ts with getAutoColor(index) function",
+      "Create src/components/spreadsheet/ColoredDropdownEditor.tsx custom dropdown",
+      "DropdownEditor delegates to ColoredDropdownEditor when dropdownColors exists",
+      "Dropdown options show background colors matching their assigned color",
+      "Cells display background color matching the selected value's color",
+      "SpecificationList shows color indicator dot next to each value",
+      "SpecValueItem edit mode includes color picker for manual override",
+      "Color changes persist after page refresh",
+      "Colors work in both light and dark mode",
+      "npm run typecheck passes",
+      "npm run test passes"
+    ],
+    "passes": true
   }
 ]

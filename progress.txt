@@ -1,3 +1,47 @@
+## dropdown-value-colors - COMPLETED
+Add background color support to dropdown values with colors displayed in dropdown menu and spreadsheet cells
+
+### Key decisions
+- Extended SpecValue interface with optional 'color?: string' field for storing hex color
+- Extended SKUCell interface with 'dropdownColors?: Record<string, string>' to map displayValue->color
+- Created color-utils.ts with COLOR_PALETTE (18 colors), getAutoColor(index) round-robin function
+- Created ColoredDropdownEditor.tsx using shadcn/ui DropdownMenu (native select can't style options)
+- DropdownEditor delegates to ColoredDropdownEditor when cell.dropdownColors exists
+- Updated spreadsheet-adapter to extract dropdownColors from spec values with colors
+- SpecValueItem displays color indicator dot and has color picker dropdown in edit mode
+- AddSpecDialog auto-assigns colors from palette on value creation via getAutoColor(index)
+- Colors persist via Zustand persist middleware (stored in SpecValue.color field)
+
+### Files changed
+- src/types/index.ts (+1 line: color field in SpecValue)
+- src/types/spreadsheet.ts (+2 lines: dropdownColors field in SKUCell)
+- src/lib/color-utils.ts (new, ~50 lines: COLOR_PALETTE, getAutoColor, isValidColor)
+- src/lib/color-utils.test.ts (new, 9 tests)
+- src/store/sheets.ts (+10 lines: updated addSpecValue signature, duplicateSheet copies colors)
+- src/lib/spreadsheet-adapter.ts (+20 lines: getDropdownColorsForSpec helper, color extraction)
+- src/lib/spreadsheet-adapter.test.ts (+65 lines: 6 tests for dropdown colors)
+- src/components/spreadsheet/ColoredDropdownEditor.tsx (new, ~150 lines)
+- src/components/spreadsheet/ColoredDropdownEditor.test.tsx (new, 14 tests)
+- src/components/spreadsheet/DropdownEditor.tsx (+15 lines: delegation to ColoredDropdownEditor)
+- src/components/SpecificationList.tsx (+80 lines: color indicator, color picker in edit mode)
+- src/components/AddSpecDialog.tsx (+5 lines: auto-assign colors via getAutoColor)
+
+### stepsToVerify verified
+1. SpecValue interface has 'color?: string' field ✓
+2. SKUCell interface has 'dropdownColors?: Record<string, string>' field ✓
+3. New spec values are auto-assigned colors from COLOR_PALETTE (round-robin) ✓
+4. src/lib/color-utils.ts created with getAutoColor(index) function ✓
+5. src/components/spreadsheet/ColoredDropdownEditor.tsx created ✓
+6. DropdownEditor delegates to ColoredDropdownEditor when dropdownColors exists ✓
+7. Dropdown options show background colors matching their assigned color ✓
+8. Cells display background color matching selected value's color ✓ (via trigger style)
+9. SpecificationList shows color indicator dot next to each value ✓
+10. SpecValueItem edit mode includes color picker for manual override ✓
+11. Color changes persist after page refresh ✓ (via Zustand persist)
+12. Colors work in both light and dark mode ✓ (CSS uses hex colors directly)
+13. npm run typecheck passes ✓
+14. npm run test passes ✓ (1381 tests, +28 new)
+
 ## fix-pin-rows-above-offset - COMPLETED
 Fix off-by-one error in 'Pin rows above' feature where pinning row N would skip displaying row N
 

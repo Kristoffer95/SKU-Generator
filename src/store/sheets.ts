@@ -42,8 +42,8 @@ interface SheetsState {
   updateSpecification: (sheetId: string, specId: string, updates: Partial<Pick<Specification, 'name'>>) => boolean;
   removeSpecification: (sheetId: string, specId: string) => boolean;
   reorderSpec: (sheetId: string, specId: string, newOrder: number) => boolean;
-  addSpecValue: (sheetId: string, specId: string, displayValue: string, skuFragment: string) => string | null;
-  updateSpecValue: (sheetId: string, specId: string, valueId: string, updates: Partial<Pick<SpecValue, 'displayValue' | 'skuFragment'>>) => boolean;
+  addSpecValue: (sheetId: string, specId: string, displayValue: string, skuFragment: string, color?: string) => string | null;
+  updateSpecValue: (sheetId: string, specId: string, valueId: string, updates: Partial<Pick<SpecValue, 'displayValue' | 'skuFragment' | 'color'>>) => boolean;
   removeSpecValue: (sheetId: string, specId: string, valueId: string) => boolean;
   getSpecificationById: (sheetId: string, specId: string) => Specification | undefined;
   validateSkuFragment: (sheetId: string, specId: string, skuFragment: string, excludeValueId?: string) => boolean;
@@ -419,6 +419,7 @@ export const useSheetsStore = create<SheetsState>()(
             id: generateId(),
             displayValue: val.displayValue,
             skuFragment: val.skuFragment,
+            ...(val.color && { color: val.color }),
           })),
         }));
 
@@ -635,7 +636,7 @@ export const useSheetsStore = create<SheetsState>()(
         return true;
       },
 
-      addSpecValue: (sheetId: string, specId: string, displayValue: string, skuFragment: string) => {
+      addSpecValue: (sheetId: string, specId: string, displayValue: string, skuFragment: string, color?: string) => {
         const { validateSkuFragment } = get();
         // Check for duplicate skuFragment within this spec
         if (!validateSkuFragment(sheetId, specId, skuFragment)) {
@@ -643,6 +644,10 @@ export const useSheetsStore = create<SheetsState>()(
         }
 
         const valueId = generateId();
+        const newValue: SpecValue = { id: valueId, displayValue, skuFragment };
+        if (color) {
+          newValue.color = color;
+        }
 
         set((state) => ({
           sheets: state.sheets.map((s) =>
@@ -651,7 +656,7 @@ export const useSheetsStore = create<SheetsState>()(
                   ...s,
                   specifications: (s.specifications ?? []).map((spec) =>
                     spec.id === specId
-                      ? { ...spec, values: [...spec.values, { id: valueId, displayValue, skuFragment }] }
+                      ? { ...spec, values: [...spec.values, newValue] }
                       : spec
                   ),
                 }

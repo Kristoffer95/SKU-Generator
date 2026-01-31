@@ -422,6 +422,109 @@ describe('spreadsheet-adapter', () => {
     });
   });
 
+  describe('dropdown colors', () => {
+    const mockSpecsWithColors: Specification[] = [
+      {
+        id: 'spec-1',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R', color: '#fce4ec' },
+          { id: 'v2', displayValue: 'Blue', skuFragment: 'B', color: '#e3f2fd' },
+        ],
+      },
+    ];
+
+    const mockSpecsWithPartialColors: Specification[] = [
+      {
+        id: 'spec-1',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R', color: '#fce4ec' },
+          { id: 'v2', displayValue: 'Blue', skuFragment: 'B' }, // No color
+        ],
+      },
+    ];
+
+    const mockSpecsWithoutColors: Specification[] = [
+      {
+        id: 'spec-1',
+        name: 'Color',
+        order: 0,
+        values: [
+          { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+          { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+        ],
+      },
+    ];
+
+    const colorColumns: ColumnDef[] = [
+      { id: 'col-sku', type: 'sku', header: 'SKU' },
+      { id: 'col-color', type: 'spec', specId: 'spec-1', header: 'Color' },
+    ];
+
+    it('includes dropdownColors when spec values have colors', () => {
+      const data: CellData[][] = [
+        [{ v: 'SKU-001' }, { v: 'Red' }],
+      ];
+
+      const result = convertToSpreadsheetData(data, colorColumns, mockSpecsWithColors);
+
+      expect(result[0][1]?.dropdownColors).toEqual({
+        Red: '#fce4ec',
+        Blue: '#e3f2fd',
+      });
+    });
+
+    it('includes only values with colors in dropdownColors', () => {
+      const data: CellData[][] = [
+        [{ v: 'SKU-001' }, { v: 'Red' }],
+      ];
+
+      const result = convertToSpreadsheetData(data, colorColumns, mockSpecsWithPartialColors);
+
+      expect(result[0][1]?.dropdownColors).toEqual({
+        Red: '#fce4ec',
+        // Blue has no color, so it's not included
+      });
+    });
+
+    it('does not include dropdownColors when no values have colors', () => {
+      const data: CellData[][] = [
+        [{ v: 'SKU-001' }, { v: 'Red' }],
+      ];
+
+      const result = convertToSpreadsheetData(data, colorColumns, mockSpecsWithoutColors);
+
+      expect(result[0][1]?.dropdownColors).toBeUndefined();
+    });
+
+    it('includes dropdownColors on empty spec cells', () => {
+      const data: CellData[][] = [
+        [{ v: 'SKU-001' }, {}],
+      ];
+
+      const result = convertToSpreadsheetData(data, colorColumns, mockSpecsWithColors);
+
+      expect(result[0][1]?.dropdownColors).toEqual({
+        Red: '#fce4ec',
+        Blue: '#e3f2fd',
+      });
+    });
+
+    it('dropdownColors are consistent across all data rows', () => {
+      const data: CellData[][] = [
+        [{ v: 'SKU-001' }, { v: 'Red' }],
+        [{ v: 'SKU-002' }, { v: 'Blue' }],
+      ];
+
+      const result = convertToSpreadsheetData(data, colorColumns, mockSpecsWithColors);
+
+      expect(result[0][1]?.dropdownColors).toEqual(result[1][1]?.dropdownColors);
+    });
+  });
+
   describe('checkbox cells', () => {
     const freeColumns: ColumnDef[] = [
       { id: 'col-sku', type: 'sku', header: 'SKU' },

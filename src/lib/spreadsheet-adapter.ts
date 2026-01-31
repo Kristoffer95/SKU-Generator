@@ -9,6 +9,24 @@ function getDropdownOptionsForSpec(spec: Specification): string[] {
 }
 
 /**
+ * Get dropdown colors (displayValue -> color) for a specification
+ * Returns a map of display values to their assigned colors
+ */
+function getDropdownColorsForSpec(spec: Specification): Record<string, string> | undefined {
+  const colors: Record<string, string> = {};
+  let hasColors = false;
+
+  for (const value of spec.values) {
+    if (value.color) {
+      colors[value.displayValue] = value.color;
+      hasColors = true;
+    }
+  }
+
+  return hasColors ? colors : undefined;
+}
+
+/**
  * Convert CellData[][] (Fortune-Sheet format) to SKUMatrix (react-spreadsheet format)
  *
  * @param data - The Fortune-Sheet cell data
@@ -68,10 +86,15 @@ export function convertToSpreadsheetData(
           });
         } else if (isSpecColumn && linkedSpec) {
           // Empty spec column cell should have dropdown options
-          resultRow.push({
+          const emptySpecCell: SKUCell = {
             value: null,
             dropdownOptions: getDropdownOptionsForSpec(linkedSpec),
-          });
+          };
+          const colors = getDropdownColorsForSpec(linkedSpec);
+          if (colors) {
+            emptySpecCell.dropdownColors = colors;
+          }
+          resultRow.push(emptySpecCell);
         } else {
           // Free columns: just null
           resultRow.push(null);
@@ -92,9 +115,13 @@ export function convertToSpreadsheetData(
         skuCell.readOnly = true;
       }
 
-      // Spec columns: add dropdown options (all rows are data rows)
+      // Spec columns: add dropdown options and colors (all rows are data rows)
       if (isSpecColumn && linkedSpec) {
         skuCell.dropdownOptions = getDropdownOptionsForSpec(linkedSpec);
+        const colors = getDropdownColorsForSpec(linkedSpec);
+        if (colors) {
+          skuCell.dropdownColors = colors;
+        }
       }
 
       // Free columns: no special treatment (plain text input)

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { SKUCell } from "@/types/spreadsheet";
+import { ColoredDropdownEditor } from "./ColoredDropdownEditor";
 
 /**
  * Point in the spreadsheet grid
@@ -37,6 +38,8 @@ export function DropdownEditor({
 
   const hasDropdownOptions =
     cell?.dropdownOptions && cell.dropdownOptions.length > 0;
+  const hasDropdownColors =
+    cell?.dropdownColors && Object.keys(cell.dropdownColors).length > 0;
 
   // Auto-focus on mount
   useEffect(() => {
@@ -86,7 +89,20 @@ export function DropdownEditor({
 
   const currentValue = cell?.value ?? "";
 
-  // Render dropdown select if cell has dropdown options
+  // Render colored dropdown if cell has dropdown colors
+  if (hasDropdownOptions && hasDropdownColors) {
+    return (
+      <ColoredDropdownEditor
+        cell={cell}
+        options={cell.dropdownOptions!}
+        colors={cell.dropdownColors!}
+        onChange={onChange}
+        exitEditMode={exitEditMode}
+      />
+    );
+  }
+
+  // Render plain dropdown select if cell has dropdown options but no colors
   if (hasDropdownOptions) {
     return (
       <div className="Spreadsheet__data-editor">

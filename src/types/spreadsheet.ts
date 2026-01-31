@@ -26,6 +26,8 @@ export interface SKUCell extends CellBase<string | number | boolean | null> {
   className?: string;
   /** Dropdown options for spec columns (undefined for non-dropdown cells) */
   dropdownOptions?: string[];
+  /** Background colors for dropdown options (displayValue -> hex color) */
+  dropdownColors?: Record<string, string>;
   /** Whether this cell is a checkbox type */
   checkbox?: boolean;
 }

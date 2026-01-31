@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useSheetsStore } from "@/store/sheets"
+import { getAutoColor } from "@/lib/color-utils"
 
 interface AddSpecDialogProps {
   open: boolean
@@ -115,9 +116,10 @@ export function AddSpecDialog({ open, onOpenChange }: AddSpecDialogProps) {
       return
     }
 
-    // Add values to the specification
-    validValues.forEach((v) => {
-      addSpecValue(currentSheet.id, specId, v.displayValue.trim(), v.skuFragment.trim())
+    // Add values to the specification with auto-assigned colors
+    validValues.forEach((v, index) => {
+      const color = getAutoColor(index)
+      addSpecValue(currentSheet.id, specId, v.displayValue.trim(), v.skuFragment.trim(), color)
     })
 
     // Add column to active data sheet (if it's a data sheet)

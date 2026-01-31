@@ -100,6 +100,7 @@ export interface SpecValue {
   id: string;
   displayValue: string;
   skuFragment: string;
+  color?: string;  // Background color for dropdown (hex)
 }
 
 /**
