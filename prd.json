@@ -1274,5 +1274,23 @@
       "npm run test passes"
     ],
     "passes": true
+  },
+  {
+    "id": "migrate-existing-spec-values-colors",
+    "category": "Bug Fix",
+    "description": "Auto-assign colors to existing spec values that lack colors on store hydration. Specs created before the color feature was implemented (or via tests) don't have color properties, causing dropdowns to render as plain dark gray without colored backgrounds. Add migration in useSheetsStore's persist middleware onRehydrateStorage callback to assign colors from COLOR_PALETTE to any spec values missing colors. Also fix updateSpecValue type signature to include 'color' field.",
+    "stepsToVerify": [
+      "src/store/sheets.ts has ensureSpecValueColors function that assigns getAutoColor(index) to values without color",
+      "persist middleware's onRehydrateStorage calls ensureSpecValueColors on state.sheets",
+      "updateSpecValue type signature includes 'color': Partial<Pick<SpecValue, 'displayValue' | 'skuFragment' | 'color'>>",
+      "Clear localStorage, manually create spec without colors (via console or test), reload - colors are auto-assigned",
+      "Existing specs created before color feature now have colored dropdowns",
+      "All spec values have distinct colors from the 18-color palette",
+      "ColoredDropdownEditor renders for all spec columns (no more plain dark gray dropdowns)",
+      "Colors persist after page refresh (migration only runs once if needed)",
+      "npm run typecheck passes",
+      "npm run test passes"
+    ],
+    "passes": true
   }
 ]

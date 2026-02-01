@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useSheetsStore, isLikelyHeaderRow, removeHeaderRowFromSheet } from './sheets';
+import { useSheetsStore, isLikelyHeaderRow, removeHeaderRowFromSheet, ensureSpecValueColors } from './sheets';
+import { COLOR_PALETTE } from '../lib/color-utils';
 import { useSpecificationsStore } from './specifications';
 import type { SheetConfig, CellData } from '../types';
 
@@ -2972,6 +2973,323 @@ describe('useSheetsStore', () => {
         const ungrouped = getUngroupedSheetIds();
 
         expect(ungrouped).toHaveLength(0);
+      });
+    });
+  });
+
+  describe('ensureSpecValueColors migration', () => {
+    describe('ensureSpecValueColors function', () => {
+      it('should assign colors to spec values that lack colors', () => {
+        const sheets: SheetConfig[] = [
+          {
+            id: 'sheet1',
+            name: 'Sheet 1',
+            type: 'data',
+            data: [],
+            columns: [],
+            specifications: [
+              {
+                id: 'spec1',
+                name: 'Color',
+                order: 0,
+                values: [
+                  { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+                  { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+                  { id: 'v3', displayValue: 'Green', skuFragment: 'G' },
+                ],
+              },
+            ],
+          },
+        ];
+
+        const result = ensureSpecValueColors(sheets);
+
+        expect(result[0].specifications![0].values[0].color).toBe(COLOR_PALETTE[0]);
+        expect(result[0].specifications![0].values[1].color).toBe(COLOR_PALETTE[1]);
+        expect(result[0].specifications![0].values[2].color).toBe(COLOR_PALETTE[2]);
+      });
+
+      it('should not modify spec values that already have colors', () => {
+        const sheets: SheetConfig[] = [
+          {
+            id: 'sheet1',
+            name: 'Sheet 1',
+            type: 'data',
+            data: [],
+            columns: [],
+            specifications: [
+              {
+                id: 'spec1',
+                name: 'Color',
+                order: 0,
+                values: [
+                  { id: 'v1', displayValue: 'Red', skuFragment: 'R', color: '#ff0000' },
+                  { id: 'v2', displayValue: 'Blue', skuFragment: 'B', color: '#0000ff' },
+                ],
+              },
+            ],
+          },
+        ];
+
+        const result = ensureSpecValueColors(sheets);
+
+        expect(result[0].specifications![0].values[0].color).toBe('#ff0000');
+        expect(result[0].specifications![0].values[1].color).toBe('#0000ff');
+      });
+
+      it('should handle mixed values (some with colors, some without)', () => {
+        const sheets: SheetConfig[] = [
+          {
+            id: 'sheet1',
+            name: 'Sheet 1',
+            type: 'data',
+            data: [],
+            columns: [],
+            specifications: [
+              {
+                id: 'spec1',
+                name: 'Color',
+                order: 0,
+                values: [
+                  { id: 'v1', displayValue: 'Red', skuFragment: 'R', color: '#ff0000' },
+                  { id: 'v2', displayValue: 'Blue', skuFragment: 'B' }, // No color
+                  { id: 'v3', displayValue: 'Green', skuFragment: 'G', color: '#00ff00' },
+                ],
+              },
+            ],
+          },
+        ];
+
+        const result = ensureSpecValueColors(sheets);
+
+        // Existing colors should be preserved
+        expect(result[0].specifications![0].values[0].color).toBe('#ff0000');
+        expect(result[0].specifications![0].values[2].color).toBe('#00ff00');
+        // Missing color should be assigned based on index
+        expect(result[0].specifications![0].values[1].color).toBe(COLOR_PALETTE[1]);
+      });
+
+      it('should handle sheets without specifications', () => {
+        const sheets: SheetConfig[] = [
+          {
+            id: 'sheet1',
+            name: 'Sheet 1',
+            type: 'data',
+            data: [],
+            columns: [],
+            specifications: [],
+          },
+        ];
+
+        const result = ensureSpecValueColors(sheets);
+
+        expect(result[0].specifications).toEqual([]);
+        expect(result).toEqual(sheets);
+      });
+
+      it('should handle sheets with undefined specifications', () => {
+        // Simulate legacy data that may have undefined specifications
+        const sheets = [
+          {
+            id: 'sheet1',
+            name: 'Sheet 1',
+            type: 'data',
+            data: [],
+            columns: [],
+            specifications: undefined,
+          },
+        ] as unknown as SheetConfig[];
+
+        const result = ensureSpecValueColors(sheets);
+
+        expect(result).toEqual(sheets);
+      });
+
+      it('should handle multiple sheets', () => {
+        const sheets: SheetConfig[] = [
+          {
+            id: 'sheet1',
+            name: 'Sheet 1',
+            type: 'data',
+            data: [],
+            columns: [],
+            specifications: [
+              {
+                id: 'spec1',
+                name: 'Color',
+                order: 0,
+                values: [{ id: 'v1', displayValue: 'Red', skuFragment: 'R' }],
+              },
+            ],
+          },
+          {
+            id: 'sheet2',
+            name: 'Sheet 2',
+            type: 'data',
+            data: [],
+            columns: [],
+            specifications: [
+              {
+                id: 'spec2',
+                name: 'Size',
+                order: 0,
+                values: [{ id: 'v2', displayValue: 'Small', skuFragment: 'S' }],
+              },
+            ],
+          },
+        ];
+
+        const result = ensureSpecValueColors(sheets);
+
+        expect(result[0].specifications![0].values[0].color).toBe(COLOR_PALETTE[0]);
+        expect(result[1].specifications![0].values[0].color).toBe(COLOR_PALETTE[0]);
+      });
+
+      it('should handle multiple specifications per sheet', () => {
+        const sheets: SheetConfig[] = [
+          {
+            id: 'sheet1',
+            name: 'Sheet 1',
+            type: 'data',
+            data: [],
+            columns: [],
+            specifications: [
+              {
+                id: 'spec1',
+                name: 'Color',
+                order: 0,
+                values: [
+                  { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+                  { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+                ],
+              },
+              {
+                id: 'spec2',
+                name: 'Size',
+                order: 1,
+                values: [
+                  { id: 'v3', displayValue: 'Small', skuFragment: 'S' },
+                  { id: 'v4', displayValue: 'Large', skuFragment: 'L' },
+                ],
+              },
+            ],
+          },
+        ];
+
+        const result = ensureSpecValueColors(sheets);
+
+        // Each spec's values should get colors based on their index within the spec
+        expect(result[0].specifications![0].values[0].color).toBe(COLOR_PALETTE[0]);
+        expect(result[0].specifications![0].values[1].color).toBe(COLOR_PALETTE[1]);
+        expect(result[0].specifications![1].values[0].color).toBe(COLOR_PALETTE[0]);
+        expect(result[0].specifications![1].values[1].color).toBe(COLOR_PALETTE[1]);
+      });
+
+      it('should use round-robin colors for values exceeding palette size', () => {
+        // Create values that exceed the 18-color palette
+        const manyValues = Array.from({ length: 20 }, (_, i) => ({
+          id: `v${i}`,
+          displayValue: `Value ${i}`,
+          skuFragment: `V${i}`,
+        }));
+
+        const sheets: SheetConfig[] = [
+          {
+            id: 'sheet1',
+            name: 'Sheet 1',
+            type: 'data',
+            data: [],
+            columns: [],
+            specifications: [
+              {
+                id: 'spec1',
+                name: 'Many Values',
+                order: 0,
+                values: manyValues,
+              },
+            ],
+          },
+        ];
+
+        const result = ensureSpecValueColors(sheets);
+
+        // Index 18 should wrap around to palette[0]
+        expect(result[0].specifications![0].values[18].color).toBe(COLOR_PALETTE[0]);
+        // Index 19 should wrap around to palette[1]
+        expect(result[0].specifications![0].values[19].color).toBe(COLOR_PALETTE[1]);
+      });
+
+      it('should return same reference if no changes needed', () => {
+        const sheets: SheetConfig[] = [
+          {
+            id: 'sheet1',
+            name: 'Sheet 1',
+            type: 'data',
+            data: [],
+            columns: [],
+            specifications: [
+              {
+                id: 'spec1',
+                name: 'Color',
+                order: 0,
+                values: [
+                  { id: 'v1', displayValue: 'Red', skuFragment: 'R', color: '#ff0000' },
+                ],
+              },
+            ],
+          },
+        ];
+
+        const result = ensureSpecValueColors(sheets);
+
+        // Should return same sheet object if no changes needed
+        expect(result[0]).toBe(sheets[0]);
+      });
+    });
+
+    describe('updateSpecValue with color field', () => {
+      let sheetId: string;
+      let specId: string | null;
+
+      beforeEach(() => {
+        useSheetsStore.setState({ sheets: [], activeSheetId: null, groups: [] });
+        const { addSheet, addSpecification, addSpecValue } = useSheetsStore.getState();
+        sheetId = addSheet('Test Sheet');
+        specId = addSpecification(sheetId, 'Color');
+        if (specId) {
+          addSpecValue(sheetId, specId, 'Red', 'R', '#ff0000');
+        }
+      });
+
+      it('should update color field using updateSpecValue', () => {
+        const { updateSpecValue, sheets } = useSheetsStore.getState();
+        const valueId = sheets.find(s => s.id === sheetId)?.specifications?.[0]?.values[0]?.id;
+
+        expect(valueId).toBeTruthy();
+        if (valueId && specId) {
+          const result = updateSpecValue(sheetId, specId, valueId, { color: '#00ff00' });
+          expect(result).toBe(true);
+
+          const updatedSheets = useSheetsStore.getState().sheets;
+          const value = updatedSheets.find(s => s.id === sheetId)?.specifications?.[0]?.values[0];
+          expect(value?.color).toBe('#00ff00');
+        }
+      });
+
+      it('should preserve other fields when updating only color', () => {
+        const { updateSpecValue, sheets } = useSheetsStore.getState();
+        const valueId = sheets.find(s => s.id === sheetId)?.specifications?.[0]?.values[0]?.id;
+
+        expect(valueId).toBeTruthy();
+        if (valueId && specId) {
+          updateSpecValue(sheetId, specId, valueId, { color: '#0000ff' });
+
+          const updatedSheets = useSheetsStore.getState().sheets;
+          const value = updatedSheets.find(s => s.id === sheetId)?.specifications?.[0]?.values[0];
+          expect(value?.displayValue).toBe('Red');
+          expect(value?.skuFragment).toBe('R');
+          expect(value?.color).toBe('#0000ff');
+        }
       });
     });
   });

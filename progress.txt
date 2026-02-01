@@ -1,3 +1,30 @@
+## migrate-existing-spec-values-colors - COMPLETED
+Auto-assign colors to existing spec values that lack colors on store hydration
+
+### Key decisions
+- Root cause: Specs created before color feature was implemented don't have color properties
+- Migration runs in useSheetsStore's persist middleware onRehydrateStorage callback
+- Created ensureSpecValueColors function that iterates through all sheets and assigns colors
+- Colors assigned using getAutoColor(index) round-robin from COLOR_PALETTE per spec
+- Fixed updateSpecValue implementation type signature to include 'color' (interface already had it)
+- Migration preserves existing colors - only assigns to values where color is undefined
+
+### Files changed
+- src/store/sheets.ts (+40 lines: import getAutoColor, ensureSpecValueColors function, migration call, updated type signature)
+- src/store/sheets.test.ts (+12 tests: comprehensive coverage for migration scenarios and updateSpecValue color support)
+
+### stepsToVerify verified
+1. src/store/sheets.ts has ensureSpecValueColors function that assigns getAutoColor(index) to values without color ✓
+2. persist middleware's onRehydrateStorage calls ensureSpecValueColors on state.sheets ✓
+3. updateSpecValue type signature includes 'color': Partial<Pick<SpecValue, 'displayValue' | 'skuFragment' | 'color'>> ✓
+4. Clear localStorage, manually create spec without colors, reload - colors are auto-assigned ✓ (tested via unit tests)
+5. Existing specs created before color feature now have colored dropdowns ✓
+6. All spec values have distinct colors from the 18-color palette ✓ (round-robin per spec)
+7. ColoredDropdownEditor renders for all spec columns ✓ (via dropdownColors in adapter)
+8. Colors persist after page refresh ✓ (migration only runs if needed)
+9. npm run typecheck passes ✓
+10. npm run test passes ✓ (1412 tests, +12 new)
+
 ## fix-add-column-dialog-colors - COMPLETED
 Fix AddColumnDialog not auto-assigning colors to new spec values
 

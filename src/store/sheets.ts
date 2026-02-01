@@ -5,6 +5,7 @@ import { createSampleProductSheet, getSampleSpecifications, createColumnsFromSpe
 import { useSpecificationsStore } from './specifications';
 import { migrateConfigSheetData } from '../lib/migration';
 import { needsHeaderRepair, repairAllSheetHeaders } from '../lib/header-repair';
+import { getAutoColor } from '../lib/color-utils';
 
 interface SheetsState {
   sheets: SheetConfig[];
@@ -231,6 +232,51 @@ function removeHeaderRowFromSheet(sheet: SheetConfig): SheetConfig {
     // Explicitly set rowHeights to the new shifted value, or undefined if empty
     rowHeights: newRowHeights,
   };
+}
+
+/**
+ * Ensures all spec values have colors assigned (migration for migrate-existing-spec-values-colors).
+ * Specs created before the color feature was implemented don't have color properties.
+ * This migration assigns colors from COLOR_PALETTE using round-robin per spec.
+ */
+function ensureSpecValueColors(sheets: SheetConfig[]): SheetConfig[] {
+  return sheets.map((sheet) => {
+    if (!sheet.specifications || sheet.specifications.length === 0) {
+      return sheet;
+    }
+
+    let hasChanges = false;
+    const updatedSpecs = sheet.specifications.map((spec) => {
+      // Check if any values need color assignment
+      const needsColors = spec.values.some((val) => !val.color);
+      if (!needsColors) {
+        return spec;
+      }
+
+      hasChanges = true;
+      return {
+        ...spec,
+        values: spec.values.map((val, index) => {
+          if (val.color) {
+            return val;
+          }
+          return {
+            ...val,
+            color: getAutoColor(index),
+          };
+        }),
+      };
+    });
+
+    if (!hasChanges) {
+      return sheet;
+    }
+
+    return {
+      ...sheet,
+      specifications: updatedSpecs,
+    };
+  });
 }
 
 /**
@@ -667,7 +713,7 @@ export const useSheetsStore = create<SheetsState>()(
         return valueId;
       },
 
-      updateSpecValue: (sheetId: string, specId: string, valueId: string, updates: Partial<Pick<SpecValue, 'displayValue' | 'skuFragment'>>) => {
+      updateSpecValue: (sheetId: string, specId: string, valueId: string, updates: Partial<Pick<SpecValue, 'displayValue' | 'skuFragment' | 'color'>>) => {
         const { validateSkuFragment } = get();
         // If updating skuFragment, validate uniqueness (excluding current value)
         if (updates.skuFragment !== undefined) {
@@ -1103,6 +1149,10 @@ export const useSheetsStore = create<SheetsState>()(
           // Headers now live only in columns[].header, not in data[0]
           state.sheets = state.sheets.map((sheet) => removeHeaderRowFromSheet(sheet));
 
+          // Migration: Ensure all spec values have colors assigned
+          // Specs created before the color feature don't have color properties
+          state.sheets = ensureSpecValueColors(state.sheets);
+
           markAsInitialized();
         }
       },
@@ -1111,4 +1161,4 @@ export const useSheetsStore = create<SheetsState>()(
 );
 
 // Export migration functions for testing
-export { isLikelyHeaderRow, removeHeaderRowFromSheet };
+export { isLikelyHeaderRow, removeHeaderRowFromSheet, ensureSpecValueColors };
