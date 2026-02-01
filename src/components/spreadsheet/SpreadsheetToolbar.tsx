@@ -1,4 +1,4 @@
-import { Undo2, Redo2, Plus, Columns, Bold, Italic, AlignLeft, AlignCenter, AlignRight, Sparkles, CheckSquare } from "lucide-react";
+import { Undo2, Redo2, Plus, Columns, Bold, Italic, AlignLeft, AlignCenter, AlignRight, Sparkles, CheckSquare, SeparatorHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CellColorPicker } from "@/components/spreadsheet/CellColorPicker";
 import { CellTextColorPicker } from "@/components/spreadsheet/CellTextColorPicker";
@@ -50,6 +50,10 @@ export interface SpreadsheetToolbarProps {
   onAlignChange?: (align: CellTextAlign) => void;
   /** Called when insert checkbox button is clicked */
   onInsertCheckbox?: () => void;
+  /** Called when separate blocks button is clicked */
+  onSeparateBlocks?: () => void;
+  /** Whether separate blocks is available (has a column selected or active cell) */
+  canSeparateBlocks?: boolean;
   /** Optional additional class name */
   className?: string;
 }
@@ -90,6 +94,8 @@ export function SpreadsheetToolbar({
   textAlign,
   onAlignChange,
   onInsertCheckbox,
+  onSeparateBlocks,
+  canSeparateBlocks = false,
   className,
 }: SpreadsheetToolbarProps) {
   return (
@@ -165,6 +171,22 @@ export function SpreadsheetToolbar({
         >
           <Sparkles className="h-4 w-4" />
           <span className="ml-1">Auto Populate</span>
+        </Button>
+      )}
+
+      {/* Separate Blocks button */}
+      {onSeparateBlocks && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onSeparateBlocks}
+          onMouseDown={preventFocusLoss}
+          disabled={!canSeparateBlocks}
+          title="Separate Blocks - Insert empty rows between consecutive groups of identical values"
+          data-testid="spreadsheet-toolbar-separate-blocks"
+        >
+          <SeparatorHorizontal className="h-4 w-4" />
+          <span className="ml-1">Separate Blocks</span>
         </Button>
       )}
 

@@ -1235,5 +1235,28 @@
       "npm run test passes"
     ],
     "passes": true
+  },
+  {
+    "id": "toolbar-separate-blocks",
+    "category": "Spreadsheet Features",
+    "description": "Add 'Separate Blocks' button to toolbar that inserts empty rows between consecutive groups of identical values in a column. User selects a column (or has an active cell), clicks the button, and empty rows are inserted between each block of consecutive identical values. The rows span the entire sheet width. Clicking multiple times adds more separator rows. Supports undo/redo.",
+    "stepsToVerify": [
+      "Button 'Separate Blocks' appears in toolbar after 'Add Column' button",
+      "Button is disabled when no column is selected and no cell is active",
+      "Button is enabled when a column is selected (via column letter header)",
+      "Button is enabled when a cell is active (uses that cell's column)",
+      "Click button with column containing [SM, SM, SM, LG, LG, MD] - inserts empty row after row 3 and after row 5",
+      "Empty rows span entire sheet width (all columns)",
+      "Empty cells are treated as their own unique value (form separate blocks)",
+      "Clicking button multiple times adds additional separator rows",
+      "Undo reverts all inserted rows in one action",
+      "Redo re-inserts all rows in one action",
+      "Works with single row (no separators added)",
+      "Works with all same values (no separators added)",
+      "Works with all different values (separator after each row except last)",
+      "npm run typecheck passes",
+      "npm run test passes"
+    ],
+    "passes": true
   }
 ]

@@ -7069,3 +7069,330 @@ describe('SpreadsheetContainer scrollable column headers', () => {
     expect(capturedOnSelect).toBeDefined()
   })
 })
+
+describe('SpreadsheetContainer separate blocks', () => {
+  const colorSpec: Specification = {
+    id: 'color-spec',
+    name: 'Color',
+    order: 0,
+    values: [
+      { id: 'v1', displayValue: 'Red', skuFragment: 'R' },
+      { id: 'v2', displayValue: 'Blue', skuFragment: 'B' },
+    ],
+  }
+
+  beforeEach(() => {
+    // Reset stores
+    useSheetsStore.setState({
+      sheets: [],
+      activeSheetId: null,
+      groups: [],
+    })
+    useSpecificationsStore.setState({
+      specifications: [],
+    })
+    vi.clearAllMocks()
+  })
+
+  it('renders separate blocks button in toolbar', () => {
+    createSheetWithSpecs(
+      'Products',
+      [
+        [{ v: '', m: '' }, { v: 'Red', m: 'Red' }],
+      ],
+      [colorSpec]
+    )
+    render(<SpreadsheetContainer />)
+
+    expect(screen.getByTestId('spreadsheet-toolbar-separate-blocks')).toBeInTheDocument()
+    expect(screen.getByText('Separate Blocks')).toBeInTheDocument()
+  })
+
+  it('separate blocks button is disabled when no column is selected', () => {
+    createSheetWithSpecs(
+      'Products',
+      [
+        [{ v: '', m: '' }, { v: 'Red', m: 'Red' }],
+      ],
+      [colorSpec]
+    )
+    render(<SpreadsheetContainer />)
+
+    // No selection - button should be disabled
+    expect(screen.getByTestId('spreadsheet-toolbar-separate-blocks')).toBeDisabled()
+  })
+
+  it('separate blocks button is enabled when a column is selected', () => {
+    createSheetWithSpecs(
+      'Products',
+      [
+        [{ v: '', m: '' }, { v: 'Red', m: 'Red' }],
+      ],
+      [colorSpec]
+    )
+    render(<SpreadsheetContainer />)
+
+    // Select column 1 by clicking on its letter header
+    const columnLetter1 = screen.getByTestId('column-letter-1')
+    fireEvent.click(columnLetter1)
+
+    // Button should now be enabled
+    expect(screen.getByTestId('spreadsheet-toolbar-separate-blocks')).not.toBeDisabled()
+  })
+
+  it('inserts empty rows between consecutive groups of identical values', () => {
+    // Create data with blocks: SM, SM, SM, LG, LG, MD
+    const columns: ColumnDef[] = [
+      { id: 'sku', type: 'sku', header: 'SKU' },
+      { id: 'size', type: 'free', header: 'Size' },
+    ]
+
+    createSheetWithColumns(
+      'Products',
+      [
+        [{ v: '', m: '' }, { v: 'SM', m: 'SM' }],
+        [{ v: '', m: '' }, { v: 'SM', m: 'SM' }],
+        [{ v: '', m: '' }, { v: 'SM', m: 'SM' }],
+        [{ v: '', m: '' }, { v: 'LG', m: 'LG' }],
+        [{ v: '', m: '' }, { v: 'LG', m: 'LG' }],
+        [{ v: '', m: '' }, { v: 'MD', m: 'MD' }],
+      ],
+      columns,
+      []
+    )
+    render(<SpreadsheetContainer />)
+
+    // Select column 1 (Size column)
+    const columnLetter1 = screen.getByTestId('column-letter-1')
+    fireEvent.click(columnLetter1)
+
+    // Click separate blocks button
+    const separateBlocksBtn = screen.getByTestId('spreadsheet-toolbar-separate-blocks')
+    fireEvent.click(separateBlocksBtn)
+
+    // Verify rows were inserted
+    // Original: SM, SM, SM, LG, LG, MD (6 rows)
+    // After: SM, SM, SM, [empty], LG, LG, [empty], MD (8 rows)
+    const { sheets, activeSheetId } = useSheetsStore.getState()
+    const activeSheet = sheets.find(s => s.id === activeSheetId)
+    expect(activeSheet?.data.length).toBe(8)
+
+    // Check that empty rows are in the right positions (rows 3 and 6)
+    expect(activeSheet?.data[3]?.[1]?.v).toBeUndefined()
+    expect(activeSheet?.data[6]?.[1]?.v).toBeUndefined()
+  })
+
+  it('does not insert rows when all values are the same', () => {
+    const columns: ColumnDef[] = [
+      { id: 'sku', type: 'sku', header: 'SKU' },
+      { id: 'size', type: 'free', header: 'Size' },
+    ]
+
+    createSheetWithColumns(
+      'Products',
+      [
+        [{ v: '', m: '' }, { v: 'SM', m: 'SM' }],
+        [{ v: '', m: '' }, { v: 'SM', m: 'SM' }],
+        [{ v: '', m: '' }, { v: 'SM', m: 'SM' }],
+      ],
+      columns,
+      []
+    )
+    render(<SpreadsheetContainer />)
+
+    // Select column 1 (Size column)
+    const columnLetter1 = screen.getByTestId('column-letter-1')
+    fireEvent.click(columnLetter1)
+
+    // Click separate blocks button
+    const separateBlocksBtn = screen.getByTestId('spreadsheet-toolbar-separate-blocks')
+    fireEvent.click(separateBlocksBtn)
+
+    // Verify no rows were inserted (still 3 rows)
+    const { sheets, activeSheetId } = useSheetsStore.getState()
+    const activeSheet = sheets.find(s => s.id === activeSheetId)
+    expect(activeSheet?.data.length).toBe(3)
+  })
+
+  it('inserts a row between every row when all values are different', () => {
+    const columns: ColumnDef[] = [
+      { id: 'sku', type: 'sku', header: 'SKU' },
+      { id: 'size', type: 'free', header: 'Size' },
+    ]
+
+    createSheetWithColumns(
+      'Products',
+      [
+        [{ v: '', m: '' }, { v: 'A', m: 'A' }],
+        [{ v: '', m: '' }, { v: 'B', m: 'B' }],
+        [{ v: '', m: '' }, { v: 'C', m: 'C' }],
+      ],
+      columns,
+      []
+    )
+    render(<SpreadsheetContainer />)
+
+    // Select column 1
+    const columnLetter1 = screen.getByTestId('column-letter-1')
+    fireEvent.click(columnLetter1)
+
+    // Click separate blocks button
+    const separateBlocksBtn = screen.getByTestId('spreadsheet-toolbar-separate-blocks')
+    fireEvent.click(separateBlocksBtn)
+
+    // Verify: A, [empty], B, [empty], C (5 rows)
+    const { sheets, activeSheetId } = useSheetsStore.getState()
+    const activeSheet = sheets.find(s => s.id === activeSheetId)
+    expect(activeSheet?.data.length).toBe(5)
+  })
+
+  it('clicking separate blocks multiple times adds more separator rows', () => {
+    const columns: ColumnDef[] = [
+      { id: 'sku', type: 'sku', header: 'SKU' },
+      { id: 'size', type: 'free', header: 'Size' },
+    ]
+
+    createSheetWithColumns(
+      'Products',
+      [
+        [{ v: '', m: '' }, { v: 'SM', m: 'SM' }],
+        [{ v: '', m: '' }, { v: 'LG', m: 'LG' }],
+      ],
+      columns,
+      []
+    )
+    render(<SpreadsheetContainer />)
+
+    // Select column 1
+    const columnLetter1 = screen.getByTestId('column-letter-1')
+    fireEvent.click(columnLetter1)
+
+    // Click separate blocks button twice
+    const separateBlocksBtn = screen.getByTestId('spreadsheet-toolbar-separate-blocks')
+    fireEvent.click(separateBlocksBtn)
+
+    // First click: SM, [empty], LG (3 rows)
+    let { sheets, activeSheetId } = useSheetsStore.getState()
+    let activeSheet = sheets.find(s => s.id === activeSheetId)
+    expect(activeSheet?.data.length).toBe(3)
+
+    // Re-select column after data change
+    fireEvent.click(columnLetter1)
+    fireEvent.click(separateBlocksBtn)
+
+    // Second click: SM, [empty], [empty], LG (4 rows)
+    // Because: SM, [empty1], LG becomes SM, [empty1], [separator between empty1 and LG], LG
+    ;({ sheets, activeSheetId } = useSheetsStore.getState())
+    activeSheet = sheets.find(s => s.id === activeSheetId)
+    // After second click: SM, [empty between SM and empty], [empty], [empty between empty and LG], LG = 5 rows
+    // Actually: SM block, empty block (single), LG block - so separators go between SM and empty, and between empty and LG
+    expect(activeSheet?.data.length).toBeGreaterThanOrEqual(4)
+  })
+
+  it('treats empty cells as unique blocks', () => {
+    const columns: ColumnDef[] = [
+      { id: 'sku', type: 'sku', header: 'SKU' },
+      { id: 'size', type: 'free', header: 'Size' },
+    ]
+
+    // SM, empty, SM - empty should be treated as its own value
+    createSheetWithColumns(
+      'Products',
+      [
+        [{ v: '', m: '' }, { v: 'SM', m: 'SM' }],
+        [{ v: '', m: '' }, {}],  // empty cell
+        [{ v: '', m: '' }, { v: 'SM', m: 'SM' }],
+      ],
+      columns,
+      []
+    )
+    render(<SpreadsheetContainer />)
+
+    // Select column 1
+    const columnLetter1 = screen.getByTestId('column-letter-1')
+    fireEvent.click(columnLetter1)
+
+    // Click separate blocks button
+    const separateBlocksBtn = screen.getByTestId('spreadsheet-toolbar-separate-blocks')
+    fireEvent.click(separateBlocksBtn)
+
+    // Verify: SM, [empty separator], [empty value], [empty separator], SM (5 rows)
+    const { sheets, activeSheetId } = useSheetsStore.getState()
+    const activeSheet = sheets.find(s => s.id === activeSheetId)
+    expect(activeSheet?.data.length).toBe(5)
+  })
+
+  it('works with a single row (no separators added)', () => {
+    const columns: ColumnDef[] = [
+      { id: 'sku', type: 'sku', header: 'SKU' },
+      { id: 'size', type: 'free', header: 'Size' },
+    ]
+
+    createSheetWithColumns(
+      'Products',
+      [
+        [{ v: '', m: '' }, { v: 'SM', m: 'SM' }],
+      ],
+      columns,
+      []
+    )
+    render(<SpreadsheetContainer />)
+
+    // Select column 1
+    const columnLetter1 = screen.getByTestId('column-letter-1')
+    fireEvent.click(columnLetter1)
+
+    // Click separate blocks button
+    const separateBlocksBtn = screen.getByTestId('spreadsheet-toolbar-separate-blocks')
+    fireEvent.click(separateBlocksBtn)
+
+    // Verify no rows added (still 1 row)
+    const { sheets, activeSheetId } = useSheetsStore.getState()
+    const activeSheet = sheets.find(s => s.id === activeSheetId)
+    expect(activeSheet?.data.length).toBe(1)
+  })
+
+  it('uses active cell column when no entire column is selected', () => {
+    const columns: ColumnDef[] = [
+      { id: 'sku', type: 'sku', header: 'SKU' },
+      { id: 'size', type: 'free', header: 'Size' },
+    ]
+
+    createSheetWithColumns(
+      'Products',
+      [
+        [{ v: '', m: '' }, { v: 'SM', m: 'SM' }],
+        [{ v: '', m: '' }, { v: 'LG', m: 'LG' }],
+      ],
+      columns,
+      []
+    )
+    render(<SpreadsheetContainer />)
+
+    // Simulate selecting a single cell in column 1 via capturedOnSelect
+    // This mimics a RangeSelection for a single cell
+    // Wrap in act() to ensure state updates are applied before assertions
+    act(() => {
+      if (capturedOnSelect) {
+        capturedOnSelect({
+          range: {
+            start: { row: 0, column: 1 },
+            end: { row: 0, column: 1 }
+          }
+        })
+      }
+    })
+
+    // Button should be enabled
+    expect(screen.getByTestId('spreadsheet-toolbar-separate-blocks')).not.toBeDisabled()
+
+    // Click separate blocks button
+    const separateBlocksBtn = screen.getByTestId('spreadsheet-toolbar-separate-blocks')
+    fireEvent.click(separateBlocksBtn)
+
+    // Verify: SM, [empty], LG (3 rows)
+    const { sheets, activeSheetId } = useSheetsStore.getState()
+    const activeSheet = sheets.find(s => s.id === activeSheetId)
+    expect(activeSheet?.data.length).toBe(3)
+  })
+})

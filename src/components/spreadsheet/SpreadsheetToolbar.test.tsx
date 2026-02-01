@@ -1004,4 +1004,101 @@ describe("SpreadsheetToolbar", () => {
       expect(preventDefaultSpy).toHaveBeenCalled();
     });
   });
+
+  describe("separate blocks button", () => {
+    const mockOnSeparateBlocks = vi.fn();
+
+    beforeEach(() => {
+      mockOnSeparateBlocks.mockClear();
+    });
+
+    it("renders separate blocks button when onSeparateBlocks is provided", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          onSeparateBlocks={mockOnSeparateBlocks}
+          canSeparateBlocks={true}
+        />
+      );
+
+      expect(screen.getByTestId("spreadsheet-toolbar-separate-blocks")).toBeInTheDocument();
+      expect(screen.getByText("Separate Blocks")).toBeInTheDocument();
+    });
+
+    it("does not render separate blocks button when onSeparateBlocks is not provided", () => {
+      render(<SpreadsheetToolbar {...defaultProps} />);
+
+      expect(screen.queryByTestId("spreadsheet-toolbar-separate-blocks")).not.toBeInTheDocument();
+    });
+
+    it("separate blocks button is disabled when canSeparateBlocks is false", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          onSeparateBlocks={mockOnSeparateBlocks}
+          canSeparateBlocks={false}
+        />
+      );
+
+      expect(screen.getByTestId("spreadsheet-toolbar-separate-blocks")).toBeDisabled();
+    });
+
+    it("separate blocks button is enabled when canSeparateBlocks is true", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          onSeparateBlocks={mockOnSeparateBlocks}
+          canSeparateBlocks={true}
+        />
+      );
+
+      expect(screen.getByTestId("spreadsheet-toolbar-separate-blocks")).not.toBeDisabled();
+    });
+
+    it("calls onSeparateBlocks when clicked", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          onSeparateBlocks={mockOnSeparateBlocks}
+          canSeparateBlocks={true}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId("spreadsheet-toolbar-separate-blocks"));
+
+      expect(mockOnSeparateBlocks).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not call onSeparateBlocks when disabled and clicked", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          onSeparateBlocks={mockOnSeparateBlocks}
+          canSeparateBlocks={false}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId("spreadsheet-toolbar-separate-blocks"));
+
+      expect(mockOnSeparateBlocks).not.toHaveBeenCalled();
+    });
+
+    it("separate blocks button prevents focus change on mousedown", () => {
+      render(
+        <SpreadsheetToolbar
+          {...defaultProps}
+          onSeparateBlocks={mockOnSeparateBlocks}
+          canSeparateBlocks={true}
+        />
+      );
+
+      const button = screen.getByTestId("spreadsheet-toolbar-separate-blocks");
+      const mouseDownEvent = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+      const preventDefaultSpy = vi.spyOn(mouseDownEvent, "preventDefault");
+
+      button.dispatchEvent(mouseDownEvent);
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+  });
 });

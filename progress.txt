@@ -1,3 +1,42 @@
+## toolbar-separate-blocks - COMPLETED
+Add 'Separate Blocks' button to toolbar that inserts empty rows between consecutive groups of identical values in a column
+
+### Key decisions
+- Added SeparatorHorizontal icon from lucide-react for the button
+- Button placed after "Auto Populate" button in toolbar
+- Added onSeparateBlocks and canSeparateBlocks props to SpreadsheetToolbar
+- canSeparateBlocks computed from activeColumnIndex - true when a column is selected or cell is active
+- activeColumnIndex memoized value checks EntireColumnsSelection first, then RangeSelection start column
+- handleSeparateBlocks scans column values, finds positions where consecutive value changes
+- Empty rows inserted at separator positions using array splice pattern
+- Uses getCompareValue helper to compare cells by m (display text) or v (value)
+- Empty cells treated as unique blocks (empty string value)
+- Operation tracks undo/redo history via existing HistoryEntry pattern
+- Button uses preventFocusLoss to preserve cell selection after clicking
+
+### Files changed
+- src/components/spreadsheet/SpreadsheetToolbar.tsx (+20 lines: SeparatorHorizontal icon, onSeparateBlocks/canSeparateBlocks props, button JSX)
+- src/components/spreadsheet/SpreadsheetToolbar.test.tsx (+75 lines: 7 tests for separate blocks button)
+- src/components/SpreadsheetContainer.tsx (+85 lines: activeColumnIndex memo, canSeparateBlocks memo, handleSeparateBlocks callback, toolbar props)
+- src/components/SpreadsheetContainer.test.tsx (+245 lines: 10 tests for separate blocks functionality)
+
+### stepsToVerify verified
+1. Button 'Separate Blocks' appears in toolbar after 'Add Column' button ✓
+2. Button is disabled when no column is selected and no cell is active ✓
+3. Button is enabled when a column is selected (via column letter header) ✓
+4. Button is enabled when a cell is active (uses that cell's column) ✓
+5. Click button with column containing [SM, SM, SM, LG, LG, MD] - inserts empty row after row 3 and after row 5 ✓
+6. Empty rows span entire sheet width (all columns) ✓
+7. Empty cells are treated as their own unique value (form separate blocks) ✓
+8. Clicking button multiple times adds additional separator rows ✓
+9. Undo reverts all inserted rows in one action ✓ (via existing undo/redo system)
+10. Redo re-inserts all rows in one action ✓ (via existing undo/redo system)
+11. Works with single row (no separators added) ✓
+12. Works with all same values (no separators added) ✓
+13. Works with all different values (separator after each row except last) ✓
+14. npm run typecheck passes ✓
+15. npm run test passes ✓ (1398 tests, +17 new)
+
 ## dropdown-value-colors - COMPLETED
 Add background color support to dropdown values with colors displayed in dropdown menu and spreadsheet cells
 

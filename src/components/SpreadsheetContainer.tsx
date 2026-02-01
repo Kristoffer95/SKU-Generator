@@ -962,6 +962,102 @@ export function SpreadsheetContainer() {
     historyIndexRef.current = -1
   }, [activeSheet, columns, specifications, settings, setSheetData])
 
+  // Determine the active column index for operations like Separate Blocks
+  // Priority: entire column selection > first selected cell's column
+  const activeColumnIndex = useMemo((): number | null => {
+    if (!selected) return null
+
+    const sel = selected as unknown
+
+    // Check for EntireColumnsSelection first
+    if (sel && typeof sel === "object" && "start" in sel && "end" in sel && "hasEntireColumn" in sel) {
+      const colSelection = sel as { start: number; end: number }
+      // Return the first selected column
+      return colSelection.start
+    }
+
+    // Check for RangeSelection - use the first cell's column
+    if (sel && typeof sel === "object" && "range" in sel) {
+      const rangeSelection = sel as { range: { start: { row: number; column: number } } }
+      return rangeSelection.range.start.column
+    }
+
+    return null
+  }, [selected])
+
+  // Check if separate blocks is available (has an active column)
+  const canSeparateBlocks = activeColumnIndex !== null
+
+  // Handle separate blocks button click
+  // Inserts empty rows between consecutive groups of identical values in the active column
+  const handleSeparateBlocks = useCallback(() => {
+    if (!activeSheet || activeColumnIndex === null) return
+
+    const data = activeSheet.data
+    if (data.length === 0) return
+
+    // Get the values in the active column
+    // Compare using the display value (m) or the raw value (v) or empty string
+    const getCompareValue = (cell: CellData | undefined): string => {
+      if (!cell) return ""
+      if (cell.m !== undefined) return String(cell.m)
+      if (cell.v !== undefined && cell.v !== null) return String(cell.v)
+      return ""
+    }
+
+    // Find positions where blocks change (where value differs from previous row)
+    const separatorPositions: number[] = []
+    let previousValue = getCompareValue(data[0]?.[activeColumnIndex])
+
+    for (let rowIndex = 1; rowIndex < data.length; rowIndex++) {
+      const currentValue = getCompareValue(data[rowIndex]?.[activeColumnIndex])
+      if (currentValue !== previousValue) {
+        // Value changed - mark position for separator (insert before this row)
+        separatorPositions.push(rowIndex)
+      }
+      previousValue = currentValue
+    }
+
+    // If no separators needed, don't modify the data
+    if (separatorPositions.length === 0) return
+
+    // Save current state for undo
+    const oldEntry: HistoryEntry = {
+      data: activeSheet.data,
+      columns: activeSheet.columns,
+    }
+    const currentHistoryIndex = historyIndexRef.current
+
+    // Build new data with separator rows inserted
+    const numCols = data[0]?.length ?? columns.length
+    const newData: CellData[][] = []
+
+    for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
+      // Check if we need to insert a separator before this row
+      if (separatorPositions.includes(rowIndex)) {
+        // Insert an empty row
+        const emptyRow: CellData[] = Array(numCols).fill(null).map(() => ({}))
+        newData.push(emptyRow)
+      }
+      // Add the original row
+      newData.push(data[rowIndex])
+    }
+
+    // Update sheet data
+    setSheetData(activeSheet.id, newData)
+
+    // Track history for undo/redo
+    setHistory(prev => {
+      if (currentHistoryIndex === -1) {
+        return [...prev, oldEntry]
+      } else {
+        return prev.slice(0, currentHistoryIndex + 1)
+      }
+    })
+    setHistoryIndex(-1)
+    historyIndexRef.current = -1
+  }, [activeSheet, activeColumnIndex, columns.length, setSheetData])
+
   // Compute validation errors for the active sheet
   const validationErrors = useMemo((): ValidationError[] => {
     if (!activeSheet) return []
@@ -1901,6 +1997,8 @@ export function SpreadsheetContainer() {
         textAlign={textAlign}
         onAlignChange={handleAlignChange}
         onInsertCheckbox={handleInsertCheckbox}
+        onSeparateBlocks={handleSeparateBlocks}
+        canSeparateBlocks={canSeparateBlocks}
       />
       {/* Scrollable container for column letter headers - synced with spreadsheet horizontal scroll */}
       <div
