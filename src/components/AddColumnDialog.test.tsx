@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { AddColumnDialog } from './AddColumnDialog'
 import { useSheetsStore } from '@/store/sheets'
+import { getAutoColor, COLOR_PALETTE } from '@/lib/color-utils'
 import type { ColumnDef, Specification } from '@/types'
 
 /**
@@ -582,6 +583,91 @@ describe('AddColumnDialog', () => {
       fireEvent.click(screen.getByTestId('submit-button'))
 
       expect(screen.getByTestId('error-message')).toHaveTextContent('No active sheet')
+    })
+  })
+
+  describe('Spec Value Color Assignment', () => {
+    it('auto-assigns colors from palette to new spec values', () => {
+      render(<AddColumnDialog open={true} onOpenChange={() => {}} />)
+
+      // Create a new spec with two values
+      fireEvent.change(screen.getByTestId('new-spec-name'), { target: { value: 'Size' } })
+      fireEvent.change(screen.getByTestId('value-label-0'), { target: { value: 'Small' } })
+      fireEvent.change(screen.getByTestId('value-sku-0'), { target: { value: 'S' } })
+
+      // Add second value
+      fireEvent.click(screen.getByTestId('add-value-button'))
+      fireEvent.change(screen.getByTestId('value-label-1'), { target: { value: 'Medium' } })
+      fireEvent.change(screen.getByTestId('value-sku-1'), { target: { value: 'M' } })
+
+      fireEvent.click(screen.getByTestId('submit-button'))
+
+      const specs = getActiveSheetSpecs()
+      const sizeSpec = specs.find(s => s.name === 'Size')
+      expect(sizeSpec).toBeDefined()
+      expect(sizeSpec?.values).toHaveLength(2)
+
+      // Check that each value has an auto-assigned color from the palette
+      expect(sizeSpec?.values[0].color).toBe(getAutoColor(0))
+      expect(sizeSpec?.values[1].color).toBe(getAutoColor(1))
+    })
+
+    it('assigns colors using round-robin from COLOR_PALETTE', () => {
+      render(<AddColumnDialog open={true} onOpenChange={() => {}} />)
+
+      // Create a new spec with three values
+      fireEvent.change(screen.getByTestId('new-spec-name'), { target: { value: 'Size' } })
+      fireEvent.change(screen.getByTestId('value-label-0'), { target: { value: 'Small' } })
+      fireEvent.change(screen.getByTestId('value-sku-0'), { target: { value: 'S' } })
+
+      // Add second value
+      fireEvent.click(screen.getByTestId('add-value-button'))
+      fireEvent.change(screen.getByTestId('value-label-1'), { target: { value: 'Medium' } })
+      fireEvent.change(screen.getByTestId('value-sku-1'), { target: { value: 'M' } })
+
+      // Add third value
+      fireEvent.click(screen.getByTestId('add-value-button'))
+      fireEvent.change(screen.getByTestId('value-label-2'), { target: { value: 'Large' } })
+      fireEvent.change(screen.getByTestId('value-sku-2'), { target: { value: 'L' } })
+
+      fireEvent.click(screen.getByTestId('submit-button'))
+
+      const specs = getActiveSheetSpecs()
+      const sizeSpec = specs.find(s => s.name === 'Size')
+
+      // Verify colors are from the palette in order
+      expect(sizeSpec?.values[0].color).toBe(COLOR_PALETTE[0])
+      expect(sizeSpec?.values[1].color).toBe(COLOR_PALETTE[1])
+      expect(sizeSpec?.values[2].color).toBe(COLOR_PALETTE[2])
+    })
+
+    it('assigns correct index-based colors when some values are skipped (empty labels)', () => {
+      render(<AddColumnDialog open={true} onOpenChange={() => {}} />)
+
+      fireEvent.change(screen.getByTestId('new-spec-name'), { target: { value: 'Size' } })
+      fireEvent.change(screen.getByTestId('value-label-0'), { target: { value: 'Small' } })
+      fireEvent.change(screen.getByTestId('value-sku-0'), { target: { value: 'S' } })
+
+      // Add second value with empty label (will be skipped)
+      fireEvent.click(screen.getByTestId('add-value-button'))
+      // Leave value-label-1 empty
+
+      // Add third value with label
+      fireEvent.click(screen.getByTestId('add-value-button'))
+      fireEvent.change(screen.getByTestId('value-label-2'), { target: { value: 'Large' } })
+      fireEvent.change(screen.getByTestId('value-sku-2'), { target: { value: 'L' } })
+
+      fireEvent.click(screen.getByTestId('submit-button'))
+
+      const specs = getActiveSheetSpecs()
+      const sizeSpec = specs.find(s => s.name === 'Size')
+
+      // Only 2 values should exist (empty one was filtered out)
+      expect(sizeSpec?.values).toHaveLength(2)
+
+      // Colors should be index 0 and 1 (based on filtered array index, not original position)
+      expect(sizeSpec?.values[0].color).toBe(getAutoColor(0))
+      expect(sizeSpec?.values[1].color).toBe(getAutoColor(1))
     })
   })
 })

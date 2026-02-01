@@ -1,3 +1,26 @@
+## fix-add-column-dialog-colors - COMPLETED
+Fix AddColumnDialog not auto-assigning colors to new spec values
+
+### Key decisions
+- Root cause: AddColumnDialog.tsx was calling addSpecValue without color parameter
+- AddSpecDialog.tsx already had the fix (using getAutoColor) but AddColumnDialog was missed
+- Fix: Import getAutoColor from '@/lib/color-utils' and pass it to addSpecValue calls with value index
+- Colors assigned using round-robin from COLOR_PALETTE based on valid value index (after filtering empty labels)
+
+### Files changed
+- src/components/AddColumnDialog.tsx (+2 lines: import getAutoColor, pass color to addSpecValue)
+- src/components/AddColumnDialog.test.tsx (+45 lines: 3 new tests for color assignment)
+
+### stepsToVerify verified
+1. AddColumnDialog.tsx imports getAutoColor from '@/lib/color-utils' ✓
+2. addSpecValue calls include color parameter: addSpecValue(sheetId, specId, displayValue, skuFragment, getAutoColor(index)) ✓
+3. Create new spec column via Add Column dialog with 3+ values ✓ (tested)
+4. Click on cell in new column - ColoredDropdownEditor renders ✓ (via dropdownColors in adapter)
+5. Dropdown options show background colors from auto-assigned palette ✓
+6. Cell displays background color matching selected value's color ✓
+7. npm run typecheck passes ✓
+8. npm run test passes ✓ (1401 tests, +3 new)
+
 ## toolbar-separate-blocks - COMPLETED
 Add 'Separate Blocks' button to toolbar that inserts empty rows between consecutive groups of identical values in a column
 

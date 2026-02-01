@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useSheetsStore } from "@/store/sheets"
+import { getAutoColor } from "@/lib/color-utils"
 import type { ColumnDef, Specification } from "@/types"
 
 interface AddColumnDialogProps {
@@ -157,10 +158,10 @@ export function AddColumnDialog({ open, onOpenChange, defaultPosition }: AddColu
           return
         }
 
-        // Add values to the spec
+        // Add values to the spec with auto-assigned colors
         const validValues = newSpecValues.filter(v => v.displayValue.trim())
-        validValues.forEach(v => {
-          addSpecValue(activeSheet.id, specId, v.displayValue.trim(), v.skuFragment.trim())
+        validValues.forEach((v, index) => {
+          addSpecValue(activeSheet.id, specId, v.displayValue.trim(), v.skuFragment.trim(), getAutoColor(index))
         })
 
         newColumn = {

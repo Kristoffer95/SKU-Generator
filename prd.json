@@ -1258,5 +1258,21 @@
       "npm run test passes"
     ],
     "passes": true
+  },
+  {
+    "id": "fix-add-column-dialog-colors",
+    "category": "Bug Fix",
+    "description": "Fix AddColumnDialog not auto-assigning colors to new spec values. When creating a new specification via the Add Column dialog, spec values are added without colors, causing the dropdown to fall back to native HTML <select> instead of ColoredDropdownEditor. Import getAutoColor from color-utils and pass color to addSpecValue calls.",
+    "stepsToVerify": [
+      "AddColumnDialog.tsx imports getAutoColor from '@/lib/color-utils'",
+      "addSpecValue calls in AddColumnDialog include color parameter: addSpecValue(sheetId, specId, displayValue, skuFragment, getAutoColor(index))",
+      "Create new spec column via Add Column dialog with 3+ values",
+      "Click on a cell in the new column - ColoredDropdownEditor renders (not native <select>)",
+      "Dropdown options show background colors from auto-assigned palette",
+      "Cell displays background color matching the selected value's color",
+      "npm run typecheck passes",
+      "npm run test passes"
+    ],
+    "passes": true
   }
 ]
