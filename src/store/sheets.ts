@@ -1075,6 +1075,9 @@ export const useSheetsStore = create<SheetsState>()(
           state.sheets = [productSheet];
           state.groups = [];
           state.activeSheetId = productSheet.id;
+          // Ensure all spec values have colors (sample data now includes colors,
+          // but call migration for safety in case sample-data.ts is modified)
+          state.sheets = ensureSpecValueColors(state.sheets);
           markAsInitialized();
         } else if (state && state.sheets.length > 0) {
           // Ensure groups array exists (for existing users without groups)

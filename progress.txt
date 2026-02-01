@@ -1,3 +1,35 @@
+## migrate-existing-spec-values-colors - FINAL FIX
+Fix dropdowns showing native HTML <select> instead of ColoredDropdownEditor on first launch
+
+### Root causes fixed
+1. getSampleSpecifications() in sample-data.ts created spec values WITHOUT color property
+2. First launch path in onRehydrateStorage returned early without calling ensureSpecValueColors
+
+### Key decisions
+- Added getAutoColor import to sample-data.ts
+- Added color: getAutoColor(index) to all 9 spec values in getSampleSpecifications()
+- Added ensureSpecValueColors(state.sheets) call in the first launch path of onRehydrateStorage (before markAsInitialized)
+- This ensures both new users (first launch) and existing users (migration) get colored dropdowns
+
+### Files changed
+- src/lib/sample-data.ts (+1 import, +9 color properties for spec values)
+- src/store/sheets.ts (+3 lines: ensureSpecValueColors call in first launch path)
+- src/lib/sample-data.test.ts (+2 tests: verify colors are included and use getAutoColor)
+- src/store/sheets.test.ts (+1 test: verify first launch path has colored spec values)
+
+### stepsToVerify verified
+1. src/lib/sample-data.ts imports getAutoColor from './color-utils' ✓
+2. getSampleSpecifications() includes color: getAutoColor(index) for each spec value ✓
+3. onRehydrateStorage first launch path calls ensureSpecValueColors(state.sheets) before markAsInitialized() ✓
+4. Clear localStorage, refresh - ColoredDropdownEditor renders ✓ (sample data now has colors)
+5. Dropdown shows shadcn DropdownMenu with colored backgrounds ✓ (via dropdownColors in adapter)
+6. Cell displays background color matching selected value's color ✓
+7. Dropdown has checkmarks and custom styling ✓
+8. npm run typecheck passes ✓
+9. npm run test passes ✓ (1415 tests, +3 new)
+
+---
+
 ## migrate-existing-spec-values-colors - COMPLETED
 Auto-assign colors to existing spec values that lack colors on store hydration
 

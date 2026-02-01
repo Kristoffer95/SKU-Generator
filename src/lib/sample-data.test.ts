@@ -8,6 +8,7 @@ import {
   isFirstLaunch,
   markAsInitialized,
 } from './sample-data';
+import { getAutoColor } from './color-utils';
 
 describe('sample-data', () => {
   beforeEach(() => {
@@ -146,6 +147,27 @@ describe('sample-data', () => {
       const specs = getSampleSpecifications();
       const allValueIds = specs.flatMap((s) => s.values.map((v) => v.id));
       expect(new Set(allValueIds).size).toBe(allValueIds.length);
+    });
+
+    it('all spec values have colors assigned', () => {
+      const specs = getSampleSpecifications();
+      for (const spec of specs) {
+        for (const value of spec.values) {
+          expect(value.color).toBeDefined();
+          expect(typeof value.color).toBe('string');
+          expect(value.color!.length).toBeGreaterThan(0);
+        }
+      }
+    });
+
+    it('spec values use getAutoColor for round-robin color assignment', () => {
+      const specs = getSampleSpecifications();
+      // Each spec should use getAutoColor(index) for its values
+      for (const spec of specs) {
+        spec.values.forEach((value, index) => {
+          expect(value.color).toBe(getAutoColor(index));
+        });
+      }
     });
   });
 

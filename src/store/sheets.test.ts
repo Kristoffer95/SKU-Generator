@@ -133,6 +133,26 @@ describe('useSheetsStore', () => {
       expect(sheets).toHaveLength(1);
       expect(sheets[0].type).toBe('data');
     });
+
+    it('should include spec values with colors in sample product sheet', () => {
+      const { initializeWithSampleData } = useSheetsStore.getState();
+      initializeWithSampleData();
+
+      const { sheets } = useSheetsStore.getState();
+      const productSheet = sheets[0];
+
+      // Verify all specs have colors assigned to their values
+      expect(productSheet.specifications).toBeDefined();
+      expect(productSheet.specifications!.length).toBeGreaterThan(0);
+
+      for (const spec of productSheet.specifications!) {
+        for (const value of spec.values) {
+          expect(value.color).toBeDefined();
+          expect(typeof value.color).toBe('string');
+          expect(value.color!.length).toBeGreaterThan(0);
+        }
+      }
+    });
   });
 
   /**

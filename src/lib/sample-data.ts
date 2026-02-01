@@ -1,4 +1,5 @@
 import type { CellData, SheetConfig, Specification, ColumnDef } from '../types';
+import { getAutoColor } from './color-utils';
 
 const generateId = () => crypto.randomUUID();
 
@@ -20,9 +21,9 @@ export function getSampleSpecifications(): Specification[] {
       name: 'Color',
       order: 0,
       values: [
-        { id: generateId(), displayValue: 'Red', skuFragment: 'R' },
-        { id: generateId(), displayValue: 'Blue', skuFragment: 'B' },
-        { id: generateId(), displayValue: 'Green', skuFragment: 'G' },
+        { id: generateId(), displayValue: 'Red', skuFragment: 'R', color: getAutoColor(0) },
+        { id: generateId(), displayValue: 'Blue', skuFragment: 'B', color: getAutoColor(1) },
+        { id: generateId(), displayValue: 'Green', skuFragment: 'G', color: getAutoColor(2) },
       ],
     },
     {
@@ -30,9 +31,9 @@ export function getSampleSpecifications(): Specification[] {
       name: 'Size',
       order: 1,
       values: [
-        { id: generateId(), displayValue: 'Small', skuFragment: 'S' },
-        { id: generateId(), displayValue: 'Medium', skuFragment: 'M' },
-        { id: generateId(), displayValue: 'Large', skuFragment: 'L' },
+        { id: generateId(), displayValue: 'Small', skuFragment: 'S', color: getAutoColor(0) },
+        { id: generateId(), displayValue: 'Medium', skuFragment: 'M', color: getAutoColor(1) },
+        { id: generateId(), displayValue: 'Large', skuFragment: 'L', color: getAutoColor(2) },
       ],
     },
     {
@@ -40,9 +41,9 @@ export function getSampleSpecifications(): Specification[] {
       name: 'Material',
       order: 2,
       values: [
-        { id: generateId(), displayValue: 'Cotton', skuFragment: 'COT' },
-        { id: generateId(), displayValue: 'Polyester', skuFragment: 'POL' },
-        { id: generateId(), displayValue: 'Wool', skuFragment: 'WOL' },
+        { id: generateId(), displayValue: 'Cotton', skuFragment: 'COT', color: getAutoColor(0) },
+        { id: generateId(), displayValue: 'Polyester', skuFragment: 'POL', color: getAutoColor(1) },
+        { id: generateId(), displayValue: 'Wool', skuFragment: 'WOL', color: getAutoColor(2) },
       ],
     },
   ];
