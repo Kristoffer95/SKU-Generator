@@ -523,6 +523,41 @@ describe('spreadsheet-adapter', () => {
 
       expect(result[0][1]?.dropdownColors).toEqual(result[1][1]?.dropdownColors);
     });
+
+    it('applies valueColor based on cell value matching spec value', () => {
+      const data: CellData[][] = [
+        [{ v: 'SKU-001' }, { v: 'Red' }],
+        [{ v: 'SKU-002' }, { v: 'Blue' }],
+      ];
+
+      const result = convertToSpreadsheetData(data, colorColumns, mockSpecsWithColors);
+
+      // Cell with 'Red' should have Red's color
+      expect(result[0][1]?.valueColor).toBe('#fce4ec');
+      // Cell with 'Blue' should have Blue's color
+      expect(result[1][1]?.valueColor).toBe('#e3f2fd');
+    });
+
+    it('does not apply valueColor for empty cells', () => {
+      const data: CellData[][] = [
+        [{ v: 'SKU-001' }, {}],
+      ];
+
+      const result = convertToSpreadsheetData(data, colorColumns, mockSpecsWithColors);
+
+      expect(result[0][1]?.valueColor).toBeUndefined();
+    });
+
+    it('does not apply valueColor for values without colors', () => {
+      const data: CellData[][] = [
+        [{ v: 'SKU-001' }, { v: 'Blue' }],
+      ];
+
+      // Blue has no color in mockSpecsWithPartialColors
+      const result = convertToSpreadsheetData(data, colorColumns, mockSpecsWithPartialColors);
+
+      expect(result[0][1]?.valueColor).toBeUndefined();
+    });
   });
 
   describe('checkbox cells', () => {

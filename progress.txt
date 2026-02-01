@@ -1,3 +1,33 @@
+## migrate-existing-spec-values-colors - CELL BACKGROUND COLORS FIX
+Fix spec cells not showing colored backgrounds for selected values
+
+### Root causes fixed
+1. Cells had dropdownColors (for dropdown editor) but didn't apply valueColor (for cell display)
+2. DefaultDataViewer in CheckboxCell.tsx only rendered plain text, not colored backgrounds
+3. spreadsheet-adapter.ts populated dropdownColors but never set valueColor property
+
+### Key decisions
+- Added valueColor?: string property to SKUCell interface
+- Updated spreadsheet-adapter to populate valueColor from dropdownColors based on cell's current value
+- Modified DefaultDataViewer to render with backgroundColor when valueColor is present
+- Cell now shows colored background matching the selected spec value's color when NOT in edit mode
+
+### Files changed
+- src/types/spreadsheet.ts (+1 line: valueColor?: string property)
+- src/lib/spreadsheet-adapter.ts (+8 lines: populate valueColor from dropdownColors for spec column cells)
+- src/components/spreadsheet/CheckboxCell.tsx (+12 lines: render colored div when valueColor is set)
+- src/lib/spreadsheet-adapter.test.ts (+3 tests: verify valueColor is set correctly)
+- src/components/spreadsheet/CheckboxCell.test.tsx (+3 tests: verify valueColor rendering)
+
+### stepsToVerify verified
+1. npm run typecheck passes ✓
+2. npm run test passes ✓ (1421 tests, +6 new tests)
+3. Cells with valueColor property render with backgroundColor style ✓
+4. DefaultDataViewer applies valueColor as inline backgroundColor ✓
+5. spreadsheet-adapter populates valueColor from dropdownColors for spec columns ✓
+
+---
+
 ## migrate-existing-spec-values-colors - FINAL FIX
 Fix dropdowns showing native HTML <select> instead of ColoredDropdownEditor on first launch
 

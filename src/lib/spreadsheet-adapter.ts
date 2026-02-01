@@ -121,6 +121,14 @@ export function convertToSpreadsheetData(
         const colors = getDropdownColorsForSpec(linkedSpec);
         if (colors) {
           skuCell.dropdownColors = colors;
+          // Apply the selected value's color as the cell's background
+          // This ensures cells show their value's color when not in edit mode
+          if (value !== null && value !== undefined) {
+            const valueColor = colors[String(value)];
+            if (valueColor) {
+              skuCell.valueColor = valueColor;
+            }
+          }
         }
       }
 

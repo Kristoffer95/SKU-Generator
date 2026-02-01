@@ -166,6 +166,47 @@ describe('CheckboxCell', () => {
     });
   });
 
+  describe('valueColor rendering', () => {
+    it('renders colored background when valueColor is set', () => {
+      const cell: SKUCell = {
+        value: 'Red',
+        valueColor: '#FFB3BA', // Pink-ish color
+      };
+
+      render(<CheckboxCell cell={cell} row={0} column={0} />);
+
+      const coloredDiv = screen.getByTestId('colored-cell-viewer');
+      expect(coloredDiv).toBeInTheDocument();
+      expect(coloredDiv).toHaveStyle({ backgroundColor: '#FFB3BA' });
+      expect(screen.getByText('Red')).toBeInTheDocument();
+    });
+
+    it('does not render colored background when valueColor is not set', () => {
+      const cell: SKUCell = {
+        value: 'Blue',
+      };
+
+      render(<CheckboxCell cell={cell} row={0} column={0} />);
+
+      expect(screen.queryByTestId('colored-cell-viewer')).not.toBeInTheDocument();
+      expect(screen.getByText('Blue')).toBeInTheDocument();
+    });
+
+    it('renders colored background with createCheckboxCellViewer', () => {
+      const Component = createCheckboxCellViewer();
+      const cell: SKUCell = {
+        value: 'Green',
+        valueColor: '#BAFFC9', // Light green
+      };
+
+      render(<Component cell={cell} row={0} column={0} />);
+
+      const coloredDiv = screen.getByTestId('colored-cell-viewer');
+      expect(coloredDiv).toBeInTheDocument();
+      expect(coloredDiv).toHaveStyle({ backgroundColor: '#BAFFC9' });
+    });
+  });
+
   describe('styling', () => {
     it('applies checked styles when checkbox is true', () => {
       const cell: SKUCell = {

@@ -19,9 +19,25 @@ export interface CheckboxCellProps {
 /**
  * Default data viewer that renders cell value as text
  * Used when cell is not a checkbox type
+ * Also applies valueColor as background if present
  */
 function DefaultDataViewer({ cell }: CheckboxCellProps): React.ReactElement {
   const value = cell?.value ?? "";
+  const valueColor = cell?.valueColor;
+
+  // If cell has a value color, wrap in a div with that background
+  if (valueColor) {
+    return (
+      <div
+        className="w-full h-full flex items-center px-1 -m-1"
+        style={{ backgroundColor: valueColor }}
+        data-testid="colored-cell-viewer"
+      >
+        <span>{String(value)}</span>
+      </div>
+    );
+  }
+
   return <span>{String(value)}</span>;
 }
 
