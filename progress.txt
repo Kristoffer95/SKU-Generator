@@ -1,3 +1,23 @@
+## tour-basic-steps - Define Basic Tour with 18 steps covering core workflow
+
+### Key decisions:
+- Renamed old 16-step tourSteps to basicTourSteps array with 18 steps
+- Phase 1 Foundation (4 steps): Welcome, Sidebar, Spreadsheet, Checkpoint
+- Phase 2 Create SKU (8 steps): Add spec, Dialog, Name input, Values, Spec card, Add column, Spreadsheet usage, Checkpoint
+- Phase 3 Core (6 steps): Settings button, Settings dialog, Sheet tabs, Add sheet, Import/Export, Completion
+- Added onNextClick callbacks on steps 5, 13, 16 for interactive verification
+- Updated startGuidedTour to accept TourType parameter ('basic' | 'advanced') with backward compat
+- Dialog orchestration uses BASIC_ADD_SPEC_DIALOG_STEPS [4,5,6,7] and BASIC_SETTINGS_DIALOG_STEPS [12,13]
+
+### Files changed:
+- src/lib/guided-tour.ts: Added basicTourSteps export (18 steps), updated startGuidedTour signature
+- src/lib/guided-tour.test.ts: Updated tests for 18 steps, added basicTourSteps tests (5 new tests)
+
+### Notes:
+- All 1448 tests pass (6 new tests)
+- Typecheck passes
+- Lint warnings are pre-existing issues in build output files
+
 ## tour-data-attributes - Add data-tour attributes to all components needed for Advanced Tour
 
 ### Key decisions:

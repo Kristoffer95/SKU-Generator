@@ -10,6 +10,7 @@ import {
   getTourState,
   updateTourState,
   resetTourState,
+  basicTourSteps,
   type TourState,
 } from "./guided-tour"
 
@@ -237,7 +238,7 @@ describe("guided-tour", () => {
   })
 
   describe("startGuidedTour", () => {
-    it("creates driver instance and starts tour with 16 steps", async () => {
+    it("creates driver instance and starts basic tour with 18 steps by default", async () => {
       const { driver } = await import("driver.js")
 
       startGuidedTour()
@@ -253,11 +254,20 @@ describe("guided-tour", () => {
         })
       )
 
-      // Verify 16 steps
+      // Verify 18 steps for basic tour
       const calledConfig = vi.mocked(driver).mock.calls[0]?.[0]
-      expect(calledConfig?.steps).toHaveLength(16)
+      expect(calledConfig?.steps).toHaveLength(18)
 
       expect(mockDrive).toHaveBeenCalled()
+    })
+
+    it("starts basic tour when type is 'basic'", async () => {
+      const { driver } = await import("driver.js")
+
+      startGuidedTour("basic")
+
+      const calledConfig = vi.mocked(driver).mock.calls[0]?.[0]
+      expect(calledConfig?.steps).toHaveLength(18)
     })
 
     it("calls onComplete callback when tour is destroyed", () => {
@@ -428,7 +438,7 @@ describe("guided-tour", () => {
       expect(steps[11].popover?.title).toBe("SKU Creation Complete!")
     })
 
-    it("includes Phase 3 Advanced steps (13-16)", async () => {
+    it("includes Phase 3 Core steps (13-18)", async () => {
       const { driver } = await import("driver.js")
       startGuidedTour()
 
@@ -446,8 +456,16 @@ describe("guided-tour", () => {
       expect(steps[14].popover?.title).toBe("Multiple Sheets")
       expect(steps[14].element).toBe('[data-tour="sheet-tabs"]')
 
-      // Step 16: Completion
-      expect(steps[15].popover?.title).toBe("You're Ready!")
+      // Step 16: Add sheet button
+      expect(steps[15].popover?.title).toBe("Add New Sheets")
+      expect(steps[15].element).toBe('[data-tour="add-sheet-button"]')
+
+      // Step 17: Import/Export
+      expect(steps[16].popover?.title).toBe("Import & Export")
+      expect(steps[16].element).toBe('[data-tour="import-button"]')
+
+      // Step 18: Completion
+      expect(steps[17].popover?.title).toBe("Basic Tour Complete!")
     })
 
     it("uses only data-tour selectors (no .fortune-sheet-* selectors)", async () => {
@@ -463,6 +481,53 @@ describe("guided-tour", () => {
           expect(step.element).toMatch(/^\[data-tour=|^\[data-testid=/)
         }
       })
+    })
+  })
+
+  describe("basicTourSteps export", () => {
+    it("exports basicTourSteps array with exactly 18 steps", () => {
+      expect(basicTourSteps).toHaveLength(18)
+    })
+
+    it("Phase 1 Foundation has 4 steps (1-4)", () => {
+      // Steps 0-3 are Foundation
+      expect(basicTourSteps[0].popover?.title).toBe("Welcome to SKU Generator!")
+      expect(basicTourSteps[1].popover?.title).toBe("Specifications Sidebar")
+      expect(basicTourSteps[2].popover?.title).toBe("The Spreadsheet")
+      expect(basicTourSteps[3].popover?.title).toBe("Foundation Complete!")
+    })
+
+    it("Phase 2 Create SKU has 8 steps (5-12)", () => {
+      // Steps 4-11 are Create SKU
+      expect(basicTourSteps[4].popover?.title).toBe("Phase 2: Add a Specification")
+      expect(basicTourSteps[5].popover?.title).toBe("Add Specification Dialog")
+      expect(basicTourSteps[6].popover?.title).toBe("Specification Name")
+      expect(basicTourSteps[7].popover?.title).toBe("Define Values")
+      expect(basicTourSteps[8].popover?.title).toBe("Specification Cards")
+      expect(basicTourSteps[9].popover?.title).toBe("Add Columns")
+      expect(basicTourSteps[10].popover?.title).toBe("Using Dropdowns & SKU Generation")
+      expect(basicTourSteps[11].popover?.title).toBe("SKU Creation Complete!")
+    })
+
+    it("Phase 3 Core has 6 steps (13-18)", () => {
+      // Steps 12-17 are Core
+      expect(basicTourSteps[12].popover?.title).toBe("Phase 3: SKU Settings")
+      expect(basicTourSteps[13].popover?.title).toBe("Configure SKU Format")
+      expect(basicTourSteps[14].popover?.title).toBe("Multiple Sheets")
+      expect(basicTourSteps[15].popover?.title).toBe("Add New Sheets")
+      expect(basicTourSteps[16].popover?.title).toBe("Import & Export")
+      expect(basicTourSteps[17].popover?.title).toBe("Basic Tour Complete!")
+    })
+
+    it("has interactive onNextClick callbacks on appropriate steps", () => {
+      // Step 5: Add spec button has onNextClick
+      expect(basicTourSteps[4].popover?.onNextClick).toBeDefined()
+
+      // Step 13: Settings button has onNextClick
+      expect(basicTourSteps[12].popover?.onNextClick).toBeDefined()
+
+      // Step 16: Add sheet button has onNextClick
+      expect(basicTourSteps[15].popover?.onNextClick).toBeDefined()
     })
   })
 })

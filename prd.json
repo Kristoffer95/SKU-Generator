@@ -59,7 +59,7 @@
         "Interactive steps have onNextClick callbacks to verify user actions",
         "Dialog orchestration opens AddSpecDialog for steps 5-8 and SettingsDialog for steps 13-14"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "tour-advanced-steps",
