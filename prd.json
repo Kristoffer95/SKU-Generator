@@ -18,7 +18,7 @@
         "Has Contributing guidelines",
         "Has License section"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "tour-state-management",
