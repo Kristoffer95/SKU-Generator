@@ -129,7 +129,7 @@
         "@keyframes tour-pulse defined with box-shadow pulsing effect",
         "Animation uses brand color (blue) for pulse glow"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "tour-tests-update",

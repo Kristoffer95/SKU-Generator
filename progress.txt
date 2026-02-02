@@ -1,3 +1,19 @@
+## tour-interactive-css - Add CSS for interactive tour hints
+
+### Key decisions:
+- Added .tour-pulse class to src/index.css for interactive tour element highlighting
+- @keyframes tour-pulse uses 2s ease-in-out infinite animation cycle
+- Box-shadow pulses from 0 to 8px spread using rgba(59, 130, 246, 0.7) - blue brand color
+- Animation phases: 0% visible glow, 50% expanded/faded, 100% reset
+
+### Files changed:
+- src/index.css: Added .tour-pulse class and @keyframes tour-pulse (~15 lines)
+
+### Notes:
+- All 1490 tests pass
+- Typecheck passes
+- Lint warnings are pre-existing issues in build output files
+
 ## tour-button-dropdown - Convert GuidedTourButton to dropdown with tour selection
 
 ### Key decisions:
