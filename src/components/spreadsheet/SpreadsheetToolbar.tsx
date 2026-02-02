@@ -115,6 +115,7 @@ export function SpreadsheetToolbar({
         disabled={!canUndo}
         title="Undo"
         data-testid="spreadsheet-toolbar-undo"
+        data-tour="undo"
       >
         <Undo2 className="h-4 w-4" />
       </Button>
@@ -127,6 +128,7 @@ export function SpreadsheetToolbar({
         disabled={!canRedo}
         title="Redo"
         data-testid="spreadsheet-toolbar-redo"
+        data-tour="redo"
       >
         <Redo2 className="h-4 w-4" />
       </Button>
@@ -141,6 +143,7 @@ export function SpreadsheetToolbar({
         onClick={onAddRow}
         title="Add Row"
         data-testid="spreadsheet-toolbar-add-row"
+        data-tour="add-row"
       >
         <Plus className="h-4 w-4" />
         <span className="ml-1">Add Row</span>
@@ -168,6 +171,7 @@ export function SpreadsheetToolbar({
           disabled={!canAutoPopulate}
           title="Auto Populate Combinations"
           data-testid="spreadsheet-toolbar-auto-populate"
+          data-tour="auto-populate"
         >
           <Sparkles className="h-4 w-4" />
           <span className="ml-1">Auto Populate</span>
@@ -184,6 +188,7 @@ export function SpreadsheetToolbar({
           disabled={!canSeparateBlocks}
           title="Separate Blocks - Insert empty rows between consecutive groups of identical values"
           data-testid="spreadsheet-toolbar-separate-blocks"
+          data-tour="separate-blocks"
         >
           <SeparatorHorizontal className="h-4 w-4" />
           <span className="ml-1">Separate Blocks</span>
@@ -228,6 +233,7 @@ export function SpreadsheetToolbar({
           disabled={!hasSelection}
           title="Bold"
           data-testid="spreadsheet-toolbar-bold"
+          data-tour="bold"
           className={cn(isBold && hasSelection && "bg-accent")}
         >
           <Bold className="h-4 w-4" />
@@ -244,6 +250,7 @@ export function SpreadsheetToolbar({
           disabled={!hasSelection}
           title="Italic"
           data-testid="spreadsheet-toolbar-italic"
+          data-tour="italic"
           className={cn(isItalic && hasSelection && "bg-accent")}
         >
           <Italic className="h-4 w-4" />
@@ -252,7 +259,7 @@ export function SpreadsheetToolbar({
 
       {/* Alignment buttons */}
       {onAlignChange && (
-        <>
+        <div className="flex" data-tour="align">
           <Button
             variant="ghost"
             size="sm"
@@ -289,7 +296,7 @@ export function SpreadsheetToolbar({
           >
             <AlignRight className="h-4 w-4" />
           </Button>
-        </>
+        </div>
       )}
 
       {/* Separator before checkbox button */}
@@ -307,6 +314,7 @@ export function SpreadsheetToolbar({
           disabled={!hasSelection}
           title="Insert Checkbox"
           data-testid="spreadsheet-toolbar-insert-checkbox"
+          data-tour="checkbox"
         >
           <CheckSquare className="h-4 w-4" />
         </Button>

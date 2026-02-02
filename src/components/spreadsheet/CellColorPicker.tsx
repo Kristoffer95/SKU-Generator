@@ -77,6 +77,7 @@ export function CellColorPicker({
           title="Cell background color"
           className={className}
           data-testid="cell-color-picker-trigger"
+          data-tour="cell-color"
           onMouseDown={preventFocusLoss}
         >
           <div className="relative">

@@ -156,6 +156,7 @@ export function ResizableRowIndicators({
       className="absolute left-0 top-0 z-20 pointer-events-none"
       style={{ width, height: totalHeight }}
       data-testid="resizable-row-indicators"
+      data-tour="row-indicators"
     >
       {Array.from({ length: rowCount }).map((_, rowIndex) => {
         const rowHeight = getRowHeight(rowIndex)

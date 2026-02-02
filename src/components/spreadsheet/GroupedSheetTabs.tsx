@@ -603,6 +603,7 @@ export function GroupedSheetTabs({
           className="flex items-center justify-center p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           title="Add new sheet"
           data-testid="sheet-tab-add"
+          data-tour="add-sheet-button"
         >
           <Plus className="h-4 w-4" />
         </button>
@@ -641,6 +642,7 @@ export function GroupedSheetTabs({
             className="flex items-center justify-center p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             title="Create new group"
             data-testid="add-group-button"
+            data-tour="add-group-button"
           >
             <FolderPlus className="h-4 w-4" />
           </button>

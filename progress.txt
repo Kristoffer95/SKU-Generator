@@ -1,3 +1,25 @@
+## tour-data-attributes - Add data-tour attributes to all components needed for Advanced Tour
+
+### Key decisions:
+- Added data-tour attributes to all toolbar buttons and color pickers
+- Wrapped alignment buttons in a div with data-tour="align" for easier targeting
+- Color pickers have data-tour in their trigger buttons (CellColorPicker, CellTextColorPicker)
+
+### Files changed:
+- src/components/spreadsheet/SpreadsheetToolbar.tsx: Added data-tour for undo, redo, add-row, auto-populate, separate-blocks, bold, italic, align, checkbox
+- src/components/spreadsheet/CellColorPicker.tsx: Added data-tour="cell-color"
+- src/components/spreadsheet/CellTextColorPicker.tsx: Added data-tour="text-color"
+- src/components/spreadsheet/ColumnLetterHeaders.tsx: Added data-tour="column-letters"
+- src/components/spreadsheet/DraggableColumnHeaders.tsx: Added data-tour="column-headers"
+- src/components/spreadsheet/ResizableRowIndicators.tsx: Added data-tour="row-indicators"
+- src/components/ValidationPanel.tsx: Added data-tour="validation-panel"
+- src/components/spreadsheet/GroupedSheetTabs.tsx: Added data-tour="add-sheet-button" and "add-group-button"
+
+### Notes:
+- All 1442 tests pass
+- Typecheck passes
+- Lint warnings are pre-existing issues in build output files
+
 ## tour-state-management - Implement new tour state management with support for two tours
 
 ### Key decisions:

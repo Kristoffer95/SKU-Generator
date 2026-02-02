@@ -66,6 +66,7 @@ export function ValidationPanel({ errors, onErrorClick, onDismiss }: ValidationP
         transition={{ duration: 0.2 }}
         className="border-t bg-muted/30"
         data-testid="validation-panel"
+        data-tour="validation-panel"
       >
         {/* Header with summary */}
         <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/50">

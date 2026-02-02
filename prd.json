@@ -45,7 +45,7 @@
         "ValidationPanel has data-tour='validation-panel'",
         "GroupedSheetTabs has data-tour='add-sheet-button' and 'add-group-button'"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "tour-basic-steps",

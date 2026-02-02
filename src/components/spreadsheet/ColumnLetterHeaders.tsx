@@ -112,6 +112,7 @@ export function ColumnLetterHeaders({
       role="row"
       aria-label="Column letters"
       data-testid="column-letter-headers"
+      data-tour="column-letters"
     >
       {/* Row indicator corner spacer (matches spreadsheet row indicator width) */}
       <div

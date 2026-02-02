@@ -76,6 +76,7 @@ export function CellTextColorPicker({
           title="Text color"
           className={className}
           data-testid="cell-text-color-picker-trigger"
+          data-tour="text-color"
           onMouseDown={preventFocusLoss}
         >
           <div className="relative">

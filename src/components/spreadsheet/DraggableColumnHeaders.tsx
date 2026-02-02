@@ -378,6 +378,7 @@ export function DraggableColumnHeaders({
       role="row"
       aria-label="Column headers"
       data-testid="draggable-column-headers"
+      data-tour="column-headers"
     >
       {/* Row indicator spacer (matches spreadsheet row indicator width) */}
       <div
