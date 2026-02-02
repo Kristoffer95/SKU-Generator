@@ -1,3 +1,25 @@
+## tour-button-dropdown - Convert GuidedTourButton to dropdown with tour selection
+
+### Key decisions:
+- Converted GuidedTourButton from simple button to DropdownMenu using shadcn/ui components
+- Dropdown has two tour options: Basic Tour and Advanced Tour
+- Each tour option shows green checkmark icon when that tour is completed
+- Separator divides tour options from Reset Tour Progress option
+- Reset option uses RotateCcw icon and calls resetTourState() to clear progress
+- Tour state refreshes on mount, dropdown open, and after tour completion
+- Uses getTourState() to read completion status, startGuidedTour(type) to start tours
+
+### Files changed:
+- src/components/GuidedTourButton.tsx: Converted to DropdownMenu with tour selection (96 lines)
+- src/components/GuidedTourButton.test.tsx: Updated tests for dropdown functionality (17 tests)
+- src/App.test.tsx: Added getTourState and resetTourState to mock
+- prd.json: Marked task as passes: true
+
+### Notes:
+- All 1490 tests pass (11 new/updated tests)
+- Typecheck passes
+- Lint warnings are pre-existing issues in build output files
+
 ## tour-selection-modal - Create TourSelectionModal component for first-time users
 
 ### Key decisions:

@@ -104,7 +104,7 @@
         "Clicking Advanced Tour starts advanced tour",
         "Reset clears tour state"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "tour-first-launch",

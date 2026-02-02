@@ -13,6 +13,13 @@ const mockHasTourCompleted = vi.fn()
 vi.mock('@/lib/guided-tour', () => ({
   startGuidedTour: () => mockStartGuidedTour(),
   hasTourCompleted: () => mockHasTourCompleted(),
+  getTourState: vi.fn(() => ({
+    basicCompleted: false,
+    advancedCompleted: false,
+    lastViewed: null,
+    neverShowModal: false,
+  })),
+  resetTourState: vi.fn(),
   registerTourDialogOpeners: vi.fn(),
   unregisterTourDialogOpeners: vi.fn(),
 }))
