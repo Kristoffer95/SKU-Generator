@@ -1,3 +1,24 @@
+## tour-selection-modal - Create TourSelectionModal component for first-time users
+
+### Key decisions:
+- Created TourSelectionModal.tsx with two side-by-side Card components for Basic and Advanced tours
+- Used existing UI components: Dialog, Card, Button, Label from shadcn/ui
+- Basic Tour card shows 6 bullet points: App structure, specs, columns, SKU codes, format config, sheets
+- Advanced Tour card shows 6 bullet points: Toolbar, column/row ops, drag/pin, import/export, validation, shortcuts
+- "Don't show this again" checkbox uses native HTML checkbox styled with Tailwind
+- Checkbox state saved to localStorage via updateTourState({ neverShowModal: true })
+- "Skip for now" link closes modal without setting neverShowModal
+
+### Files changed:
+- src/components/TourSelectionModal.tsx: New component (148 lines)
+- src/components/TourSelectionModal.test.tsx: Test suite (21 tests covering all acceptance criteria)
+- prd.json: Marked task as passes: true
+
+### Notes:
+- All 1479 tests pass (21 new tests)
+- Typecheck passes
+- Lint warnings are pre-existing issues in build output files
+
 ## tour-advanced-steps - Define Advanced Tour with 28 steps covering all features
 
 ### Key decisions:

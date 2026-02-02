@@ -89,7 +89,7 @@
         "'Don't show this again' checkbox sets neverShowModal in state",
         "TourSelectionModal.test.tsx created with tests"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "tour-button-dropdown",
