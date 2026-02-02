@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, act, fireEvent } from '@testing-library/react'
 
 // Mock Fortune-Sheet to avoid canvas errors in jsdom
 vi.mock('@fortune-sheet/react', () => ({
@@ -8,17 +8,13 @@ vi.mock('@fortune-sheet/react', () => ({
 
 // Mock guided-tour module
 const mockStartGuidedTour = vi.fn()
-const mockHasTourCompleted = vi.fn()
+const mockGetTourState = vi.fn()
 
 vi.mock('@/lib/guided-tour', () => ({
-  startGuidedTour: () => mockStartGuidedTour(),
-  hasTourCompleted: () => mockHasTourCompleted(),
-  getTourState: vi.fn(() => ({
-    basicCompleted: false,
-    advancedCompleted: false,
-    lastViewed: null,
-    neverShowModal: false,
-  })),
+  startGuidedTour: (type: string) => mockStartGuidedTour(type),
+  hasTourCompleted: vi.fn(() => false),
+  getTourState: () => mockGetTourState(),
+  updateTourState: vi.fn(),
   resetTourState: vi.fn(),
   registerTourDialogOpeners: vi.fn(),
   unregisterTourDialogOpeners: vi.fn(),
@@ -30,7 +26,7 @@ describe('App', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     mockStartGuidedTour.mockReset()
-    mockHasTourCompleted.mockReset()
+    mockGetTourState.mockReset()
   })
 
   afterEach(() => {
@@ -38,32 +34,185 @@ describe('App', () => {
   })
 
   it('renders the SKU Generator heading', () => {
-    mockHasTourCompleted.mockReturnValue(true)
+    mockGetTourState.mockReturnValue({
+      basicCompleted: true,
+      advancedCompleted: false,
+      lastViewed: 'basic',
+      neverShowModal: false,
+    })
     render(<App />)
     expect(screen.getByText('SKU Generator')).toBeInTheDocument()
   })
 
-  it('auto-starts tour on first page load when tour not completed', () => {
-    mockHasTourCompleted.mockReturnValue(false)
+  it('shows TourSelectionModal on first page load when no tours completed', async () => {
+    mockGetTourState.mockReturnValue({
+      basicCompleted: false,
+      advancedCompleted: false,
+      lastViewed: null,
+      neverShowModal: false,
+    })
     render(<App />)
 
-    // Tour should not start immediately
-    expect(mockStartGuidedTour).not.toHaveBeenCalled()
+    // Modal should not show immediately
+    expect(screen.queryByTestId('tour-selection-modal')).not.toBeInTheDocument()
 
     // Advance timer past the 750ms delay
-    vi.advanceTimersByTime(750)
+    await act(async () => {
+      vi.advanceTimersByTime(750)
+    })
 
-    expect(mockStartGuidedTour).toHaveBeenCalledTimes(1)
+    // Modal should now be visible
+    expect(screen.getByTestId('tour-selection-modal')).toBeInTheDocument()
+    expect(screen.getByText('Welcome to SKU Generator!')).toBeInTheDocument()
   })
 
-  it('does not auto-start tour when tour already completed', async () => {
-    mockHasTourCompleted.mockReturnValue(true)
+  it('does not show TourSelectionModal when basic tour already completed', async () => {
+    mockGetTourState.mockReturnValue({
+      basicCompleted: true,
+      advancedCompleted: false,
+      lastViewed: 'basic',
+      neverShowModal: false,
+    })
     render(<App />)
 
     // Advance timer past the delay
-    vi.advanceTimersByTime(1000)
+    await act(async () => {
+      vi.advanceTimersByTime(1000)
+    })
 
-    // Tour should not have been started
+    // Modal should not be shown
+    expect(screen.queryByTestId('tour-selection-modal')).not.toBeInTheDocument()
+  })
+
+  it('does not show TourSelectionModal when advanced tour already completed', async () => {
+    mockGetTourState.mockReturnValue({
+      basicCompleted: false,
+      advancedCompleted: true,
+      lastViewed: 'advanced',
+      neverShowModal: false,
+    })
+    render(<App />)
+
+    // Advance timer past the delay
+    await act(async () => {
+      vi.advanceTimersByTime(1000)
+    })
+
+    // Modal should not be shown
+    expect(screen.queryByTestId('tour-selection-modal')).not.toBeInTheDocument()
+  })
+
+  it('does not show TourSelectionModal when neverShowModal is true', async () => {
+    mockGetTourState.mockReturnValue({
+      basicCompleted: false,
+      advancedCompleted: false,
+      lastViewed: null,
+      neverShowModal: true,
+    })
+    render(<App />)
+
+    // Advance timer past the delay
+    await act(async () => {
+      vi.advanceTimersByTime(1000)
+    })
+
+    // Modal should not be shown
+    expect(screen.queryByTestId('tour-selection-modal')).not.toBeInTheDocument()
+  })
+
+  it('starts basic tour when user clicks Start Basic Tour', async () => {
+    mockGetTourState.mockReturnValue({
+      basicCompleted: false,
+      advancedCompleted: false,
+      lastViewed: null,
+      neverShowModal: false,
+    })
+    render(<App />)
+
+    // Advance timer to show modal
+    await act(async () => {
+      vi.advanceTimersByTime(750)
+    })
+
+    // Click Start Basic Tour
+    const basicTourButton = screen.getByTestId('start-basic-tour')
+    await act(async () => {
+      fireEvent.click(basicTourButton)
+    })
+
+    // Modal should close
+    expect(screen.queryByTestId('tour-selection-modal')).not.toBeInTheDocument()
+
+    // Advance timer to allow tour to start (100ms delay)
+    await act(async () => {
+      vi.advanceTimersByTime(100)
+    })
+
+    // Tour should have been started with 'basic' type
+    expect(mockStartGuidedTour).toHaveBeenCalledWith('basic')
+  })
+
+  it('starts advanced tour when user clicks Start Advanced Tour', async () => {
+    mockGetTourState.mockReturnValue({
+      basicCompleted: false,
+      advancedCompleted: false,
+      lastViewed: null,
+      neverShowModal: false,
+    })
+    render(<App />)
+
+    // Advance timer to show modal
+    await act(async () => {
+      vi.advanceTimersByTime(750)
+    })
+
+    // Click Start Advanced Tour
+    const advancedTourButton = screen.getByTestId('start-advanced-tour')
+    await act(async () => {
+      fireEvent.click(advancedTourButton)
+    })
+
+    // Modal should close
+    expect(screen.queryByTestId('tour-selection-modal')).not.toBeInTheDocument()
+
+    // Advance timer to allow tour to start (100ms delay)
+    await act(async () => {
+      vi.advanceTimersByTime(100)
+    })
+
+    // Tour should have been started with 'advanced' type
+    expect(mockStartGuidedTour).toHaveBeenCalledWith('advanced')
+  })
+
+  it('closes modal without starting tour when user clicks Skip for now', async () => {
+    mockGetTourState.mockReturnValue({
+      basicCompleted: false,
+      advancedCompleted: false,
+      lastViewed: null,
+      neverShowModal: false,
+    })
+    render(<App />)
+
+    // Advance timer to show modal
+    await act(async () => {
+      vi.advanceTimersByTime(750)
+    })
+
+    // Click Skip for now
+    const skipLink = screen.getByTestId('skip-tour-link')
+    await act(async () => {
+      fireEvent.click(skipLink)
+    })
+
+    // Modal should close
+    expect(screen.queryByTestId('tour-selection-modal')).not.toBeInTheDocument()
+
+    // Advance timer past any potential delays
+    await act(async () => {
+      vi.advanceTimersByTime(1000)
+    })
+
+    // Tour should NOT have been started
     expect(mockStartGuidedTour).not.toHaveBeenCalled()
   })
 })

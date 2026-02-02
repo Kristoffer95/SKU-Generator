@@ -118,7 +118,7 @@
         "Modal onSelectTour starts selected tour and closes modal",
         "Modal onClose sets showTourModal to false"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "tour-interactive-css",

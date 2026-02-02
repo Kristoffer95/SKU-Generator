@@ -1,3 +1,23 @@
+## tour-first-launch - Update App.tsx first-launch logic to show TourSelectionModal
+
+### Key decisions:
+- Replaced direct tour auto-start with TourSelectionModal for first-time users
+- Added showTourModal state to control modal visibility
+- useEffect checks getTourState() for basicCompleted, advancedCompleted, and neverShowModal
+- Shows modal after 750ms delay if neither tour completed AND neverShowModal is false
+- handleSelectTour closes modal, then starts selected tour after 100ms (allows modal close animation)
+- Modal onOpenChange directly wired to setShowTourModal for close handling
+
+### Files changed:
+- src/App.tsx: Added TourSelectionModal import, showTourModal state, useEffect for first-time detection, handleSelectTour handler (60 lines total)
+- src/App.test.tsx: Rewrote tests for new modal-based flow (8 tests: modal visibility, tour selection, skip behavior)
+- prd.json: Marked task as passes: true
+
+### Notes:
+- All 1495 tests pass (5 new tests in App.test.tsx)
+- Typecheck passes
+- Lint warnings are pre-existing issues in build output files
+
 ## tour-interactive-css - Add CSS for interactive tour hints
 
 ### Key decisions:
