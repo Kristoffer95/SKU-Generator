@@ -122,6 +122,24 @@ export function ColoredDropdownEditor({
     []
   );
 
+  // Prevent blur from bubbling to the spreadsheet when focus moves to dropdown content
+  // The dropdown content is rendered via a portal outside the spreadsheet table,
+  // which causes react-spreadsheet to think focus was lost and exit edit mode.
+  // We intercept the blur event and stop propagation if focus is going to our dropdown.
+  const handleBlur = useCallback((event: React.FocusEvent) => {
+    const relatedTarget = event.relatedTarget as HTMLElement | null;
+    if (relatedTarget) {
+      // Check if focus is moving to a Radix portal (dropdown content)
+      const isRadixPortal = relatedTarget.closest('[data-radix-popper-content-wrapper]');
+      // Also check for our dropdown content specifically
+      const isDropdownContent = relatedTarget.closest('[data-testid="colored-dropdown-content"]');
+      if (isRadixPortal || isDropdownContent) {
+        // Focus is moving to our dropdown, prevent blur from bubbling
+        event.stopPropagation();
+      }
+    }
+  }, []);
+
   // Get color for current value to display in trigger
   const currentColor = currentValue ? colors[String(currentValue)] : undefined;
 
@@ -129,6 +147,7 @@ export function ColoredDropdownEditor({
     <div
       className="Spreadsheet__data-editor w-full h-full"
       onKeyDown={handleKeyDown}
+      onBlur={handleBlur}
       data-testid="colored-dropdown-editor"
     >
       <DropdownMenu open={open} onOpenChange={handleOpenChange} modal={false}>

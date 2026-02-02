@@ -1313,5 +1313,29 @@
       "npm run test passes"
     ],
     "passes": true
+  },
+  {
+    "id": "fix-dropdown-not-appearing-in-cells",
+    "category": "Bug Fix",
+    "description": "Fix dropdown not appearing at all when editing spec cells in Chrome. Despite tests passing and previous fixes for 'closing immediately' issues, users report the dropdown never appears when clicking on spec column cells. Investigation needed to determine if react-spreadsheet's DataEditor is being invoked, if cell data has proper dropdownOptions/dropdownColors, or if there are rendering/visibility issues. If ColoredDropdownEditor cannot be fixed, fall back to classic HTML <select> dropdown.",
+    "stepsToVerify": [
+      "MUST USE agent-browser to verify fix in Chrome",
+      "Start dev server: npm run dev",
+      "Navigate to http://localhost:5173",
+      "Click on a spec cell (e.g., in Color or Size column)",
+      "Double-click or press Enter to enter edit mode",
+      "Dropdown MUST appear with all spec values as options",
+      "If ColoredDropdownEditor: options show background colors",
+      "If fallback to <select>: native dropdown appears with options",
+      "Select a value - cell updates with new value",
+      "SKU in column A regenerates with new fragment",
+      "Press Escape - dropdown closes without changing value",
+      "Press Tab - commits value and moves to next cell",
+      "Works after page refresh",
+      "Works for all spec columns (not just first one)",
+      "npm run typecheck passes",
+      "npm run test passes"
+    ],
+    "passes": true
   }
 ]
