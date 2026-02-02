@@ -19,7 +19,7 @@ function App() {
 
   // Auto-start guided tour on first page load
   useEffect(() => {
-    if (!hasTourCompleted()) {
+    if (!hasTourCompleted("basic")) {
       // Delay to ensure all elements are rendered before starting tour
       const timeout = setTimeout(() => {
         startGuidedTour()

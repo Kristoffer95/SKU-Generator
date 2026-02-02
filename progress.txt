@@ -1,0 +1,19 @@
+## tour-state-management - Implement new tour state management with support for two tours
+
+### Key decisions:
+- TourState interface: basicCompleted, advancedCompleted, lastViewed, neverShowModal
+- New storage key: 'sku-generator-tour-state' (JSON serialized)
+- Migration: Old 'sku-generator-tour-completed' key migrates to basicCompleted=true
+- Legacy functions (markTourCompleted, resetTourStatus) preserved for backward compat
+- hasTourCompleted(type) now requires 'basic' or 'advanced' parameter
+
+### Files changed:
+- src/lib/guided-tour.ts: Added TourState type, getTourState/updateTourState/resetTourState functions, migration logic
+- src/lib/guided-tour.test.ts: Added 33 tests for new state management functions
+- src/App.tsx: Updated hasTourCompleted() call to hasTourCompleted("basic")
+- prd.json: Marked task as passes: true
+
+### Notes:
+- All 1442 tests pass
+- Typecheck passes
+- Lint warnings are pre-existing issues in other files

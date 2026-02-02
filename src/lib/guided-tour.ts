@@ -1,18 +1,98 @@
 import { driver, DriveStep, Driver } from "driver.js"
 import "driver.js/dist/driver.css"
 
-const TOUR_COMPLETED_KEY = "sku-generator-tour-completed"
+// ============ TOUR STATE MANAGEMENT ============
 
-export function hasTourCompleted(): boolean {
-  return localStorage.getItem(TOUR_COMPLETED_KEY) === "true"
+const TOUR_STATE_KEY = "sku-generator-tour-state"
+const OLD_TOUR_COMPLETED_KEY = "sku-generator-tour-completed"
+
+export type TourType = "basic" | "advanced"
+
+export interface TourState {
+  basicCompleted: boolean
+  advancedCompleted: boolean
+  lastViewed: TourType | null
+  neverShowModal: boolean
 }
 
+const DEFAULT_TOUR_STATE: TourState = {
+  basicCompleted: false,
+  advancedCompleted: false,
+  lastViewed: null,
+  neverShowModal: false,
+}
+
+/**
+ * Migrate from old single-tour storage key to new two-tour state.
+ * If user completed the old tour, mark basic tour as completed.
+ */
+function migrateFromOldTourKey(): TourState | null {
+  const oldValue = localStorage.getItem(OLD_TOUR_COMPLETED_KEY)
+  if (oldValue === "true") {
+    localStorage.removeItem(OLD_TOUR_COMPLETED_KEY)
+    return {
+      ...DEFAULT_TOUR_STATE,
+      basicCompleted: true,
+      lastViewed: "basic",
+    }
+  }
+  // Clean up old key even if not "true"
+  if (oldValue !== null) {
+    localStorage.removeItem(OLD_TOUR_COMPLETED_KEY)
+  }
+  return null
+}
+
+export function getTourState(): TourState {
+  // Check for migration from old key first
+  const migratedState = migrateFromOldTourKey()
+  if (migratedState) {
+    localStorage.setItem(TOUR_STATE_KEY, JSON.stringify(migratedState))
+    return migratedState
+  }
+
+  const stored = localStorage.getItem(TOUR_STATE_KEY)
+  if (!stored) {
+    return { ...DEFAULT_TOUR_STATE }
+  }
+
+  try {
+    const parsed = JSON.parse(stored) as Partial<TourState>
+    return {
+      basicCompleted: parsed.basicCompleted ?? false,
+      advancedCompleted: parsed.advancedCompleted ?? false,
+      lastViewed: parsed.lastViewed ?? null,
+      neverShowModal: parsed.neverShowModal ?? false,
+    }
+  } catch {
+    return { ...DEFAULT_TOUR_STATE }
+  }
+}
+
+export function updateTourState(updates: Partial<TourState>): void {
+  const current = getTourState()
+  const newState = { ...current, ...updates }
+  localStorage.setItem(TOUR_STATE_KEY, JSON.stringify(newState))
+}
+
+export function resetTourState(): void {
+  localStorage.removeItem(TOUR_STATE_KEY)
+  localStorage.removeItem(OLD_TOUR_COMPLETED_KEY)
+}
+
+export function hasTourCompleted(type: TourType): boolean {
+  const state = getTourState()
+  return type === "basic" ? state.basicCompleted : state.advancedCompleted
+}
+
+// Legacy function for backward compatibility - marks basic tour as completed
 export function markTourCompleted(): void {
-  localStorage.setItem(TOUR_COMPLETED_KEY, "true")
+  updateTourState({ basicCompleted: true, lastViewed: "basic" })
 }
 
+// Legacy function for backward compatibility
 export function resetTourStatus(): void {
-  localStorage.removeItem(TOUR_COMPLETED_KEY)
+  resetTourState()
 }
 
 // Dialog opener registry - allows components to register callbacks for opening dialogs

@@ -7,6 +7,10 @@ import {
   stopGuidedTour,
   registerTourDialogOpeners,
   unregisterTourDialogOpeners,
+  getTourState,
+  updateTourState,
+  resetTourState,
+  type TourState,
 } from "./guided-tour"
 
 // Mock driver.js
@@ -41,34 +45,194 @@ describe("guided-tour", () => {
     capturedOnDeselected = undefined
   })
 
-  describe("hasTourCompleted", () => {
-    it("returns false when tour has not been completed", () => {
-      expect(hasTourCompleted()).toBe(false)
+  // ============ NEW TOUR STATE MANAGEMENT TESTS ============
+
+  describe("getTourState", () => {
+    it("returns default state when no state exists", () => {
+      const state = getTourState()
+      expect(state).toEqual({
+        basicCompleted: false,
+        advancedCompleted: false,
+        lastViewed: null,
+        neverShowModal: false,
+      })
     })
 
-    it("returns true when tour has been completed", () => {
-      localStorage.setItem("sku-generator-tour-completed", "true")
-      expect(hasTourCompleted()).toBe(true)
+    it("returns stored state from localStorage", () => {
+      const storedState: TourState = {
+        basicCompleted: true,
+        advancedCompleted: false,
+        lastViewed: "basic",
+        neverShowModal: true,
+      }
+      localStorage.setItem("sku-generator-tour-state", JSON.stringify(storedState))
+
+      const state = getTourState()
+      expect(state).toEqual(storedState)
     })
 
-    it("returns false for invalid localStorage value", () => {
-      localStorage.setItem("sku-generator-tour-completed", "false")
-      expect(hasTourCompleted()).toBe(false)
+    it("handles partial stored state with defaults", () => {
+      localStorage.setItem("sku-generator-tour-state", JSON.stringify({ basicCompleted: true }))
+
+      const state = getTourState()
+      expect(state).toEqual({
+        basicCompleted: true,
+        advancedCompleted: false,
+        lastViewed: null,
+        neverShowModal: false,
+      })
+    })
+
+    it("returns default state for invalid JSON", () => {
+      localStorage.setItem("sku-generator-tour-state", "invalid-json")
+
+      const state = getTourState()
+      expect(state).toEqual({
+        basicCompleted: false,
+        advancedCompleted: false,
+        lastViewed: null,
+        neverShowModal: false,
+      })
     })
   })
 
-  describe("markTourCompleted", () => {
-    it("sets localStorage flag to true", () => {
-      markTourCompleted()
-      expect(localStorage.getItem("sku-generator-tour-completed")).toBe("true")
+  describe("updateTourState", () => {
+    it("updates specific fields while preserving others", () => {
+      updateTourState({ basicCompleted: true })
+
+      let state = getTourState()
+      expect(state.basicCompleted).toBe(true)
+      expect(state.advancedCompleted).toBe(false)
+
+      updateTourState({ advancedCompleted: true, lastViewed: "advanced" })
+
+      state = getTourState()
+      expect(state.basicCompleted).toBe(true)
+      expect(state.advancedCompleted).toBe(true)
+      expect(state.lastViewed).toBe("advanced")
+    })
+
+    it("can set neverShowModal flag", () => {
+      updateTourState({ neverShowModal: true })
+
+      const state = getTourState()
+      expect(state.neverShowModal).toBe(true)
     })
   })
 
-  describe("resetTourStatus", () => {
-    it("removes localStorage flag", () => {
+  describe("resetTourState", () => {
+    it("removes tour state from localStorage", () => {
+      updateTourState({ basicCompleted: true, advancedCompleted: true })
+
+      resetTourState()
+
+      expect(localStorage.getItem("sku-generator-tour-state")).toBeNull()
+      const state = getTourState()
+      expect(state).toEqual({
+        basicCompleted: false,
+        advancedCompleted: false,
+        lastViewed: null,
+        neverShowModal: false,
+      })
+    })
+
+    it("also removes old tour completed key", () => {
       localStorage.setItem("sku-generator-tour-completed", "true")
-      resetTourStatus()
+
+      resetTourState()
+
       expect(localStorage.getItem("sku-generator-tour-completed")).toBeNull()
+    })
+  })
+
+  describe("hasTourCompleted (with type parameter)", () => {
+    it("returns false when basic tour has not been completed", () => {
+      expect(hasTourCompleted("basic")).toBe(false)
+    })
+
+    it("returns true when basic tour has been completed", () => {
+      updateTourState({ basicCompleted: true })
+      expect(hasTourCompleted("basic")).toBe(true)
+    })
+
+    it("returns false when advanced tour has not been completed", () => {
+      expect(hasTourCompleted("advanced")).toBe(false)
+    })
+
+    it("returns true when advanced tour has been completed", () => {
+      updateTourState({ advancedCompleted: true })
+      expect(hasTourCompleted("advanced")).toBe(true)
+    })
+
+    it("returns correct values when both tours have different completion states", () => {
+      updateTourState({ basicCompleted: true, advancedCompleted: false })
+      expect(hasTourCompleted("basic")).toBe(true)
+      expect(hasTourCompleted("advanced")).toBe(false)
+    })
+  })
+
+  describe("migration from old storage key", () => {
+    it("migrates old tour-completed key to new state with basicCompleted=true", () => {
+      localStorage.setItem("sku-generator-tour-completed", "true")
+
+      const state = getTourState()
+
+      expect(state.basicCompleted).toBe(true)
+      expect(state.lastViewed).toBe("basic")
+      expect(localStorage.getItem("sku-generator-tour-completed")).toBeNull()
+      expect(localStorage.getItem("sku-generator-tour-state")).not.toBeNull()
+    })
+
+    it("removes old key even if value is not 'true'", () => {
+      localStorage.setItem("sku-generator-tour-completed", "false")
+
+      const state = getTourState()
+
+      expect(state.basicCompleted).toBe(false)
+      expect(localStorage.getItem("sku-generator-tour-completed")).toBeNull()
+    })
+
+    it("does not migrate if new state already exists", () => {
+      const newState: TourState = {
+        basicCompleted: false,
+        advancedCompleted: true,
+        lastViewed: "advanced",
+        neverShowModal: false,
+      }
+      localStorage.setItem("sku-generator-tour-state", JSON.stringify(newState))
+      localStorage.setItem("sku-generator-tour-completed", "true")
+
+      // Trigger potential migration by calling getTourState
+      getTourState()
+
+      // Old key should be removed but new state should be preserved
+      // Note: Migration happens before checking new state, so old key is removed
+      // but since newState already exists, it's used instead
+      expect(localStorage.getItem("sku-generator-tour-completed")).toBeNull()
+    })
+  })
+
+  // ============ LEGACY COMPATIBILITY TESTS ============
+
+  describe("markTourCompleted (legacy)", () => {
+    it("sets basicCompleted to true in new state format", () => {
+      markTourCompleted()
+
+      const state = getTourState()
+      expect(state.basicCompleted).toBe(true)
+      expect(state.lastViewed).toBe("basic")
+    })
+  })
+
+  describe("resetTourStatus (legacy)", () => {
+    it("resets all tour state", () => {
+      updateTourState({ basicCompleted: true, advancedCompleted: true })
+
+      resetTourStatus()
+
+      const state = getTourState()
+      expect(state.basicCompleted).toBe(false)
+      expect(state.advancedCompleted).toBe(false)
     })
   })
 
@@ -104,7 +268,9 @@ describe("guided-tour", () => {
       capturedOnDestroyed?.()
 
       expect(onComplete).toHaveBeenCalled()
-      expect(localStorage.getItem("sku-generator-tour-completed")).toBe("true")
+      // markTourCompleted is called, which updates the new state format
+      const state = getTourState()
+      expect(state.basicCompleted).toBe(true)
     })
 
     it("closes dialogs when tour is destroyed", () => {

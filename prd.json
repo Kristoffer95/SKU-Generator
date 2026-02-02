@@ -1,0 +1,150 @@
+{
+  "items": [
+    {
+      "id": "readme-comprehensive",
+      "category": "Documentation",
+      "description": "Create comprehensive README.md with all features documented",
+      "stepsToVerify": [
+        "README.md exists in project root",
+        "Has header with project title and badges (React, TypeScript, Vite)",
+        "Has brief description with value proposition",
+        "Has screenshots section with placeholders",
+        "Has features overview organized by category (Specification Management, Spreadsheet Features, SKU Generation, Advanced Features, Multi-Sheet Support, Import/Export, Guided Tour)",
+        "Has Getting Started section with prerequisites and installation steps",
+        "Has Development Commands table (dev, build, typecheck, lint, test)",
+        "Has Tech Stack section listing all technologies",
+        "Has Keyboard Shortcuts reference table",
+        "Has Project Structure directory overview",
+        "Has Contributing guidelines",
+        "Has License section"
+      ],
+      "passes": false
+    },
+    {
+      "id": "tour-state-management",
+      "category": "Tour",
+      "description": "Implement new tour state management with support for two tours",
+      "stepsToVerify": [
+        "TourState interface defined with basicCompleted, advancedCompleted, lastViewed, neverShowModal fields",
+        "New storage key 'sku-generator-tour-state' used",
+        "Migration from old 'sku-generator-tour-completed' key implemented",
+        "getTourState(), updateTourState(), resetTourState() functions exported",
+        "hasTourCompleted(type) accepts 'basic' or 'advanced' parameter"
+      ],
+      "passes": true
+    },
+    {
+      "id": "tour-data-attributes",
+      "category": "Tour",
+      "description": "Add data-tour attributes to all components needed for Advanced Tour",
+      "stepsToVerify": [
+        "SpreadsheetToolbar has data-tour on: undo, redo, add-row, auto-populate, separate-blocks, cell-color, text-color, bold, italic, align buttons, checkbox",
+        "ColumnLetterHeaders has data-tour='column-letters'",
+        "DraggableColumnHeaders has data-tour='column-headers'",
+        "ResizableRowIndicators has data-tour='row-indicators'",
+        "ValidationPanel has data-tour='validation-panel'",
+        "GroupedSheetTabs has data-tour='add-sheet-button' and 'add-group-button'"
+      ],
+      "passes": false
+    },
+    {
+      "id": "tour-basic-steps",
+      "category": "Tour",
+      "description": "Define Basic Tour with 18 steps covering core workflow",
+      "stepsToVerify": [
+        "basicTourSteps array defined with 18 steps",
+        "Phase 1 Foundation (4 steps): Welcome, Sidebar, Spreadsheet, Checkpoint",
+        "Phase 2 Create SKU (8 steps): Add spec, Dialog, Name input, Values, Spec card, Add column, Spreadsheet usage, Checkpoint",
+        "Phase 3 Core (6 steps): Settings button, Settings dialog, Sheet tabs, Add sheet, Import/Export, Completion",
+        "Interactive steps have onNextClick callbacks to verify user actions",
+        "Dialog orchestration opens AddSpecDialog for steps 5-8 and SettingsDialog for steps 13-14"
+      ],
+      "passes": false
+    },
+    {
+      "id": "tour-advanced-steps",
+      "category": "Tour",
+      "description": "Define Advanced Tour with 28 steps covering all features",
+      "stepsToVerify": [
+        "advancedTourSteps array defined with 28 steps",
+        "Phase 1 Toolbar (10 steps): Welcome, Toolbar overview, Undo/Redo, Add Row, Auto Populate, Separate Blocks, Cell color, Text color, Text formatting, Checkbox",
+        "Phase 2 Column/Row Ops (8 steps): Column letters, Drag reorder, Resize, Context menu, Pin columns, Row ops, Pin rows, Checkpoint",
+        "Phase 3 Import/Export (6 steps): Import, Export options, Export preview, Sheet groups, Spec value colors, Checkpoint",
+        "Phase 4 Validation/Shortcuts (4 steps): Validation panel, Click to navigate, Keyboard shortcuts, Completion",
+        "Interactive steps have onNextClick callbacks to verify user actions"
+      ],
+      "passes": false
+    },
+    {
+      "id": "tour-selection-modal",
+      "category": "Tour",
+      "description": "Create TourSelectionModal component for first-time users",
+      "stepsToVerify": [
+        "TourSelectionModal.tsx created in src/components/",
+        "Modal shows two side-by-side cards: Basic Tour and Advanced Tour",
+        "Each card has description and bullet points of features covered",
+        "Basic Tour card has 'Start Basic Tour' button",
+        "Advanced Tour card has 'Start Advanced Tour' button",
+        "'Skip for now' link at bottom closes modal",
+        "'Don't show this again' checkbox sets neverShowModal in state",
+        "TourSelectionModal.test.tsx created with tests"
+      ],
+      "passes": false
+    },
+    {
+      "id": "tour-button-dropdown",
+      "category": "Tour",
+      "description": "Convert GuidedTourButton to dropdown with tour selection",
+      "stepsToVerify": [
+        "GuidedTourButton renders as DropdownMenu",
+        "Dropdown has 'Basic Tour' option with checkmark if completed",
+        "Dropdown has 'Advanced Tour' option with checkmark if completed",
+        "Dropdown has separator and 'Reset Tour Progress' option",
+        "Clicking Basic Tour starts basic tour",
+        "Clicking Advanced Tour starts advanced tour",
+        "Reset clears tour state"
+      ],
+      "passes": false
+    },
+    {
+      "id": "tour-first-launch",
+      "category": "Tour",
+      "description": "Update App.tsx first-launch logic to show TourSelectionModal",
+      "stepsToVerify": [
+        "App.tsx imports TourSelectionModal",
+        "showTourModal state added",
+        "useEffect checks if neither tour completed and neverShowModal is false",
+        "If first time user, shows TourSelectionModal after 750ms delay",
+        "Modal onSelectTour starts selected tour and closes modal",
+        "Modal onClose sets showTourModal to false"
+      ],
+      "passes": false
+    },
+    {
+      "id": "tour-interactive-css",
+      "category": "Tour",
+      "description": "Add CSS for interactive tour hints",
+      "stepsToVerify": [
+        "src/index.css has .tour-pulse class with animation",
+        "@keyframes tour-pulse defined with box-shadow pulsing effect",
+        "Animation uses brand color (blue) for pulse glow"
+      ],
+      "passes": false
+    },
+    {
+      "id": "tour-tests-update",
+      "category": "Tour",
+      "description": "Update guided-tour.test.ts for two-tour system",
+      "stepsToVerify": [
+        "Tests for getTourState(), updateTourState(), resetTourState()",
+        "Tests for hasTourCompleted('basic') and hasTourCompleted('advanced')",
+        "Tests for basicTourSteps array (18 steps)",
+        "Tests for advancedTourSteps array (28 steps)",
+        "Tests for startGuidedTour('basic') and startGuidedTour('advanced')",
+        "Tests for migration from old storage key",
+        "All tests pass with npm run test"
+      ],
+      "passes": false
+    }
+  ]
+}
