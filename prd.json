@@ -144,7 +144,7 @@
         "Tests for migration from old storage key",
         "All tests pass with npm run test"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }

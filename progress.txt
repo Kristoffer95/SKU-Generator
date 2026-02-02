@@ -1,3 +1,21 @@
+## tour-tests-update - Update guided-tour.test.ts for two-tour system
+
+### Key decisions:
+- Tests already comprehensive from previous tour tasks, no changes needed
+- Verified all 49 tests in guided-tour.test.ts pass
+- Tests cover: getTourState, updateTourState, resetTourState, hasTourCompleted('basic'/'advanced')
+- Tests cover: basicTourSteps (18 steps), advancedTourSteps (28 steps)
+- Tests cover: startGuidedTour('basic'/'advanced'), migration from old storage key
+- Full test suite (1495 tests) passes
+
+### Files changed:
+- prd.json: Marked task as passes: true
+
+### Notes:
+- All 1495 tests pass
+- Typecheck passes
+- Lint warnings are pre-existing issues in build output files
+
 ## tour-first-launch - Update App.tsx first-launch logic to show TourSelectionModal
 
 ### Key decisions:
