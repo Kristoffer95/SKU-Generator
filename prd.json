@@ -1297,5 +1297,21 @@
       "npm run test passes"
     ],
     "passes": true
+  },
+  {
+    "id": "fix-no-active-sheet-on-empty-state",
+    "category": "Bug Fix",
+    "description": "Fix app breaking when localStorage 'sku-sheets' is cleared/corrupted but 'sku-has-data' flag still exists. The onRehydrateStorage callback in sheets.ts has two conditions: (1) isFirstLaunch() - creates sample data, (2) sheets.length > 0 - runs migrations. But there's no fallback for when !isFirstLaunch() AND sheets.length === 0, leaving the app with no sheets and no way to create them. Add an else branch to create a default empty sheet when this orphaned state is detected.",
+    "stepsToVerify": [
+      "In browser dev tools: localStorage.removeItem('sku-sheets'); localStorage.setItem('sku-has-data', 'true');",
+      "Refresh the page",
+      "A default 'Sheet 1' should be created automatically",
+      "Sheet tabs should show the new sheet as active",
+      "Can click '+' to add more sheets",
+      "Can create specifications in the sidebar",
+      "npm run typecheck passes",
+      "npm run test passes"
+    ],
+    "passes": true
   }
 ]

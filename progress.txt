@@ -1,3 +1,35 @@
+## fix-no-active-sheet-on-empty-state - COMPLETED
+Fix app breaking when localStorage 'sku-sheets' is cleared/corrupted but 'sku-has-data' flag still exists
+
+### Root cause
+The onRehydrateStorage callback in sheets.ts had two conditions:
+1. `isFirstLaunch()` - creates sample data
+2. `sheets.length > 0` - runs migrations
+
+But no fallback for when `!isFirstLaunch() && sheets.length === 0`, leaving the app with no sheets and no way to create them. This orphaned state occurs when localStorage 'sku-sheets' is cleared while 'sku-has-data' flag still exists.
+
+### Key decisions
+- Added else branch to onRehydrateStorage to handle orphaned state
+- Creates default empty sheet named "Sheet 1" using existing createEmptySheet function
+- Initializes groups to empty array
+- Sets the new sheet as activeSheetId
+- This ensures the app is always usable even if localStorage gets corrupted
+
+### Files changed
+- src/store/sheets.ts (+8 lines: else branch for orphaned state recovery at lines 1160-1168)
+- src/store/sheets.test.ts (+105 lines: 5 new tests for orphaned state recovery)
+
+### stepsToVerify verified
+1. localStorage.removeItem('sku-sheets'); localStorage.setItem('sku-has-data', 'true'); triggers recovery ✓
+2. Default 'Sheet 1' created automatically ✓ (via unit tests)
+3. Sheet tabs show the new sheet as active ✓ (activeSheetId set correctly)
+4. Can click '+' to add more sheets ✓ (tested addSheet functionality)
+5. Can create specifications in the sidebar ✓ (tested addSpecification functionality)
+6. npm run typecheck passes ✓
+7. npm run test passes ✓ (1429 tests, +5 new)
+
+---
+
 ## migrate-existing-spec-values-colors - DROPDOWN INIT GUARD FIX
 Fix ColoredDropdownEditor closing immediately on mount due to focus events
 

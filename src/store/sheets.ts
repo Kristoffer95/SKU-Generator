@@ -1157,6 +1157,15 @@ export const useSheetsStore = create<SheetsState>()(
           state.sheets = ensureSpecValueColors(state.sheets);
 
           markAsInitialized();
+        } else if (state && state.sheets.length === 0) {
+          // Orphaned state recovery: User has initialized before (!isFirstLaunch)
+          // but sheets array is empty (localStorage 'sku-sheets' was cleared/corrupted
+          // while 'sku-has-data' flag still exists). Create a default empty sheet
+          // so the app is usable.
+          const defaultSheet = createEmptySheet('Sheet 1');
+          state.sheets = [defaultSheet];
+          state.groups = [];
+          state.activeSheetId = defaultSheet.id;
         }
       },
     }
