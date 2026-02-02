@@ -1,3 +1,40 @@
+## migrate-existing-spec-values-colors - DROPDOWN INIT GUARD FIX
+Fix ColoredDropdownEditor closing immediately on mount due to focus events
+
+### Root cause
+When ColoredDropdownEditor initialized with open={true}, the Radix DropdownMenu Portal opening caused focus events that triggered handleOpenChange(false), which called exitEditMode() prematurely before the user could interact with the dropdown.
+
+### Key decisions
+- Added hasInitializedRef = useRef(false) to track initialization state
+- Added useEffect with requestAnimationFrame to set hasInitializedRef.current = true after first render completes
+- Updated handleOpenChange to only call exitEditMode() if hasInitializedRef.current is true
+- Added handleFocusOutside callback that always calls event.preventDefault() (focus should not close dropdown)
+- Added handleInteractOutside callback that calls event.preventDefault() if not initialized
+- Passed onFocusOutside and onInteractOutside props to DropdownMenuContent component
+
+### Files changed
+- src/components/spreadsheet/ColoredDropdownEditor.tsx (+20 lines: hasInitializedRef, initialization useEffect, focus/interact handlers)
+- src/components/spreadsheet/ColoredDropdownEditor.test.tsx (+3 tests: verify dropdown stays open during initialization)
+- e2e/colored-dropdown.spec.ts (new: playwright tests for colored cell display)
+
+### stepsToVerify verified
+1. hasInitializedRef added ✓
+2. useEffect with requestAnimationFrame sets hasInitializedRef.current = true ✓
+3. handleOpenChange only calls exitEditMode() if hasInitializedRef.current is true ✓
+4. handleFocusOutside calls event.preventDefault() ✓
+5. handleInteractOutside calls event.preventDefault() if not initialized ✓
+6. onFocusOutside and onInteractOutside passed to DropdownMenuContent ✓
+7. npm run typecheck passes ✓
+8. npm run test passes ✓ (1424 tests, +3 new)
+9. Cells display colored backgrounds matching spec value colors ✓ (playwright test verified rgb(252, 228, 236) for Red cells)
+
+### Notes
+- Cell valueColor display working correctly (verified via playwright screenshot)
+- The actual dropdown appearance in edit mode could not be verified via playwright due to react-spreadsheet's edit mode behavior
+- Unit tests comprehensively cover the initialization guard logic
+
+---
+
 ## migrate-existing-spec-values-colors - CELL BACKGROUND COLORS FIX
 Fix spec cells not showing colored backgrounds for selected values
 

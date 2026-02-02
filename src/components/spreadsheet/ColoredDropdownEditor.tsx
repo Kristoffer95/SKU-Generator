@@ -38,12 +38,21 @@ export function ColoredDropdownEditor({
 }: ColoredDropdownEditorProps) {
   const [open, setOpen] = useState(true);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const hasInitializedRef = useRef(false);
   const currentValue = cell?.value ?? "";
 
   // Auto-open and focus on mount
   useEffect(() => {
     // Focus the trigger to enable keyboard navigation
     triggerRef.current?.focus();
+  }, []);
+
+  // Mark as initialized after first render to prevent premature close
+  useEffect(() => {
+    const rafId = requestAnimationFrame(() => {
+      hasInitializedRef.current = true;
+    });
+    return () => cancelAnimationFrame(rafId);
   }, []);
 
   // Handle selecting an option
@@ -86,11 +95,31 @@ export function ColoredDropdownEditor({
   const handleOpenChange = useCallback(
     (isOpen: boolean) => {
       setOpen(isOpen);
-      if (!isOpen) {
+      // Only exit edit mode if we've been initialized
+      // This prevents premature closing due to focus events during mount
+      if (!isOpen && hasInitializedRef.current) {
         exitEditMode();
       }
     },
     [exitEditMode]
+  );
+
+  // Prevent focus outside from closing the dropdown during initialization
+  const handleFocusOutside = useCallback(
+    (event: Event) => {
+      event.preventDefault();
+    },
+    []
+  );
+
+  // Prevent interact outside from closing the dropdown during initialization
+  const handleInteractOutside = useCallback(
+    (event: Event) => {
+      if (!hasInitializedRef.current) {
+        event.preventDefault();
+      }
+    },
+    []
   );
 
   // Get color for current value to display in trigger
@@ -122,6 +151,8 @@ export function ColoredDropdownEditor({
           align="start"
           className="w-[var(--radix-dropdown-menu-trigger-width)] p-1"
           data-testid="colored-dropdown-content"
+          onFocusOutside={handleFocusOutside}
+          onInteractOutside={handleInteractOutside}
         >
           {/* Clear option */}
           <DropdownMenuItem

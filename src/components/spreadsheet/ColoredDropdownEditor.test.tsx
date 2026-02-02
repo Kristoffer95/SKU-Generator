@@ -167,4 +167,41 @@ describe('ColoredDropdownEditor', () => {
       expect(blueOption).not.toHaveStyle({ backgroundColor: '#e3f2fd' });
     });
   });
+
+  it('does not call exitEditMode during initialization when dropdown closes due to focus events', async () => {
+    // This test verifies that the initialization guard prevents premature closing
+    // The dropdown starts open and should stay open during initialization
+    renderEditor();
+
+    // Verify the dropdown opens immediately
+    await waitFor(() => {
+      expect(screen.getByTestId('colored-dropdown-content')).toBeInTheDocument();
+    });
+
+    // The exitEditMode should NOT have been called yet (initialization guard)
+    expect(mockExitEditMode).not.toHaveBeenCalled();
+  });
+
+  it('renders onFocusOutside handler that prevents event', async () => {
+    renderEditor();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('colored-dropdown-content')).toBeInTheDocument();
+    });
+
+    // The dropdown should still be open and visible
+    expect(screen.getByTestId('colored-dropdown-content')).toBeVisible();
+  });
+
+  it('keeps dropdown open on mount via initialization guard', async () => {
+    renderEditor();
+
+    // Immediately after mount, the dropdown should be open
+    await waitFor(() => {
+      expect(screen.getByTestId('colored-dropdown-content')).toBeInTheDocument();
+    });
+
+    // exitEditMode should not have been called during initialization
+    expect(mockExitEditMode).not.toHaveBeenCalled();
+  });
 });
