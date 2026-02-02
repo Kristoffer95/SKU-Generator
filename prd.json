@@ -73,7 +73,7 @@
         "Phase 4 Validation/Shortcuts (4 steps): Validation panel, Click to navigate, Keyboard shortcuts, Completion",
         "Interactive steps have onNextClick callbacks to verify user actions"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "tour-selection-modal",

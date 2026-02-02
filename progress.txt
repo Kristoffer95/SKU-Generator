@@ -1,3 +1,24 @@
+## tour-advanced-steps - Define Advanced Tour with 28 steps covering all features
+
+### Key decisions:
+- Created advancedTourSteps array with 28 steps organized into 4 phases
+- Phase 1 Toolbar (10 steps): Welcome, Toolbar, Undo/Redo, Add Row, Auto Populate, Separate Blocks, Cell color, Text color, Text formatting, Checkbox
+- Phase 2 Column/Row Ops (8 steps): Column letters, Drag reorder, Resize, Context menu, Pin columns, Row ops, Pin rows, Checkpoint
+- Phase 3 Import/Export (6 steps): Import, Export options, Export preview, Sheet groups, Spec value colors, Checkpoint
+- Phase 4 Validation/Shortcuts (4 steps): Validation panel, Click to navigate, Keyboard shortcuts, Completion
+- Added onNextClick callbacks on steps 5, 13, 19, 26 for interactive elements
+- Advanced tour has no dialog steps (uses existing data-tour attributes from tour-data-attributes task)
+- Updated startGuidedTour to use advancedTourSteps when type='advanced'
+
+### Files changed:
+- src/lib/guided-tour.ts: Added advancedTourSteps export (28 steps), removed TODO comments
+- src/lib/guided-tour.test.ts: Added 11 tests for advancedTourSteps (phase verification, onNextClick, selector tests)
+
+### Notes:
+- All 1458 tests pass (10 new tests)
+- Typecheck passes
+- Lint warnings are pre-existing issues in build output files
+
 ## tour-basic-steps - Define Basic Tour with 18 steps covering core workflow
 
 ### Key decisions:

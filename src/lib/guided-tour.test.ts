@@ -11,6 +11,7 @@ import {
   updateTourState,
   resetTourState,
   basicTourSteps,
+  advancedTourSteps,
   type TourState,
 } from "./guided-tour"
 
@@ -528,6 +529,134 @@ describe("guided-tour", () => {
 
       // Step 16: Add sheet button has onNextClick
       expect(basicTourSteps[15].popover?.onNextClick).toBeDefined()
+    })
+  })
+
+  describe("advancedTourSteps export", () => {
+    it("exports advancedTourSteps array with exactly 28 steps", () => {
+      expect(advancedTourSteps).toHaveLength(28)
+    })
+
+    it("Phase 1 Toolbar has 10 steps (1-10)", () => {
+      // Steps 0-9 are Toolbar
+      expect(advancedTourSteps[0].popover?.title).toBe("Advanced Features Tour")
+      expect(advancedTourSteps[1].popover?.title).toBe("The Toolbar")
+      expect(advancedTourSteps[1].element).toBe('[data-tour="toolbar"]')
+      expect(advancedTourSteps[2].popover?.title).toBe("Undo & Redo")
+      expect(advancedTourSteps[2].element).toBe('[data-tour="undo"]')
+      expect(advancedTourSteps[3].popover?.title).toBe("Add Row")
+      expect(advancedTourSteps[3].element).toBe('[data-tour="add-row"]')
+      expect(advancedTourSteps[4].popover?.title).toBe("Auto Populate")
+      expect(advancedTourSteps[4].element).toBe('[data-tour="auto-populate"]')
+      expect(advancedTourSteps[5].popover?.title).toBe("Separate Blocks Mode")
+      expect(advancedTourSteps[5].element).toBe('[data-tour="separate-blocks"]')
+      expect(advancedTourSteps[6].popover?.title).toBe("Cell Background Color")
+      expect(advancedTourSteps[6].element).toBe('[data-tour="cell-color"]')
+      expect(advancedTourSteps[7].popover?.title).toBe("Text Color")
+      expect(advancedTourSteps[7].element).toBe('[data-tour="text-color"]')
+      expect(advancedTourSteps[8].popover?.title).toBe("Text Formatting")
+      expect(advancedTourSteps[8].element).toBe('[data-tour="bold"]')
+      expect(advancedTourSteps[9].popover?.title).toBe("Checkbox Mode")
+      expect(advancedTourSteps[9].element).toBe('[data-tour="checkbox"]')
+    })
+
+    it("Phase 2 Column/Row Ops has 8 steps (11-18)", () => {
+      // Steps 10-17 are Column/Row Ops
+      expect(advancedTourSteps[10].popover?.title).toBe("Phase 2: Column Letters")
+      expect(advancedTourSteps[10].element).toBe('[data-tour="column-letters"]')
+      expect(advancedTourSteps[11].popover?.title).toBe("Drag to Reorder Columns")
+      expect(advancedTourSteps[11].element).toBe('[data-tour="column-headers"]')
+      expect(advancedTourSteps[12].popover?.title).toBe("Resize Rows & Columns")
+      expect(advancedTourSteps[12].element).toBe('[data-tour="row-indicators"]')
+      expect(advancedTourSteps[13].popover?.title).toBe("Right-Click Context Menu")
+      expect(advancedTourSteps[13].element).toBe('[data-tour="column-headers"]')
+      expect(advancedTourSteps[14].popover?.title).toBe("Pin Columns")
+      expect(advancedTourSteps[14].element).toBe('[data-tour="column-letters"]')
+      expect(advancedTourSteps[15].popover?.title).toBe("Row Operations")
+      expect(advancedTourSteps[15].element).toBe('[data-tour="row-indicators"]')
+      expect(advancedTourSteps[16].popover?.title).toBe("Pin Rows")
+      expect(advancedTourSteps[16].element).toBe('[data-tour="row-indicators"]')
+      expect(advancedTourSteps[17].popover?.title).toBe("Column & Row Mastery!")
+    })
+
+    it("Phase 3 Import/Export has 6 steps (19-24)", () => {
+      // Steps 18-23 are Import/Export
+      expect(advancedTourSteps[18].popover?.title).toBe("Phase 3: Import Data")
+      expect(advancedTourSteps[18].element).toBe('[data-tour="import-button"]')
+      expect(advancedTourSteps[19].popover?.title).toBe("Export Options")
+      expect(advancedTourSteps[19].element).toBe('[data-tour="export-button"]')
+      expect(advancedTourSteps[20].popover?.title).toBe("Export Preview")
+      expect(advancedTourSteps[20].element).toBe('[data-tour="export-button"]')
+      expect(advancedTourSteps[21].popover?.title).toBe("Sheet Groups")
+      expect(advancedTourSteps[21].element).toBe('[data-tour="add-group-button"]')
+      expect(advancedTourSteps[22].popover?.title).toBe("Specification Value Colors")
+      expect(advancedTourSteps[22].element).toBe('[data-tour="sidebar"]')
+      expect(advancedTourSteps[23].popover?.title).toBe("Import/Export Complete!")
+    })
+
+    it("Phase 4 Validation/Shortcuts has 4 steps (25-28)", () => {
+      // Steps 24-27 are Validation/Shortcuts
+      expect(advancedTourSteps[24].popover?.title).toBe("Phase 4: Validation Panel")
+      expect(advancedTourSteps[24].element).toBe('[data-tour="validation-panel"]')
+      expect(advancedTourSteps[25].popover?.title).toBe("Click to Navigate")
+      expect(advancedTourSteps[25].element).toBe('[data-tour="validation-panel"]')
+      expect(advancedTourSteps[26].popover?.title).toBe("Keyboard Shortcuts")
+      expect(advancedTourSteps[27].popover?.title).toBe("Advanced Tour Complete!")
+    })
+
+    it("has interactive onNextClick callbacks on appropriate steps", () => {
+      // Step 5: Auto Populate has onNextClick
+      expect(advancedTourSteps[4].popover?.onNextClick).toBeDefined()
+
+      // Step 13: Resize Rows & Columns has onNextClick
+      expect(advancedTourSteps[12].popover?.onNextClick).toBeDefined()
+
+      // Step 19: Import Data has onNextClick
+      expect(advancedTourSteps[18].popover?.onNextClick).toBeDefined()
+
+      // Step 26: Click to Navigate has onNextClick
+      expect(advancedTourSteps[25].popover?.onNextClick).toBeDefined()
+    })
+
+    it("uses only data-tour selectors (no .fortune-sheet-* selectors)", () => {
+      advancedTourSteps.forEach((step) => {
+        if (step.element) {
+          expect(step.element).not.toMatch(/fortune-sheet/i)
+          expect(step.element).toMatch(/^\[data-tour=|^\[data-testid=/)
+        }
+      })
+    })
+  })
+
+  describe("startGuidedTour with advanced type", () => {
+    it("starts advanced tour when type is 'advanced'", async () => {
+      const { driver } = await import("driver.js")
+
+      startGuidedTour("advanced")
+
+      const calledConfig = vi.mocked(driver).mock.calls[0]?.[0]
+      expect(calledConfig?.steps).toHaveLength(28)
+    })
+
+    it("marks advancedCompleted when advanced tour is destroyed", () => {
+      startGuidedTour("advanced")
+
+      // Simulate tour being destroyed
+      capturedOnDestroyed?.()
+
+      const state = getTourState()
+      expect(state.advancedCompleted).toBe(true)
+      expect(state.lastViewed).toBe("advanced")
+    })
+
+    it("calls onComplete callback when advanced tour is destroyed", () => {
+      const onComplete = vi.fn()
+      startGuidedTour("advanced", onComplete)
+
+      // Simulate tour being destroyed
+      capturedOnDestroyed?.()
+
+      expect(onComplete).toHaveBeenCalled()
     })
   })
 })

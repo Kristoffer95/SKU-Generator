@@ -119,6 +119,10 @@ const BASIC_ADD_SPEC_DIALOG_STEPS = [4, 5, 6, 7]
 // Steps where SettingsDialog should be open for basic tour (13-14, 0-indexed: 12-13)
 const BASIC_SETTINGS_DIALOG_STEPS = [12, 13]
 
+// Advanced tour has no dialog steps (it focuses on features available without dialogs)
+const ADVANCED_ADD_SPEC_DIALOG_STEPS: number[] = []
+const ADVANCED_SETTINGS_DIALOG_STEPS: number[] = []
+
 /**
  * 18-step Basic Tour organized into 3 phases:
  * - Phase 1: Foundation (Steps 1-4) - Welcome, Sidebar, Spreadsheet, Checkpoint
@@ -349,6 +353,338 @@ export const basicTourSteps: DriveStep[] = [
   },
 ]
 
+/**
+ * 28-step Advanced Tour organized into 4 phases:
+ * - Phase 1: Toolbar (Steps 1-10) - Welcome, Toolbar overview, Undo/Redo, Add Row, Auto Populate, Separate Blocks, Cell color, Text color, Text formatting, Checkbox
+ * - Phase 2: Column/Row Ops (Steps 11-18) - Column letters, Drag reorder, Resize, Context menu, Pin columns, Row ops, Pin rows, Checkpoint
+ * - Phase 3: Import/Export (Steps 19-24) - Import, Export options, Export preview, Sheet groups, Spec value colors, Checkpoint
+ * - Phase 4: Validation/Shortcuts (Steps 25-28) - Validation panel, Click to navigate, Keyboard shortcuts, Completion
+ */
+export const advancedTourSteps: DriveStep[] = [
+  // ============ PHASE 1: TOOLBAR (Steps 1-10) ============
+  {
+    // Step 1: Welcome
+    popover: {
+      title: "Advanced Features Tour",
+      description:
+        "Welcome to the Advanced Tour! This covers toolbar controls, column/row operations, import/export features, and validation. Assumes you've completed the Basic Tour.",
+      side: "over",
+      align: "center",
+    },
+  },
+  {
+    // Step 2: Toolbar overview
+    element: '[data-tour="toolbar"]',
+    popover: {
+      title: "The Toolbar",
+      description:
+        "The toolbar provides quick access to editing tools, formatting options, and spreadsheet operations. Let's explore each feature.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    // Step 3: Undo/Redo
+    element: '[data-tour="undo"]',
+    popover: {
+      title: "Undo & Redo",
+      description:
+        "Undo your last action or redo a previously undone action. Keyboard shortcuts: Ctrl+Z (undo) and Ctrl+Y or Ctrl+Shift+Z (redo).",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    // Step 4: Add Row
+    element: '[data-tour="add-row"]',
+    popover: {
+      title: "Add Row",
+      description:
+        "Quickly add a new row to the bottom of your spreadsheet. For more options, right-click on row indicators to insert rows above or below.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    // Step 5: Auto Populate - INTERACTIVE
+    element: '[data-tour="auto-populate"]',
+    popover: {
+      title: "Auto Populate",
+      description:
+        "Automatically generates all possible combinations of your specification values. Creates one row for each unique combination of all spec columns.",
+      side: "bottom",
+      align: "start",
+      onNextClick: (_element, _step, { driver }) => {
+        driver.moveNext()
+      },
+    },
+  },
+  {
+    // Step 6: Separate Blocks
+    element: '[data-tour="separate-blocks"]',
+    popover: {
+      title: "Separate Blocks Mode",
+      description:
+        "Toggle to add empty rows between groups when auto-populating. Helps visually organize large sets of combinations by grouping related SKUs.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    // Step 7: Cell color
+    element: '[data-tour="cell-color"]',
+    popover: {
+      title: "Cell Background Color",
+      description:
+        "Change the background color of selected cells. Use colors to highlight important rows, categorize data, or add visual organization to your spreadsheet.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    // Step 8: Text color
+    element: '[data-tour="text-color"]',
+    popover: {
+      title: "Text Color",
+      description:
+        "Change the text color of selected cells. Combine with cell colors for better contrast or to create a color-coding system for your data.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    // Step 9: Text formatting (Bold/Italic)
+    element: '[data-tour="bold"]',
+    popover: {
+      title: "Text Formatting",
+      description:
+        "Apply bold (Ctrl+B) or italic (Ctrl+I) formatting to selected cells. Use these to emphasize important data or create visual hierarchy.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    // Step 10: Checkbox
+    element: '[data-tour="checkbox"]',
+    popover: {
+      title: "Checkbox Mode",
+      description:
+        "Toggle checkbox mode to add interactive checkboxes to cells. Useful for tracking completion status, approvals, or any yes/no data points.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+
+  // ============ PHASE 2: COLUMN/ROW OPS (Steps 11-18) ============
+  {
+    // Step 11: Column letters
+    element: '[data-tour="column-letters"]',
+    popover: {
+      title: "Phase 2: Column Letters",
+      description:
+        "Column letters (A, B, C...) identify each column. Click to select an entire column. The first column (A) is reserved for auto-generated SKUs.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    // Step 12: Drag reorder columns
+    element: '[data-tour="column-headers"]',
+    popover: {
+      title: "Drag to Reorder Columns",
+      description:
+        "Drag column headers to rearrange the order of your specification columns. This changes how values are combined in the SKU (left-to-right order).",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    // Step 13: Resize columns/rows - INTERACTIVE
+    element: '[data-tour="row-indicators"]',
+    popover: {
+      title: "Resize Rows & Columns",
+      description:
+        "Drag the borders between row numbers or column letters to resize. Double-click borders to auto-fit content. Row indicators also show row numbers.",
+      side: "right",
+      align: "start",
+      onNextClick: (_element, _step, { driver }) => {
+        driver.moveNext()
+      },
+    },
+  },
+  {
+    // Step 14: Context menu
+    element: '[data-tour="column-headers"]',
+    popover: {
+      title: "Right-Click Context Menu",
+      description:
+        "Right-click on column headers or row indicators for context menus. Options include insert, delete, hide, pin, and more. A faster way to manage rows and columns.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    // Step 15: Pin columns
+    element: '[data-tour="column-letters"]',
+    popover: {
+      title: "Pin Columns",
+      description:
+        "Pin columns to keep them visible while scrolling horizontally. Right-click a column header and select 'Pin Left' or 'Pin Right'. Great for keeping the SKU column always visible.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    // Step 16: Row operations
+    element: '[data-tour="row-indicators"]',
+    popover: {
+      title: "Row Operations",
+      description:
+        "Click row numbers to select entire rows. Right-click for options: insert above/below, delete, hide, or pin rows. Multi-select with Shift+Click or Ctrl+Click.",
+      side: "right",
+      align: "start",
+    },
+  },
+  {
+    // Step 17: Pin rows
+    element: '[data-tour="row-indicators"]',
+    popover: {
+      title: "Pin Rows",
+      description:
+        "Pin important rows to keep them visible while scrolling vertically. Right-click a row indicator and select 'Pin Top' or 'Pin Bottom'. Useful for header rows or key products.",
+      side: "right",
+      align: "start",
+    },
+  },
+  {
+    // Step 18: Column/Row ops checkpoint
+    popover: {
+      title: "Column & Row Mastery!",
+      description:
+        "You've learned to reorder, resize, pin, and manage columns and rows. These tools help you organize data exactly how you need it. Next: Import/Export features!",
+      side: "over",
+      align: "center",
+    },
+  },
+
+  // ============ PHASE 3: IMPORT/EXPORT (Steps 19-24) ============
+  {
+    // Step 19: Import - INTERACTIVE
+    element: '[data-tour="import-button"]',
+    popover: {
+      title: "Phase 3: Import Data",
+      description:
+        "Import existing data from CSV or Excel files. The importer will map columns to your specifications and preserve any additional data columns.",
+      side: "bottom",
+      align: "start",
+      onNextClick: (_element, _step, { driver }) => {
+        driver.moveNext()
+      },
+    },
+  },
+  {
+    // Step 20: Export options
+    element: '[data-tour="export-button"]',
+    popover: {
+      title: "Export Options",
+      description:
+        "Export your data in multiple formats: CSV for simple data, XLSX for Excel with formatting, or PDF for printable reports. Each format preserves your data differently.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    // Step 21: Export preview
+    element: '[data-tour="export-button"]',
+    popover: {
+      title: "Export Preview",
+      description:
+        "Before exporting, you can preview how your data will look. The preview shows column order, formatting, and any cell colors that will be included in the export.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    // Step 22: Sheet groups
+    element: '[data-tour="add-group-button"]',
+    popover: {
+      title: "Sheet Groups",
+      description:
+        "Organize multiple sheets into groups using this button. Groups help manage large projects with many product categories. Drag sheets between groups to reorganize.",
+      side: "top",
+      align: "start",
+    },
+  },
+  {
+    // Step 23: Spec value colors
+    element: '[data-tour="sidebar"]',
+    popover: {
+      title: "Specification Value Colors",
+      description:
+        "You can assign colors to specification values in the sidebar. When you select a value in the spreadsheet, its assigned color will be applied to the cell automatically.",
+      side: "right",
+      align: "start",
+    },
+  },
+  {
+    // Step 24: Import/Export checkpoint
+    popover: {
+      title: "Import/Export Complete!",
+      description:
+        "You now know how to import existing data and export in various formats. Sheet groups help organize complex projects. Finally, let's cover validation and keyboard shortcuts!",
+      side: "over",
+      align: "center",
+    },
+  },
+
+  // ============ PHASE 4: VALIDATION/SHORTCUTS (Steps 25-28) ============
+  {
+    // Step 25: Validation panel
+    element: '[data-tour="validation-panel"]',
+    popover: {
+      title: "Phase 4: Validation Panel",
+      description:
+        "The validation panel shows any issues with your data: duplicate SKUs, empty required cells, or invalid values. Issues are listed with their location for easy navigation.",
+      side: "left",
+      align: "start",
+    },
+  },
+  {
+    // Step 26: Click to navigate - INTERACTIVE
+    element: '[data-tour="validation-panel"]',
+    popover: {
+      title: "Click to Navigate",
+      description:
+        "Click on any validation issue to jump directly to the problematic cell. The cell will be highlighted and selected, making it easy to fix the issue immediately.",
+      side: "left",
+      align: "start",
+      onNextClick: (_element, _step, { driver }) => {
+        driver.moveNext()
+      },
+    },
+  },
+  {
+    // Step 27: Keyboard shortcuts
+    popover: {
+      title: "Keyboard Shortcuts",
+      description:
+        "Speed up your workflow with shortcuts: Ctrl+Z (undo), Ctrl+Y (redo), Ctrl+B (bold), Ctrl+I (italic), Ctrl+C/V (copy/paste), Delete (clear cells), Arrow keys (navigate).",
+      side: "over",
+      align: "center",
+    },
+  },
+  {
+    // Step 28: Completion
+    popover: {
+      title: "Advanced Tour Complete!",
+      description:
+        "Congratulations! You've mastered all features: toolbar controls, column/row operations, import/export, validation, and shortcuts. You're now a SKU Generator power user!",
+      side: "over",
+      align: "center",
+    },
+  },
+]
+
 let currentDriverInstance: Driver | null = null
 let currentTourType: TourType = "basic"
 
@@ -377,11 +713,11 @@ export function startGuidedTour(
   }
 
   // Select the appropriate steps and dialog step indices
-  const steps = tourType === "basic" ? basicTourSteps : basicTourSteps // TODO: advancedTourSteps when defined
+  const steps = tourType === "basic" ? basicTourSteps : advancedTourSteps
   const addSpecDialogSteps =
-    tourType === "basic" ? BASIC_ADD_SPEC_DIALOG_STEPS : [] // TODO: ADVANCED_ADD_SPEC_DIALOG_STEPS
+    tourType === "basic" ? BASIC_ADD_SPEC_DIALOG_STEPS : ADVANCED_ADD_SPEC_DIALOG_STEPS
   const settingsDialogSteps =
-    tourType === "basic" ? BASIC_SETTINGS_DIALOG_STEPS : [] // TODO: ADVANCED_SETTINGS_DIALOG_STEPS
+    tourType === "basic" ? BASIC_SETTINGS_DIALOG_STEPS : ADVANCED_SETTINGS_DIALOG_STEPS
 
   const driverObj = driver({
     showProgress: true,
